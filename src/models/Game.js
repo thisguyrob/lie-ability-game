@@ -369,27 +369,49 @@ class Game {
   startOptionSelection() {
     this.state = GAME_STATES.OPTION_SELECTION;
 
-    // Compile all options (player lies + truth)
-    const allOptions = [];
-    
-    // Add player lies
+    // Compile all options (player lies + truth), combining duplicate lies
+    const lieMap = new Map();
+
     for (const [playerId, lie] of this.playerLies.entries()) {
-      allOptions.push({
-        text: lie,
-        type: 'lie',
-        submittedBy: playerId
-      });
+      const key = lie.trim().toLowerCase();
+      if (!lieMap.has(key)) {
+        lieMap.set(key, { text: lie, type: 'lie', submittedBy: [playerId] });
+      } else {
+        lieMap.get(key).submittedBy.push(playerId);
+      }
     }
-    
+
+    const uniqueOptions = Array.from(lieMap.values());
+
+    // Pad with extra lies from the question to hide duplicates
+    const playersCount = Array.from(this.players.values()).filter(p => p.status === 'connected').length;
+    const usedTexts = new Set([...lieMap.keys(), this.currentQuestionData.answer.trim().toLowerCase()]);
+    const fillerLies = [...this.currentQuestionData.lies];
+
+    // simple shuffle of filler lies
+    for (let i = fillerLies.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [fillerLies[i], fillerLies[j]] = [fillerLies[j], fillerLies[i]];
+    }
+
+    for (const lie of fillerLies) {
+      if (uniqueOptions.length >= playersCount) break;
+      const key = lie.trim().toLowerCase();
+      if (!usedTexts.has(key)) {
+        usedTexts.add(key);
+        uniqueOptions.push({ text: lie, type: 'lie', submittedBy: null });
+      }
+    }
+
     // Add truth
-    allOptions.push({
+    uniqueOptions.push({
       text: this.currentQuestionData.answer,
       type: 'truth',
       submittedBy: null
     });
 
     // Shuffle options
-    this.shuffledOptions = this.questionService.shuffleOptions(allOptions.map(opt => opt.text));
+    this.shuffledOptions = this.questionService.shuffleOptions(uniqueOptions);
     
     // Find truth index in shuffled array
     this.truthIndex = this.shuffledOptions.findIndex(opt => opt.text === this.currentQuestionData.answer);
