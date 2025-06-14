@@ -173,6 +173,35 @@ io.on('connection', (socket) => {
     }
   });
 
+  // Handle request for automatic lie
+  socket.on(SOCKET_EVENTS.AUTO_LIE, () => {
+    try {
+      const playerId = getPlayerIdBySocketId(socket.id);
+      if (!playerId) {
+        socket.emit(SOCKET_EVENTS.ERROR, { message: 'Player not found' });
+        return;
+      }
+
+      const player = game.players.get(playerId);
+      const playerName = player ? player.name : 'Unknown';
+      const autoLie = game.getRandomLieForCurrentQuestion();
+
+      console.log(`🎲 [PLAYER ACTION] ${playerName} requested auto lie: "${autoLie}"`);
+
+      const result = game.submitLie(playerId, autoLie);
+      if (!result.success) {
+        console.log(`❌ [PLAYER ACTION] Auto lie failed for ${playerName}: ${result.error}`);
+        socket.emit(SOCKET_EVENTS.ERROR, { message: result.error });
+      } else {
+        console.log(`✅ [PLAYER ACTION] Auto lie accepted for ${playerName}`);
+        socket.emit('lie_submitted', { success: true, auto: true });
+      }
+    } catch (error) {
+      console.error('Error in AUTO_LIE:', error);
+      socket.emit(SOCKET_EVENTS.ERROR, { message: 'Failed to auto submit lie' });
+    }
+  });
+
   // Handle option selection
   socket.on(SOCKET_EVENTS.SELECT_OPTION, (data) => {
     try {

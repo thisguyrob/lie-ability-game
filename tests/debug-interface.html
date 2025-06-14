@@ -307,6 +307,7 @@
                 <div class="controls">
                     <input type="text" id="lieInput" placeholder="Enter a convincing lie..." disabled maxlength="100">
                     <button onclick="submitLie()" disabled id="submitLieBtn">Submit Lie</button>
+                    <button onclick="lieForMe()" disabled id="lieForMeBtn">Lie for Me</button>
                 </div>
                 <div id="lieStatus" style="margin-top: 10px; font-style: italic; color: #666;"></div>
             </div>
@@ -859,6 +860,7 @@
             const instructions = document.getElementById('lieInstructions');
             const lieInput = document.getElementById('lieInput');
             const submitBtn = document.getElementById('submitLieBtn');
+            const autoBtn = document.getElementById('lieForMeBtn');
             const lieStatus = document.getElementById('lieStatus');
             
             if (instructions) {
@@ -889,6 +891,10 @@
             } else {
                 console.error('❌ Submit button element not found');
             }
+
+            if (autoBtn) {
+                autoBtn.disabled = false;
+            }
             
             if (lieStatus) {
                 lieStatus.textContent = '';
@@ -907,17 +913,24 @@
         function disableLieSubmission() {
             document.getElementById('lieInput').disabled = true;
             document.getElementById('submitLieBtn').disabled = true;
+            const autoBtn = document.getElementById('lieForMeBtn');
+            if (autoBtn) autoBtn.disabled = true;
         }
         
         function updateLieSubmission(subStep) {
             // PRESERVE the current input value
             const lieInputValue = preserveInputValue('lieInput');
-            
+            const autoBtn = document.getElementById('lieForMeBtn');
+
             if (subStep.hasSubmittedLie) {
                 disableLieSubmission();
                 document.getElementById('lieStatus').textContent = '✅ Waiting for other players...';
             }
-            
+
+            if (!subStep.hasSubmittedLie && autoBtn) {
+                autoBtn.disabled = false;
+            }
+
             // RESTORE the input value
             restoreInputValue('lieInput', lieInputValue);
         }
@@ -1068,6 +1081,15 @@
             }
             
             socket.emit('submit_lie', { lie });
+        }
+
+        function lieForMe() {
+            const lieStatus = document.getElementById('lieStatus');
+            if (lieStatus) {
+                lieStatus.textContent = '📤 Requesting lie from server...';
+                lieStatus.style.color = '#007bff';
+            }
+            socket.emit('auto_lie');
         }
         
         function selectOption(buttonId) {

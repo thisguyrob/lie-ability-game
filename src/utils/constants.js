@@ -54,6 +54,7 @@ const SOCKET_EVENTS = {
   START_GAME: 'start_game',
   SELECT_CATEGORY: 'select_category',
   SUBMIT_LIE: 'submit_lie',
+  AUTO_LIE: 'auto_lie',
   SELECT_OPTION: 'select_option',
   LIKE_LIE: 'like_lie',
   REQUEST_GAME_STATE: 'request_game_state',
