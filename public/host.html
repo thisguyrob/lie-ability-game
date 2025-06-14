@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <title>Lie-Ability - Host</title>
   <script src="/socket.io/socket.io.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.0/build/qrcode.min.js"></script>
   <style>
     body { font-family: sans-serif; padding: 20px; }
     .view { display: none; margin: 20px 0; }
@@ -11,13 +12,23 @@
     ul { list-style: none; padding: 0; }
     table { border-collapse: collapse; }
     td, th { border: 1px solid #ccc; padding: 4px 8px; }
+    #lobbyContainer { display:flex; gap:20px; align-items:flex-start; }
+    #qrCode canvas { width:200px; height:200px; }
+    #playerList { list-style:none; padding:0; }
+    .player-item { display:flex; align-items:center; margin:5px 0; }
+    .player-avatar { width:32px; height:32px; border-radius:4px; display:flex; align-items:center; justify-content:center; margin-right:8px; font-size:20px; color:#fff; }
   </style>
 </head>
 <body>
   <h1>Lie-Ability - Host Screen</h1>
   <div id="timer"></div>
 
-  <div id="lobbyView" class="view">Waiting for players...</div>
+  <div id="lobbyView" class="view">
+    <div id="lobbyContainer">
+      <div id="qrCode"></div>
+      <ul id="playerList"></ul>
+    </div>
+  </div>
   <div id="categoryView" class="view">
     <h3 id="categoryPrompt"></h3>
     <ul id="categoryList"></ul>
@@ -53,6 +64,43 @@ const sections = {
   score: document.getElementById('scoreboardView')
 };
 
+function generateQRCode(){
+  const url = window.location.origin + '/player';
+  const container = document.getElementById('qrCode');
+  if(!container) return;
+  container.innerHTML = '';
+  if(window.QRCode){
+    const canvas = document.createElement('canvas');
+    QRCode.toCanvas(canvas, url, { width: 200 }, err => {
+      if(!err) container.appendChild(canvas);
+    });
+  } else {
+    const img=document.createElement('img');
+    img.src = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(url)}`;
+    container.appendChild(img);
+  }
+}
+
+function renderLobby(){
+  generateQRCode();
+  const list=document.getElementById('playerList');
+  if(!list) return;
+  list.innerHTML='';
+  (gameState.players||[]).forEach(p=>{
+    const li=document.createElement('li');
+    li.className='player-item';
+    const av=document.createElement('span');
+    av.className='player-avatar';
+    av.textContent=p.avatar.emoji;
+    av.style.backgroundColor=p.avatar.color;
+    li.appendChild(av);
+    const name=document.createElement('span');
+    name.textContent=p.name;
+    li.appendChild(name);
+    list.appendChild(li);
+  });
+}
+
 function hideAll(){ Object.values(sections).forEach(s => s.style.display='none'); }
 function show(name){ hideAll(); if(sections[name]) sections[name].style.display='block'; }
 function log(msg){ document.getElementById('log').textContent += msg+'\n'; }
@@ -70,6 +118,7 @@ function render(){
   switch(gameState.state){
     case 'lobby':
       show('lobby');
+      renderLobby();
       break;
     case 'category_selection':
       show('category');
