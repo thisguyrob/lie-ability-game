@@ -902,7 +902,10 @@ const storedId = localStorage.getItem('playerId');
 const storedName = localStorage.getItem('playerName');
 if(storedId && storedName){
   playerId = storedId;
-  socket.emit('join_game',{playerName: storedName, playerId: storedId});
+  document.getElementById('joinSection').style.display = 'none';
+  document.getElementById('views').style.display = 'block';
+  document.getElementById('lobbyView').style.display = 'block';
+  socket.emit('join_game', { playerName: storedName, playerId: storedId });
 } else if(storedName){
   document.getElementById('nameInput').value = storedName;
 }
