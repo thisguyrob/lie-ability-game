@@ -6,62 +6,148 @@
   <script src="/socket.io/socket.io.js"></script>
   <style>
     body { font-family: sans-serif; padding: 20px; }
-    #log { background:#eee; padding:10px; white-space:pre-line; }
+    .view { display: none; margin: 20px 0; }
+    #log { background:#eee; padding:10px; white-space:pre-line; max-height: 200px; overflow:auto; }
+    ul { list-style: none; padding: 0; }
+    table { border-collapse: collapse; }
+    td, th { border: 1px solid #ccc; padding: 4px 8px; }
   </style>
 </head>
 <body>
   <h1>Lie-Ability - Host Screen</h1>
-  <div id="status">Connecting...</div>
-  <div id="phase"></div>
-  <div id="question"></div>
-  <div id="options"></div>
   <div id="timer"></div>
+
+  <div id="lobbyView" class="view">Waiting for players...</div>
+  <div id="categoryView" class="view">
+    <h3 id="categoryPrompt"></h3>
+    <ul id="categoryList"></ul>
+  </div>
+  <div id="questionView" class="view">
+    <h3 id="questionText"></h3>
+  </div>
+  <div id="lieView" class="view">Players are submitting lies...</div>
+  <div id="optionView" class="view">
+    <ul id="optionList"></ul>
+  </div>
+  <div id="revealView" class="view">
+    <h3 id="revealQuestion"></h3>
+    <ul id="revealList"></ul>
+  </div>
+  <div id="scoreboardView" class="view">
+    <table id="scoreTable"></table>
+  </div>
+
   <pre id="log"></pre>
 
 <script>
 const socket = io();
-const logEl = document.getElementById('log');
-const phaseEl = document.getElementById('phase');
-const questionEl = document.getElementById('question');
-const optionsEl = document.getElementById('options');
-const timerEl = document.getElementById('timer');
-const statusEl = document.getElementById('status');
+let gameState = null;
+let subStep = null;
+const sections = {
+  lobby: document.getElementById('lobbyView'),
+  category: document.getElementById('categoryView'),
+  question: document.getElementById('questionView'),
+  lie: document.getElementById('lieView'),
+  option: document.getElementById('optionView'),
+  reveal: document.getElementById('revealView'),
+  score: document.getElementById('scoreboardView')
+};
 
-function log(msg){ logEl.textContent += msg + '\n'; }
+function hideAll(){ Object.values(sections).forEach(s => s.style.display='none'); }
+function show(name){ hideAll(); if(sections[name]) sections[name].style.display='block'; }
+function log(msg){ document.getElementById('log').textContent += msg+'\n'; }
 
-socket.on('connect', () => {
-  statusEl.textContent = 'Connected';
-  socket.emit('request_game_state');
-});
+socket.on('connect', () => { socket.emit('request_game_state'); });
+socket.on('game_state_update', d => { gameState = d; render(); });
+socket.on('sub_step_info', d => { subStep = d; render(); });
+socket.on('timer_update', d => { document.getElementById('timer').textContent = '⏱ '+d.secondsRemaining+'s'; });
+socket.on('truth_reveal_start', d => renderReveal(d));
+socket.on('scoreboard_update', d => renderScoreboard(d));
 
-socket.on('game_state_update', data => {
-  updateState(data);
-});
-
-socket.on('sub_step_info', info => {
-  updateSubStep(info);
-});
-
-socket.on('timer_update', data => {
-  timerEl.textContent = '⏱ ' + data.secondsRemaining + 's';
-});
-
-function updateState(data){
-  phaseEl.textContent = 'Phase: ' + data.state;
-  if(data.currentQuestionData){
-    questionEl.textContent = data.currentQuestionData.category + ': ' + data.currentQuestionData.question;
-  } else {
-    questionEl.textContent = '';
+function render(){
+  if(!gameState) return;
+  log('State -> ' + gameState.state);
+  switch(gameState.state){
+    case 'lobby':
+      show('lobby');
+      break;
+    case 'category_selection':
+      show('category');
+      renderCategory();
+      break;
+    case 'question_reading':
+      show('question');
+      renderQuestion();
+      break;
+    case 'lie_submission':
+      show('lie');
+      break;
+    case 'option_selection':
+      show('option');
+      renderOptions();
+      break;
+    case 'truth_reveal':
+      // handled by reveal event
+      break;
+    case 'scoreboard':
+    case 'game_ended':
+      // scoreboard event will show table
+      break;
   }
-  log('Game state -> ' + data.state);
 }
 
-function updateSubStep(info){
-  if(info.options){
-    optionsEl.innerHTML = info.options.map(o => '<div>' + o.text + '</div>').join('');
-  } else {
-    optionsEl.innerHTML = '';
-  }
+function renderCategory(){
+  if(!subStep) return;
+  const list=document.getElementById('categoryList');
+  list.innerHTML='';
+  (subStep.categories||[]).forEach(c => {
+    const li=document.createElement('li');
+    li.textContent = c.category;
+    list.appendChild(li);
+  });
+  const selectorName = gameState.players.find(p=>p.id===gameState.categorySelector)?.name || '';
+  document.getElementById('categoryPrompt').textContent = subStep.isSelector ? 'You choose the category' : `Waiting for ${selectorName} to pick`;
+}
+
+function renderQuestion(){
+  const q = subStep && subStep.question ? subStep.question : gameState.currentQuestionData;
+  document.getElementById('questionText').textContent = q ? `${q.category}: ${q.question}` : '';
+}
+
+function renderOptions(){
+  const list=document.getElementById('optionList');
+  list.innerHTML='';
+  (subStep?.options||[]).forEach(o => {
+    const li=document.createElement('li');
+    li.textContent = o.text;
+    list.appendChild(li);
+  });
+}
+
+function renderReveal(data){
+  show('reveal');
+  document.getElementById('revealQuestion').textContent = data.question;
+  const list=document.getElementById('revealList');
+  list.innerHTML='';
+  data.lies.forEach(l => {
+    const li=document.createElement('li');
+    li.textContent = `${l.lie} - ${l.voteCount} vote(s)`;
+    list.appendChild(li);
+  });
+  const truth=document.createElement('li');
+  truth.textContent = `Truth: ${data.truth.answer} - ${data.truth.voteCount} correct`;
+  list.appendChild(truth);
+}
+
+function renderScoreboard(data){
+  show('score');
+  const table=document.getElementById('scoreTable');
+  table.innerHTML='<tr><th>Rank</th><th>Name</th><th>Pts</th></tr>';
+  data.players.forEach(p => {
+    const row=document.createElement('tr');
+    row.innerHTML = `<td>${p.rank}</td><td>${p.name}</td><td>${p.points}</td>`;
+    table.appendChild(row);
+  });
 }
 </script>
 </body>

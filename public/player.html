@@ -6,7 +6,10 @@
   <script src="/socket.io/socket.io.js"></script>
   <style>
     body{font-family:sans-serif;padding:20px;}
+    .view{display:none;margin:20px 0;}
     #options button{display:block;margin:5px 0;}
+    table{border-collapse:collapse;}
+    td,th{border:1px solid #ccc;padding:4px 8px;}
   </style>
 </head>
 <body>
@@ -16,129 +19,190 @@
     <input id="nameInput" placeholder="Name">
     <button id="joinBtn">Join</button>
   </div>
-  <div id="game" style="display:none;">
-    <div id="phase"></div>
-    <div id="question"></div>
-    <div id="lieSection" style="display:none;">
+
+  <div id="views" style="display:none;">
+    <div id="lobbyView" class="view">Waiting for game start...</div>
+    <div id="categoryView" class="view">
+      <h3 id="categoryPrompt"></h3>
+      <div id="categoryButtons"></div>
+    </div>
+    <div id="questionView" class="view">
+      <div id="questionText"></div>
+    </div>
+    <div id="lieView" class="view">
       <input id="lieInput" placeholder="Enter your lie">
       <button id="autoLie">Auto Lie</button>
       <button id="submitLie">Submit</button>
       <div id="lieStatus"></div>
     </div>
-    <div id="options" style="display:none;"></div>
-    <div id="voteStatus"></div>
-    <div id="likeSection" style="display:none;">
-      <button id="likeBtn">Like Selected Lie</button>
+    <div id="voteView" class="view">
+      <div id="options"></div>
+      <div id="voteStatus"></div>
+      <button id="likeBtn" style="display:none;">Like Selected Lie</button>
+    </div>
+    <div id="revealView" class="view">
+      <div id="revealQuestion"></div>
+      <ul id="revealList"></ul>
+    </div>
+    <div id="scoreboardView" class="view">
+      <table id="scoreTable"></table>
     </div>
     <div id="timer"></div>
   </div>
+
   <pre id="log"></pre>
 
 <script>
 const socket = io();
 let playerId = null;
-let currentOptions = [];
+let gameState = null;
+let subStep = null;
 let selectedOption = null;
 
-function log(msg){document.getElementById('log').textContent += msg+'\n';}
+const views = {
+  lobby: document.getElementById('lobbyView'),
+  category: document.getElementById('categoryView'),
+  question: document.getElementById('questionView'),
+  lie: document.getElementById('lieView'),
+  vote: document.getElementById('voteView'),
+  reveal: document.getElementById('revealView'),
+  score: document.getElementById('scoreboardView')
+};
 
-socket.on('connect', ()=>{
-  document.getElementById('connection').textContent = 'Connected';
-});
+function hideAll(){ Object.values(views).forEach(v=>v.style.display='none'); }
+function show(name){ hideAll(); if(views[name]) views[name].style.display='block'; }
+function log(msg){ document.getElementById('log').textContent+=msg+'\n'; }
 
+socket.on('connect', () => { document.getElementById('connection').textContent = 'Connected'; });
 socket.on('player_joined', data => {
   if(!playerId && data.player){
     playerId = data.player.id;
     document.getElementById('joinSection').style.display='none';
-    document.getElementById('game').style.display='block';
-  }
-  log(`${data.player.name} joined`);
-});
-
-socket.on('player_reconnected', d=>{
-  if(d.playerId === playerId){
-    socket.emit('request_game_state');
+    document.getElementById('views').style.display='block';
   }
 });
-
-socket.on('game_state_update', data => { updateGame(data); });
-socket.on('sub_step_info', info => { updateSubStep(info); });
-
-socket.on('lie_submitted', ()=>{
-  document.getElementById('lieStatus').textContent='Lie submitted!';
-});
-
-socket.on('option_selected', ()=>{
-  document.getElementById('voteStatus').textContent='Vote submitted!';
-});
-
-socket.on('timer_update', data => {
-  document.getElementById('timer').textContent='⏱ '+data.secondsRemaining+'s';
-});
-
-socket.on('lie_liked', ()=>{
-  document.getElementById('likeSection').style.display='none';
-});
-
-socket.on('error', data => { log('Error: '+data.message); });
+socket.on('player_reconnected', d => { if(d.playerId === playerId) socket.emit('request_game_state'); });
+socket.on('game_state_update', d => { gameState=d; render(); });
+socket.on('sub_step_info', d => { subStep=d; render(); });
+socket.on('timer_update', d => { document.getElementById('timer').textContent='⏱ '+d.secondsRemaining+'s'; });
+socket.on('lie_submitted', () => { document.getElementById('lieStatus').textContent='Lie submitted!'; });
+socket.on('option_selected', () => { document.getElementById('voteStatus').textContent='Vote submitted!'; });
+socket.on('truth_reveal_start', d => renderReveal(d));
+socket.on('scoreboard_update', d => renderScoreboard(d));
+socket.on('lie_liked', () => { document.getElementById('likeBtn').style.display='none'; });
+socket.on('error', data => log('Error: '+data.message));
 
 document.getElementById('joinBtn').onclick = () => {
-  const name = document.getElementById('nameInput').value.trim();
-  if(name){
-    socket.emit('join_game',{playerName:name});
-  }
+  const name=document.getElementById('nameInput').value.trim();
+  if(name){ socket.emit('join_game',{playerName:name}); }
 };
 
 document.getElementById('submitLie').onclick = () => {
-  const lie = document.getElementById('lieInput').value.trim();
-  if(lie){
-    socket.emit('submit_lie',{lie});
-  }
+  const lie=document.getElementById('lieInput').value.trim();
+  if(lie){ socket.emit('submit_lie',{lie}); }
 };
 
 document.getElementById('autoLie').onclick = () => { socket.emit('auto_lie'); };
-
-function updateGame(data){
-  document.getElementById('phase').textContent='Phase: '+data.state;
-  if(data.currentQuestionData){
-    document.getElementById('question').textContent=data.currentQuestionData.question;
-  }
-}
-
-function updateSubStep(info){
-  if(info.state==='lie_submission'){
-    document.getElementById('lieSection').style.display='block';
-  }else{
-    document.getElementById('lieSection').style.display='none';
-  }
-
-  if(info.state==='option_selection' && info.options){
-    currentOptions = info.options;
-    const container = document.getElementById('options');
-    container.innerHTML='';
-    info.options.forEach(opt=>{
-      const btn=document.createElement('button');
-      btn.textContent=opt.text;
-      btn.onclick=()=>{
-        selectedOption=opt;
-        socket.emit('select_option',{optionId:opt.id});
-        document.getElementById('voteStatus').textContent='Voted for '+opt.text;
-      };
-      container.appendChild(btn);
-    });
-    container.style.display='block';
-    document.getElementById('likeSection').style.display='block';
-  }else{
-    document.getElementById('options').style.display='none';
-    document.getElementById('likeSection').style.display='none';
-  }
-}
 
 document.getElementById('likeBtn').onclick = () => {
   if(selectedOption && selectedOption.submittedById){
     socket.emit('like_lie',{likedPlayerId:selectedOption.submittedById});
   }
 };
+
+function render(){
+  if(!gameState) return;
+  switch(gameState.state){
+    case 'lobby':
+      show('lobby');
+      break;
+    case 'category_selection':
+      show('category');
+      renderCategory();
+      break;
+    case 'question_reading':
+      show('question');
+      renderQuestion();
+      break;
+    case 'lie_submission':
+      show('lie');
+      break;
+    case 'option_selection':
+      show('vote');
+      renderOptions();
+      break;
+    case 'truth_reveal':
+      break;
+    case 'scoreboard':
+    case 'game_ended':
+      break;
+  }
+}
+
+function renderCategory(){
+  const container=document.getElementById('categoryButtons');
+  container.innerHTML='';
+  if(subStep?.categories){
+    subStep.categories.forEach(c => {
+      const btn=document.createElement('button');
+      btn.textContent=c.category;
+      if(subStep.isSelector){
+        btn.onclick=()=>{ socket.emit('select_category',{categoryId:c.id}); };
+      }
+      container.appendChild(btn);
+    });
+  }
+  const selectorName=gameState.players.find(p=>p.id===gameState.categorySelector)?.name || '';
+  document.getElementById('categoryPrompt').textContent=subStep.isSelector ? 'Choose a category' : `Waiting for ${selectorName}`;
+}
+
+function renderQuestion(){
+  const q=subStep?.question || gameState.currentQuestionData;
+  document.getElementById('questionText').textContent = q ? `${q.category}: ${q.question}` : '';
+}
+
+function renderOptions(){
+  const container=document.getElementById('options');
+  container.innerHTML='';
+  if(subStep?.options){
+    subStep.options.forEach(opt => {
+      const btn=document.createElement('button');
+      btn.textContent=opt.text;
+      btn.onclick=()=>{
+        selectedOption=opt;
+        socket.emit('select_option',{optionId:opt.id});
+        document.getElementById('likeBtn').style.display='block';
+      };
+      container.appendChild(btn);
+    });
+  }
+}
+
+function renderReveal(data){
+  show('reveal');
+  document.getElementById('revealQuestion').textContent=data.question;
+  const list=document.getElementById('revealList');
+  list.innerHTML='';
+  data.lies.forEach(l=>{
+    const li=document.createElement('li');
+    li.textContent=`${l.lie} - ${l.voteCount} vote(s)`;
+    list.appendChild(li);
+  });
+  const truth=document.createElement('li');
+  truth.textContent=`Truth: ${data.truth.answer} - ${data.truth.voteCount} correct`;
+  list.appendChild(truth);
+}
+
+function renderScoreboard(data){
+  show('score');
+  const table=document.getElementById('scoreTable');
+  table.innerHTML='<tr><th>Rank</th><th>Name</th><th>Pts</th></tr>';
+  data.players.forEach(p=>{
+    const row=document.createElement('tr');
+    row.innerHTML=`<td>${p.rank}</td><td>${p.name}</td><td>${p.points}</td>`;
+    table.appendChild(row);
+  });
+}
 </script>
 </body>
 </html>
