@@ -102,6 +102,10 @@ socket.on('player_joined', data => {
     document.getElementById('views').style.display='block';
     updateAvatarUI(data.player.avatar);
   }
+  if(data.gameState){
+    gameState = data.gameState;
+    render();
+  }
 });
 socket.on('player_reconnected', d => { if(d.playerId === playerId) socket.emit('request_game_state'); });
 socket.on('game_state_update', d => {
