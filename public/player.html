@@ -252,6 +252,12 @@
       text-align: center;
     }
 
+    .name-update-section {
+      width: 100%;
+      text-align: center;
+      margin-top: 20px;
+    }
+
     .emoji-input-container {
       position: relative;
       display: inline-block;
@@ -809,6 +815,12 @@
               </div>
             </div>
           </div>
+          <div class="name-update-section">
+            <div class="input-group">
+              <input id="nameEditInput" class="input-field" placeholder="Your name" type="text">
+            </div>
+            <button id="nameBtn" class="btn-primary btn-small">Update Name</button>
+          </div>
         </div>
       </div>
 
@@ -897,6 +909,20 @@
 <script>
 const socket = io();
 let playerId = null;
+// Attempt automatic reconnection using stored info
+const storedId = localStorage.getItem('playerId');
+const storedName = localStorage.getItem('playerName');
+if(storedId && storedName){
+  playerId = storedId;
+  document.getElementById('joinSection').style.display = 'none';
+  document.getElementById('views').style.display = 'block';
+  document.getElementById('lobbyView').style.display = 'block';
+  socket.emit('join_game', { playerName: storedName, playerId: storedId });
+  document.getElementById('nameEditInput').value = storedName;
+} else if(storedName){
+  document.getElementById('nameInput').value = storedName;
+  document.getElementById('nameEditInput').value = storedName;
+}
 let gameState = null;
 let subStep = null;
 let selectedOption = null;
@@ -1135,9 +1161,12 @@ socket.on('disconnect', () => {
 socket.on('player_joined', data => {
   if(!playerId && data.player){
     playerId = data.player.id;
+    localStorage.setItem('playerId', playerId);
+    localStorage.setItem('playerName', data.player.name);
     document.getElementById('joinSection').style.display='none';
     document.getElementById('views').style.display='block';
     updateAvatarUI(data.player.avatar);
+    document.getElementById('nameEditInput').value = data.player.name;
   }
   if(data.gameState){
     gameState = data.gameState;
@@ -1145,13 +1174,28 @@ socket.on('player_joined', data => {
   }
 });
 
-socket.on('player_reconnected', d => { if(d.playerId === playerId) socket.emit('request_game_state'); });
+socket.on('player_reconnected', d => {
+  if(d.success){
+    playerId = d.playerId;
+    localStorage.setItem('playerId', playerId);
+    if(d.playerName) localStorage.setItem('playerName', d.playerName);
+    document.getElementById('joinSection').style.display='none';
+    document.getElementById('views').style.display='block';
+    if(d.playerName) document.getElementById('nameEditInput').value = d.playerName;
+    if(d.gameState){ gameState = d.gameState; render(); }
+  } else if(d.playerId === playerId){
+    socket.emit('request_game_state');
+  }
+});
 
 socket.on('game_state_update', d => {
   gameState=d;
   if(playerId){
     const me = (d.players||[]).find(p=>p.id===playerId);
-    if(me) updateAvatarUI(me.avatar);
+    if(me){
+      updateAvatarUI(me.avatar);
+      document.getElementById('nameEditInput').value = me.name;
+    }
   }
   render();
 });
@@ -1253,12 +1297,22 @@ document.getElementById('avatarBtn').onclick = () => {
   document.getElementById('customEmojiPicker').style.display = 'none';
 };
 
+document.getElementById('nameBtn').onclick = () => {
+  const newName = document.getElementById('nameEditInput').value.trim()
+  if(newName){
+    socket.emit('update_name', { name: newName })
+    localStorage.setItem('playerName', newName)
+  }
+};
+
 function render(){
   if(!gameState) return;
   
   const editingAllowed = gameState.state === 'lobby';
   document.getElementById('editAvatarBtn').disabled = !editingAllowed;
   document.getElementById('avatarBtn').disabled = !editingAllowed;
+  document.getElementById('nameBtn').disabled = !editingAllowed;
+  document.getElementById('nameEditInput').disabled = !editingAllowed;
   
   if(!editingAllowed){
     editingAvatar = false;
@@ -1400,8 +1454,9 @@ function renderScoreboard(data){
       <tr>
         <th>Rank</th>
         <th>Player</th>
-        <th>Points</th>
+        <th>Last Lie</th>
         <th>Players Fooled</th>
+        <th>Score</th>
       </tr>
     </thead>
     <tbody></tbody>
@@ -1420,8 +1475,9 @@ function renderScoreboard(data){
     row.innerHTML=`
       <td>${rankDisplay}</td>
       <td><strong>${p.name}</strong></td>
-      <td>${p.points}</td>
+      <td>${p.lastLie || ''}</td>
       <td>${p.playersFooled}</td>
+      <td>${p.points}</td>
     `;
     tbody.appendChild(row);
   });

@@ -16,6 +16,9 @@ class Player {
     this.likes = [];
     this.hasSubmittedLie = false;
     this.hasSelectedOption = false;
+
+    // Track how many players this player's last lie fooled
+    this.playersFooledLastQuestion = 0;
     
     // Round tracking
     this.roundStats = {
@@ -78,6 +81,7 @@ class Player {
     this.likes = [];
     this.hasSubmittedLie = false;
     this.hasSelectedOption = false;
+    this.playersFooledLastQuestion = 0;
   }
 
   resetForNewGame() {
@@ -115,7 +119,7 @@ class Player {
       avatar: this.avatar,
       lastLie: this.roundStats.liesSubmitted[this.roundStats.liesSubmitted.length - 1] || null,
       likesReceived: this.roundStats.likesReceived,
-      playersFooled: this.roundStats.playersFooled
+      playersFooled: this.playersFooledLastQuestion
     };
   }
 }

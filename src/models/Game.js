@@ -154,6 +154,36 @@ class Game {
     return { success: true };
   }
 
+  updatePlayerName(playerId, newName) {
+    if (this.state !== GAME_STATES.LOBBY) {
+      return { success: false, error: 'Cannot change name after game start' };
+    }
+
+    const player = this.players.get(playerId);
+    if (!player) {
+      return { success: false, error: 'Player not found' };
+    }
+
+    for (const p of this.players.values()) {
+      if (p.name === newName && p.id !== playerId) {
+        return { success: false, error: 'Name already taken' };
+      }
+    }
+
+    const oldName = player.name;
+    player.name = newName;
+
+    this.broadcastToAll(SOCKET_EVENTS.PLAYER_NAME_UPDATED, {
+      playerId,
+      name: newName
+    });
+
+    console.log(`📝 [PLAYER ACTION] ${oldName} changed name to ${newName}`);
+
+    this.broadcastGameStateAndSubStep();
+    return { success: true };
+  }
+
   // Game Control Methods
   startGame() {
     if (this.state !== GAME_STATES.LOBBY) {
@@ -616,6 +646,7 @@ class Game {
       const foolPoints = votesReceived * pointMultiplier.FOOL_PLAYER;
       player.addPoints(foolPoints);
       player.roundStats.playersFooled += votesReceived;
+      player.playersFooledLastQuestion = votesReceived;
       
       if (foolPoints > 0) {
         console.log(`🎯 [SCORING] ${player.name} fooled ${votesReceived} players (+${foolPoints} points)`);
