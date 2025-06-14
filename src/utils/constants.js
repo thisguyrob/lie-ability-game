@@ -58,6 +58,7 @@ const SOCKET_EVENTS = {
   SELECT_OPTION: 'select_option',
   LIKE_LIE: 'like_lie',
   UPDATE_AVATAR: 'update_avatar',
+  UPDATE_NAME: 'update_name',
   REQUEST_GAME_STATE: 'request_game_state',
   CHANGE_QUESTION_PACK: 'change_question_pack',
   
@@ -77,6 +78,7 @@ const SOCKET_EVENTS = {
   ERROR: 'error',
   TIMER_UPDATE: 'timer_update',
   PLAYER_AVATAR_UPDATED: 'player_avatar_updated',
+  PLAYER_NAME_UPDATED: 'player_name_updated',
   HOST_SUB_STEP_INFO: 'host_sub_step_info',
   AVAILABLE_QUESTION_PACKS: 'available_question_packs'
 };

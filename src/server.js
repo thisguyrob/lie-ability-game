@@ -283,6 +283,25 @@ io.on('connection', (socket) => {
     }
   });
 
+  // Handle name updates
+  socket.on(SOCKET_EVENTS.UPDATE_NAME, (data) => {
+    try {
+      const playerId = getPlayerIdBySocketId(socket.id)
+      if (!playerId) {
+        socket.emit(SOCKET_EVENTS.ERROR, { message: 'Player not found' })
+        return
+      }
+
+      const result = game.updatePlayerName(playerId, data.name)
+      if (!result.success) {
+        socket.emit(SOCKET_EVENTS.ERROR, { message: result.error })
+      }
+    } catch (error) {
+      console.error('Error in UPDATE_NAME:', error)
+      socket.emit(SOCKET_EVENTS.ERROR, { message: 'Failed to update name' })
+    }
+  })
+
   // Handle game state request
   socket.on(SOCKET_EVENTS.REQUEST_GAME_STATE, () => {
     try {
