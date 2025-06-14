@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Lie-Ability - Player</title>
+  <script src="/socket.io/socket.io.js"></script>
+  <style>
+    body{font-family:sans-serif;padding:20px;}
+    #options button{display:block;margin:5px 0;}
+  </style>
+</head>
+<body>
+  <h1>Player Controller</h1>
+  <div id="connection">Connecting...</div>
+  <div id="joinSection">
+    <input id="nameInput" placeholder="Name">
+    <button id="joinBtn">Join</button>
+  </div>
+  <div id="game" style="display:none;">
+    <div id="phase"></div>
+    <div id="question"></div>
+    <div id="lieSection" style="display:none;">
+      <input id="lieInput" placeholder="Enter your lie">
+      <button id="autoLie">Auto Lie</button>
+      <button id="submitLie">Submit</button>
+      <div id="lieStatus"></div>
+    </div>
+    <div id="options" style="display:none;"></div>
+    <div id="voteStatus"></div>
+    <div id="likeSection" style="display:none;">
+      <button id="likeBtn">Like Selected Lie</button>
+    </div>
+    <div id="timer"></div>
+  </div>
+  <pre id="log"></pre>
+
+<script>
+const socket = io();
+let playerId = null;
+let currentOptions = [];
+let selectedOption = null;
+
+function log(msg){document.getElementById('log').textContent += msg+'\n';}
+
+socket.on('connect', ()=>{
+  document.getElementById('connection').textContent = 'Connected';
+});
+
+socket.on('player_joined', data => {
+  if(!playerId && data.player){
+    playerId = data.player.id;
+    document.getElementById('joinSection').style.display='none';
+    document.getElementById('game').style.display='block';
+  }
+  log(`${data.player.name} joined`);
+});
+
+socket.on('player_reconnected', d=>{
+  if(d.playerId === playerId){
+    socket.emit('request_game_state');
+  }
+});
+
+socket.on('game_state_update', data => { updateGame(data); });
+socket.on('sub_step_info', info => { updateSubStep(info); });
+
+socket.on('lie_submitted', ()=>{
+  document.getElementById('lieStatus').textContent='Lie submitted!';
+});
+
+socket.on('option_selected', ()=>{
+  document.getElementById('voteStatus').textContent='Vote submitted!';
+});
+
+socket.on('timer_update', data => {
+  document.getElementById('timer').textContent='⏱ '+data.secondsRemaining+'s';
+});
+
+socket.on('lie_liked', ()=>{
+  document.getElementById('likeSection').style.display='none';
+});
+
+socket.on('error', data => { log('Error: '+data.message); });
+
+document.getElementById('joinBtn').onclick = () => {
+  const name = document.getElementById('nameInput').value.trim();
+  if(name){
+    socket.emit('join_game',{playerName:name});
+  }
+};
+
+document.getElementById('submitLie').onclick = () => {
+  const lie = document.getElementById('lieInput').value.trim();
+  if(lie){
+    socket.emit('submit_lie',{lie});
+  }
+};
+
+document.getElementById('autoLie').onclick = () => { socket.emit('auto_lie'); };
+
+function updateGame(data){
+  document.getElementById('phase').textContent='Phase: '+data.state;
+  if(data.currentQuestionData){
+    document.getElementById('question').textContent=data.currentQuestionData.question;
+  }
+}
+
+function updateSubStep(info){
+  if(info.state==='lie_submission'){
+    document.getElementById('lieSection').style.display='block';
+  }else{
+    document.getElementById('lieSection').style.display='none';
+  }
+
+  if(info.state==='option_selection' && info.options){
+    currentOptions = info.options;
+    const container = document.getElementById('options');
+    container.innerHTML='';
+    info.options.forEach(opt=>{
+      const btn=document.createElement('button');
+      btn.textContent=opt.text;
+      btn.onclick=()=>{
+        selectedOption=opt;
+        socket.emit('select_option',{optionId:opt.id});
+        document.getElementById('voteStatus').textContent='Voted for '+opt.text;
+      };
+      container.appendChild(btn);
+    });
+    container.style.display='block';
+    document.getElementById('likeSection').style.display='block';
+  }else{
+    document.getElementById('options').style.display='none';
+    document.getElementById('likeSection').style.display='none';
+  }
+}
+
+document.getElementById('likeBtn').onclick = () => {
+  if(selectedOption && selectedOption.submittedById){
+    socket.emit('like_lie',{likedPlayerId:selectedOption.submittedById});
+  }
+};
+</script>
+</body>
+</html>

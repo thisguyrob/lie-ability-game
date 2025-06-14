@@ -390,6 +390,15 @@ app.get('/tests/debug-interface.html', (req, res) => {
   res.sendFile(path.join(__dirname, '../tests/debug-interface.html'));
 });
 
+// Routes for lightweight demo front-end
+app.get('/host', (req, res) => {
+  res.sendFile(path.join(__dirname, '../public/host.html'));
+});
+
+app.get('/player', (req, res) => {
+  res.sendFile(path.join(__dirname, '../public/player.html'));
+});
+
 // Serve static files for frontend (when we build it)
 app.use(express.static(path.join(__dirname, '../public')));
 

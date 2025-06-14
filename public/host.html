@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Lie-Ability - Host</title>
+  <script src="/socket.io/socket.io.js"></script>
+  <style>
+    body { font-family: sans-serif; padding: 20px; }
+    #log { background:#eee; padding:10px; white-space:pre-line; }
+  </style>
+</head>
+<body>
+  <h1>Lie-Ability - Host Screen</h1>
+  <div id="status">Connecting...</div>
+  <div id="phase"></div>
+  <div id="question"></div>
+  <div id="options"></div>
+  <div id="timer"></div>
+  <pre id="log"></pre>
+
+<script>
+const socket = io();
+const logEl = document.getElementById('log');
+const phaseEl = document.getElementById('phase');
+const questionEl = document.getElementById('question');
+const optionsEl = document.getElementById('options');
+const timerEl = document.getElementById('timer');
+const statusEl = document.getElementById('status');
+
+function log(msg){ logEl.textContent += msg + '\n'; }
+
+socket.on('connect', () => {
+  statusEl.textContent = 'Connected';
+  socket.emit('request_game_state');
+});
+
+socket.on('game_state_update', data => {
+  updateState(data);
+});
+
+socket.on('sub_step_info', info => {
+  updateSubStep(info);
+});
+
+socket.on('timer_update', data => {
+  timerEl.textContent = '⏱ ' + data.secondsRemaining + 's';
+});
+
+function updateState(data){
+  phaseEl.textContent = 'Phase: ' + data.state;
+  if(data.currentQuestionData){
+    questionEl.textContent = data.currentQuestionData.category + ': ' + data.currentQuestionData.question;
+  } else {
+    questionEl.textContent = '';
+  }
+  log('Game state -> ' + data.state);
+}
+
+function updateSubStep(info){
+  if(info.options){
+    optionsEl.innerHTML = info.options.map(o => '<div>' + o.text + '</div>').join('');
+  } else {
+    optionsEl.innerHTML = '';
+  }
+}
+</script>
+</body>
+</html>
