@@ -201,11 +201,14 @@ class QuestionService {
    * @returns {Array} Shuffled array with position tracking
    */
   shuffleOptions(options) {
-    const shuffled = options.map((option, originalIndex) => ({
-      text: option,
-      originalIndex,
-      id: Math.random().toString(36).substr(2, 9) // Unique ID for frontend
-    }));
+    const shuffled = options.map((option, originalIndex) => {
+      const opt = typeof option === 'string' ? { text: option } : { ...option };
+      return {
+        ...opt,
+        originalIndex,
+        id: Math.random().toString(36).substr(2, 9) // Unique ID for frontend
+      };
+    });
     
     // Fisher-Yates shuffle
     for (let i = shuffled.length - 1; i > 0; i--) {
