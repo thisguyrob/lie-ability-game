@@ -264,6 +264,25 @@ io.on('connection', (socket) => {
     }
   });
 
+  // Handle avatar updates
+  socket.on(SOCKET_EVENTS.UPDATE_AVATAR, (data) => {
+    try {
+      const playerId = getPlayerIdBySocketId(socket.id);
+      if (!playerId) {
+        socket.emit(SOCKET_EVENTS.ERROR, { message: 'Player not found' });
+        return;
+      }
+
+      const result = game.updatePlayerAvatar(playerId, data.emoji, data.color);
+      if (!result.success) {
+        socket.emit(SOCKET_EVENTS.ERROR, { message: result.error });
+      }
+    } catch (error) {
+      console.error('Error in UPDATE_AVATAR:', error);
+      socket.emit(SOCKET_EVENTS.ERROR, { message: 'Failed to update avatar' });
+    }
+  });
+
   // Handle game state request
   socket.on(SOCKET_EVENTS.REQUEST_GAME_STATE, () => {
     try {
@@ -276,13 +295,7 @@ io.on('connection', (socket) => {
       if (playerId) {
         socket.emit('sub_step_info', game.getSubStepInfo(playerId));
       } else {
-        // Send basic sub-step info for non-joined users
-        socket.emit('sub_step_info', { 
-          state: game.state, 
-          isSelector: false, 
-          hasSubmittedLie: false, 
-          hasSelectedOption: false 
-        });
+        socket.emit(SOCKET_EVENTS.HOST_SUB_STEP_INFO, game.getSubStepInfo(null));
       }
     } catch (error) {
       console.error('Error in REQUEST_GAME_STATE:', error);
@@ -388,6 +401,15 @@ app.get('/api/question-packs', async (req, res) => {
 // Serve debug interface from tests folder
 app.get('/tests/debug-interface.html', (req, res) => {
   res.sendFile(path.join(__dirname, '../tests/debug-interface.html'));
+});
+
+// Routes for lightweight demo front-end
+app.get('/host', (req, res) => {
+  res.sendFile(path.join(__dirname, '../public/host.html'));
+});
+
+app.get('/player', (req, res) => {
+  res.sendFile(path.join(__dirname, '../public/player.html'));
 });
 
 // Serve static files for frontend (when we build it)
