@@ -1454,9 +1454,9 @@ function renderScoreboard(data){
       <tr>
         <th>Rank</th>
         <th>Player</th>
-        <th>Points</th>
         <th>Last Lie</th>
         <th>Players Fooled</th>
+        <th>Score</th>
       </tr>
     </thead>
     <tbody></tbody>
@@ -1475,9 +1475,9 @@ function renderScoreboard(data){
     row.innerHTML=`
       <td>${rankDisplay}</td>
       <td><strong>${p.name}</strong></td>
-      <td>${p.points}</td>
       <td>${p.lastLie || ''}</td>
       <td>${p.playersFooled}</td>
+      <td>${p.points}</td>
     `;
     tbody.appendChild(row);
   });
