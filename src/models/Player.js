@@ -21,7 +21,7 @@ class Player {
     this.roundStats = {
       liesSubmitted: [],
       correctGuesses: 0,
-      playersTooled: 0,
+      playersFooled: 0,
       likesReceived: 0
     };
   }
@@ -85,7 +85,7 @@ class Player {
     this.roundStats = {
       liesSubmitted: [],
       correctGuesses: 0,
-      playersTooled: 0,
+      playersFooled: 0,
       likesReceived: 0
     };
     this.resetForNewQuestion();
@@ -114,7 +114,8 @@ class Player {
       points: this.points,
       avatar: this.avatar,
       lastLie: this.roundStats.liesSubmitted[this.roundStats.liesSubmitted.length - 1] || null,
-      likesReceived: this.roundStats.likesReceived
+      likesReceived: this.roundStats.likesReceived,
+      playersFooled: this.roundStats.playersFooled
     };
   }
 }

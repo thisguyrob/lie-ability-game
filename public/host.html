@@ -198,10 +198,10 @@ function renderReveal(data){
 function renderScoreboard(data){
   show('score');
   const table=document.getElementById('scoreTable');
-  table.innerHTML='<tr><th>Rank</th><th>Name</th><th>Pts</th></tr>';
+  table.innerHTML='<tr><th>Rank</th><th>Name</th><th>Pts</th><th>Fooled</th></tr>';
   data.players.forEach(p => {
     const row=document.createElement('tr');
-    row.innerHTML = `<td>${p.rank}</td><td>${p.name}</td><td>${p.points}</td>`;
+    row.innerHTML = `<td>${p.rank}</td><td>${p.name}</td><td>${p.points}</td><td>${p.playersFooled}</td>`;
     table.appendChild(row);
   });
 }

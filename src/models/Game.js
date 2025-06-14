@@ -615,7 +615,7 @@ class Game {
 
       const foolPoints = votesReceived * pointMultiplier.FOOL_PLAYER;
       player.addPoints(foolPoints);
-      player.roundStats.playersTooled += votesReceived;
+      player.roundStats.playersFooled += votesReceived;
       
       if (foolPoints > 0) {
         console.log(`🎯 [SCORING] ${player.name} fooled ${votesReceived} players (+${foolPoints} points)`);
