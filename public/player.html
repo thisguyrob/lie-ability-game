@@ -24,11 +24,14 @@
   <div id="views" style="display:none;">
     <div id="lobbyView" class="view">
       <p>Waiting for game start...</p>
-      <div>
+      <div id="avatarSection">
         <span id="avatarPreview" class="player-avatar"></span>
-        <input id="emojiInput" placeholder="😊" style="width:3em;">
-        <input id="colorInput" type="color">
-        <button id="avatarBtn">Update Avatar</button>
+        <button id="editAvatarBtn">Edit Avatar</button>
+        <div id="avatarEdit" style="display:none; margin-top:5px;">
+          <input id="emojiInput" placeholder="😊" style="width:3em;">
+          <input id="colorInput" type="color">
+          <button id="avatarBtn">Update</button>
+        </div>
       </div>
     </div>
     <div id="categoryView" class="view">
@@ -67,6 +70,7 @@ let playerId = null;
 let gameState = null;
 let subStep = null;
 let selectedOption = null;
+let editingAvatar = false;
 
 const views = {
   lobby: document.getElementById('lobbyView'),
@@ -118,6 +122,8 @@ socket.on('lie_liked', () => { document.getElementById('likeBtn').style.display=
 socket.on('player_avatar_updated', d => {
   if(d.playerId === playerId) updateAvatarUI(d.avatar);
   socket.emit('request_game_state');
+  editingAvatar = false;
+  document.getElementById('avatarEdit').style.display = 'none';
 });
 socket.on('error', data => log('Error: '+data.message));
 
@@ -139,15 +145,28 @@ document.getElementById('likeBtn').onclick = () => {
   }
 };
 
+document.getElementById('editAvatarBtn').onclick = () => {
+  editingAvatar = !editingAvatar;
+  document.getElementById('avatarEdit').style.display = editingAvatar ? 'block' : 'none';
+};
+
 document.getElementById('avatarBtn').onclick = () => {
   const emoji = document.getElementById('emojiInput').value.trim() || '😀';
   const color = document.getElementById('colorInput').value || '#ffffff';
   socket.emit('update_avatar',{emoji,color});
+  editingAvatar = false;
+  document.getElementById('avatarEdit').style.display = 'none';
 };
 
 function render(){
   if(!gameState) return;
-  document.getElementById('avatarBtn').disabled = gameState.state !== 'lobby';
+  const editingAllowed = gameState.state === 'lobby';
+  document.getElementById('editAvatarBtn').disabled = !editingAllowed;
+  document.getElementById('avatarBtn').disabled = !editingAllowed;
+  if(!editingAllowed){
+    editingAvatar = false;
+    document.getElementById('avatarEdit').style.display = 'none';
+  }
   switch(gameState.state){
     case 'lobby':
       show('lobby');
