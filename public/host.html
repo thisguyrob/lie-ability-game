@@ -28,6 +28,7 @@
       <div id="qrCode"></div>
       <ul id="playerList"></ul>
     </div>
+    <button id="startBtn" disabled>Start Game</button>
   </div>
   <div id="categoryView" class="view">
     <h3 id="categoryPrompt"></h3>
@@ -63,6 +64,8 @@ const sections = {
   reveal: document.getElementById('revealView'),
   score: document.getElementById('scoreboardView')
 };
+const startBtn = document.getElementById('startBtn');
+startBtn.onclick = () => socket.emit('start_game');
 
 function generateQRCode(){
   const url = window.location.origin + '/player';
@@ -99,6 +102,7 @@ function renderLobby(){
     li.appendChild(name);
     list.appendChild(li);
   });
+  startBtn.disabled = (gameState.players||[]).length < 2;
 }
 
 function hideAll(){ Object.values(sections).forEach(s => s.style.display='none'); }
@@ -111,6 +115,8 @@ socket.on('sub_step_info', d => { subStep = d; render(); });
 socket.on('timer_update', d => { document.getElementById('timer').textContent = '⏱ '+d.secondsRemaining+'s'; });
 socket.on('truth_reveal_start', d => renderReveal(d));
 socket.on('scoreboard_update', d => renderScoreboard(d));
+socket.on('player_joined', () => socket.emit('request_game_state'));
+socket.on('player_left', () => socket.emit('request_game_state'));
 
 function render(){
   if(!gameState) return;

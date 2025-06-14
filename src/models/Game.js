@@ -849,11 +849,9 @@ class Game {
   }
 
   broadcastToAll(event, data) {
-    for (const player of this.players.values()) {
-      if (player.socketId) {
-        this.io.to(player.socketId).emit(event, data);
-      }
-    }
+    // Emit to every connected socket so that observer clients like the host
+    // screen receive updates without needing to join as a player.
+    this.io.emit(event, data);
   }
 
   getRandomLieForCurrentQuestion() {
