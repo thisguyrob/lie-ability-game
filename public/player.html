@@ -153,6 +153,8 @@ document.getElementById('editAvatarBtn').onclick = () => {
 document.getElementById('avatarBtn').onclick = () => {
   const emoji = document.getElementById('emojiInput').value.trim() || '😀';
   const color = document.getElementById('colorInput').value || '#ffffff';
+  // Optimistically update the preview so players immediately see their choice
+  updateAvatarUI({ emoji, color });
   socket.emit('update_avatar',{emoji,color});
   editingAvatar = false;
   document.getElementById('avatarEdit').style.display = 'none';
