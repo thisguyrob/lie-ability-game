@@ -897,6 +897,15 @@
 <script>
 const socket = io();
 let playerId = null;
+// Attempt automatic reconnection using stored info
+const storedId = localStorage.getItem('playerId');
+const storedName = localStorage.getItem('playerName');
+if(storedId && storedName){
+  playerId = storedId;
+  socket.emit('join_game',{playerName: storedName, playerId: storedId});
+} else if(storedName){
+  document.getElementById('nameInput').value = storedName;
+}
 let gameState = null;
 let subStep = null;
 let selectedOption = null;
@@ -1135,6 +1144,8 @@ socket.on('disconnect', () => {
 socket.on('player_joined', data => {
   if(!playerId && data.player){
     playerId = data.player.id;
+    localStorage.setItem('playerId', playerId);
+    localStorage.setItem('playerName', data.player.name);
     document.getElementById('joinSection').style.display='none';
     document.getElementById('views').style.display='block';
     updateAvatarUI(data.player.avatar);
@@ -1145,7 +1156,18 @@ socket.on('player_joined', data => {
   }
 });
 
-socket.on('player_reconnected', d => { if(d.playerId === playerId) socket.emit('request_game_state'); });
+socket.on('player_reconnected', d => {
+  if(d.success){
+    playerId = d.playerId;
+    localStorage.setItem('playerId', playerId);
+    if(d.playerName) localStorage.setItem('playerName', d.playerName);
+    document.getElementById('joinSection').style.display='none';
+    document.getElementById('views').style.display='block';
+    if(d.gameState){ gameState = d.gameState; render(); }
+  } else if(d.playerId === playerId){
+    socket.emit('request_game_state');
+  }
+});
 
 socket.on('game_state_update', d => {
   gameState=d;
