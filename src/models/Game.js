@@ -31,6 +31,8 @@ class Game {
 
     // Track which questions have been asked to avoid repeats
     this.askedQuestions = new Set();
+    // Track which lies have been used for each question
+    this.usedLiesByQuestion = new Map();
     
     // Don't call init() here - it should be called explicitly
   }
@@ -145,6 +147,7 @@ class Game {
     this.currentRound = 1;
     this.currentQuestion = 1;
     this.askedQuestions.clear();
+    this.usedLiesByQuestion.clear();
 
     // Reset all players for new game
     for (const player of this.players.values()) {
@@ -363,7 +366,7 @@ class Game {
     // Auto-submit lies for players who haven't submitted
     for (const player of connectedPlayers) {
       if (!player.hasSubmittedLie) {
-        const autoLie = this.questionService.getRandomLieFromQuestion(this.currentQuestionData);
+        const autoLie = this.getRandomLieForCurrentQuestion();
         player.submitLie(autoLie);
         this.playerLies.set(player.id, autoLie);
         console.log(`🤖 [GAME STATE] Auto-submitted lie for ${player.name}: "${autoLie}"`);
@@ -392,22 +395,20 @@ class Game {
 
     // Pad with extra lies from the question to hide duplicates
     const playersCount = Array.from(this.players.values()).filter(p => p.status === 'connected').length;
-    const usedTexts = new Set([...lieMap.keys(), this.currentQuestionData.answer.trim().toLowerCase()]);
-    const fillerLies = [...this.currentQuestionData.lies];
+    const usedTexts = new Set([
+      ...lieMap.keys(),
+      this.currentQuestionData.answer.trim().toLowerCase()
+    ]);
 
-    // simple shuffle of filler lies
-    for (let i = fillerLies.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [fillerLies[i], fillerLies[j]] = [fillerLies[j], fillerLies[i]];
-    }
-
-    for (const lie of fillerLies) {
-      if (uniqueOptions.length >= playersCount) break;
+    let attempts = this.currentQuestionData.lies.length * 2;
+    while (uniqueOptions.length < playersCount && attempts > 0) {
+      const lie = this.getRandomLieForCurrentQuestion();
       const key = lie.trim().toLowerCase();
       if (!usedTexts.has(key)) {
         usedTexts.add(key);
         uniqueOptions.push({ text: lie, type: 'lie', submittedBy: null });
       }
+      attempts--;
     }
 
     // Add truth
@@ -767,6 +768,7 @@ class Game {
     this.currentQuestion = 1;
     this.currentQuestionData = null;
     this.askedQuestions.clear();
+    this.usedLiesByQuestion.clear();
     
     console.log(`🔄 [GAME STATE] Returned to lobby - ready for new game`);
     
@@ -858,7 +860,15 @@ class Game {
     if (!this.currentQuestionData) {
       return null;
     }
-    return this.questionService.getRandomLieFromQuestion(this.currentQuestionData);
+    const key = this.currentQuestionData.question;
+    let used = this.usedLiesByQuestion.get(key);
+    if (!used) {
+      used = new Set();
+      this.usedLiesByQuestion.set(key, used);
+    }
+    const lie = this.questionService.getRandomLieFromQuestion(this.currentQuestionData, used);
+    used.add(lie);
+    return lie;
   }
 
   changeQuestionPack(packName) {

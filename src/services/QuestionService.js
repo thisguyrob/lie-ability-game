@@ -214,12 +214,15 @@ class QuestionService {
    * @param {Object} question - The question object
    * @returns {string} A random lie
    */
-  getRandomLieFromQuestion(question) {
+  getRandomLieFromQuestion(question, usedLies = new Set()) {
     if (!question.lies || question.lies.length === 0) {
       return "Mystery answer"; // Fallback
     }
-    
-    return question.lies[Math.floor(Math.random() * question.lies.length)];
+
+    const available = question.lies.filter(l => !usedLies.has(l));
+    const pool = available.length > 0 ? available : question.lies;
+
+    return pool[Math.floor(Math.random() * pool.length)];
   }
 
   /**
