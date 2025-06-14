@@ -434,7 +434,6 @@ class Game {
     console.log(`🎯 [GAME STATE] Truth is at index ${this.truthIndex}: "${this.currentQuestionData.answer}"`);
 
     this.broadcastToAll(SOCKET_EVENTS.OPTION_SELECTION_START, {
-      options: this.shuffledOptions.map(opt => ({ id: opt.id, text: opt.text })),
       timeLimit: TIMERS.OPTION_SELECTION / 1000
     });
 
@@ -467,6 +466,10 @@ class Game {
     const option = this.shuffledOptions.find(opt => opt.id === optionId);
     if (!option) {
       return { success: false, error: 'Invalid option' };
+    }
+
+    if (option.submittedBy && option.submittedBy.includes(playerId)) {
+      return { success: false, error: 'Cannot select your own lie' };
     }
 
     const optionIndex = this.shuffledOptions.indexOf(option);
@@ -836,9 +839,13 @@ class Game {
           timeRemaining: Math.ceil(this.timerService.getRemainingTime('lie_submission') / 1000)
         };
       case GAME_STATES.OPTION_SELECTION:
+        let options = this.shuffledOptions?.map(opt => ({ id: opt.id, text: opt.text, submittedBy: opt.submittedBy }));
+        if (playerId) {
+          options = options.filter(opt => !opt.submittedBy || !opt.submittedBy.includes(playerId));
+        }
         return {
           ...baseInfo,
-          options: this.shuffledOptions?.map(opt => ({ id: opt.id, text: opt.text })),
+          options: options.map(o => ({ id: o.id, text: o.text })),
           timeRemaining: Math.ceil(this.timerService.getRemainingTime('option_selection') / 1000)
         };
       default:
