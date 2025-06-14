@@ -28,6 +28,9 @@ class Game {
     this.playerLikes = new Map(); // playerId -> array of liked playerIds
     this.shuffledOptions = []; // All options (lies + truth) in random order
     this.truthIndex = -1; // Index of truth in shuffledOptions
+
+    // Track which questions have been asked to avoid repeats
+    this.askedQuestions = new Set();
     
     // Don't call init() here - it should be called explicitly
   }
@@ -141,6 +144,7 @@ class Game {
     this.state = GAME_STATES.CATEGORY_SELECTION;
     this.currentRound = 1;
     this.currentQuestion = 1;
+    this.askedQuestions.clear();
 
     // Reset all players for new game
     for (const player of this.players.values()) {
@@ -179,13 +183,14 @@ class Game {
     // For final round, skip category selection
     if (this.currentRound === GAME_CONFIG.FINAL_ROUND) {
       console.log(`🏁 [GAME STATE] Final round - auto-selecting question`);
-      this.currentQuestionData = this.questionService.getRandomFinalRoundQuestion();
+      this.currentQuestionData = this.questionService.getRandomFinalRoundQuestion(this.askedQuestions);
+      this.askedQuestions.add(this.currentQuestionData.question);
       this.startQuestionReading();
       return;
     }
 
     // Get category options and select random player to choose
-    this.categoryOptions = this.questionService.getRandomCategories(false);
+    this.categoryOptions = this.questionService.getRandomCategories(false, this.askedQuestions);
     const connectedPlayers = Array.from(this.players.values()).filter(p => p.status === 'connected');
     this.categorySelector = connectedPlayers[Math.floor(Math.random() * connectedPlayers.length)].id;
     const selector = this.players.get(this.categorySelector);
@@ -239,6 +244,7 @@ class Game {
 
     this.timerService.cancelTimer('category_selection');
     this.currentQuestionData = selectedOption.question;
+    this.askedQuestions.add(this.currentQuestionData.question);
     this.startQuestionReading();
     
     return { success: true };
@@ -249,6 +255,7 @@ class Game {
       const randomOption = this.categoryOptions[Math.floor(Math.random() * this.categoryOptions.length)];
       console.log(`🎲 [GAME STATE] Auto-selected category: "${randomOption.category}"`);
       this.currentQuestionData = randomOption.question;
+      this.askedQuestions.add(this.currentQuestionData.question);
       this.startQuestionReading();
     }
   }
@@ -759,6 +766,7 @@ class Game {
     this.currentRound = 1;
     this.currentQuestion = 1;
     this.currentQuestionData = null;
+    this.askedQuestions.clear();
     
     console.log(`🔄 [GAME STATE] Returned to lobby - ready for new game`);
     

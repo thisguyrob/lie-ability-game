@@ -148,18 +148,42 @@ class QuestionService {
    * @param {boolean} isFinalRound - Whether this is for the final round
    * @returns {Array} Array of 4 category options with their questions
    */
-  getRandomCategories(isFinalRound = false) {
+  getRandomCategories(isFinalRound = false, usedQuestions = new Set()) {
     if (!this.currentPack) {
       throw new Error('No question pack selected');
     }
 
     const pack = this.questionPacks.get(this.currentPack);
     const questions = isFinalRound ? pack.final_round : pack.early_rounds;
-    
-    // Get 4 random questions and return their categories
-    const shuffled = [...questions].sort(() => 0.5 - Math.random());
-    const selected = shuffled.slice(0, 4);
-    
+
+    // Filter out questions that have already been used this game
+    const available = questions.filter(q => !usedQuestions.has(q.question));
+
+    // Shuffle to randomize selection
+    const shuffled = [...available].sort(() => 0.5 - Math.random());
+
+    const selected = [];
+    const usedCategories = new Set();
+
+    // Prefer unique categories
+    for (const q of shuffled) {
+      if (!usedCategories.has(q.category)) {
+        selected.push(q);
+        usedCategories.add(q.category);
+      }
+      if (selected.length === 4) break;
+    }
+
+    // If we still don't have enough options (e.g., not enough unique categories)
+    if (selected.length < 4) {
+      for (const q of shuffled) {
+        if (!selected.includes(q)) {
+          selected.push(q);
+        }
+        if (selected.length === 4) break;
+      }
+    }
+
     return selected.map((question, index) => ({
       id: index,
       category: question.category,
@@ -171,15 +195,18 @@ class QuestionService {
    * Get a random question from the final round
    * @returns {Object} Question object
    */
-  getRandomFinalRoundQuestion() {
+  getRandomFinalRoundQuestion(usedQuestions = new Set()) {
     if (!this.currentPack) {
       throw new Error('No question pack selected');
     }
 
     const pack = this.questionPacks.get(this.currentPack);
     const questions = pack.final_round;
-    
-    return questions[Math.floor(Math.random() * questions.length)];
+
+    const available = questions.filter(q => !usedQuestions.has(q.question));
+    const pool = available.length > 0 ? available : questions;
+
+    return pool[Math.floor(Math.random() * pool.length)];
   }
 
   /**
