@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <title>Lie-Ability - Player</title>
   <script src="/socket.io/socket.io.js"></script>
+  <script type="module" src="https://cdn.jsdelivr.net/npm/emoji-picker-element@1"></script>
   <style>
     body{font-family:sans-serif;padding:20px;}
     .view{display:none;margin:20px 0;}
@@ -30,6 +31,7 @@
         <div id="avatarEdit" style="display:none; margin-top:5px;">
           <input id="emojiInput" placeholder="😊" style="width:3em;">
           <input id="colorInput" type="color">
+          <emoji-picker id="emojiPicker" style="max-width:220px; display:none;"></emoji-picker>
           <button id="avatarBtn">Update</button>
         </div>
       </div>
@@ -81,6 +83,13 @@ const views = {
   reveal: document.getElementById('revealView'),
   score: document.getElementById('scoreboardView')
 };
+
+const emojiPickerEl = document.getElementById('emojiPicker');
+if(emojiPickerEl){
+  emojiPickerEl.addEventListener('emoji-click', e => {
+    document.getElementById('emojiInput').value = e.detail.unicode;
+  });
+}
 
 function hideAll(){ Object.values(views).forEach(v=>v.style.display='none'); }
 function show(name){ hideAll(); if(views[name]) views[name].style.display='block'; }
@@ -152,6 +161,7 @@ document.getElementById('likeBtn').onclick = () => {
 document.getElementById('editAvatarBtn').onclick = () => {
   editingAvatar = !editingAvatar;
   document.getElementById('avatarEdit').style.display = editingAvatar ? 'block' : 'none';
+  document.getElementById('emojiPicker').style.display = editingAvatar ? 'block' : 'none';
 };
 
 document.getElementById('avatarBtn').onclick = () => {
@@ -162,6 +172,7 @@ document.getElementById('avatarBtn').onclick = () => {
   socket.emit('update_avatar',{emoji,color});
   editingAvatar = false;
   document.getElementById('avatarEdit').style.display = 'none';
+  document.getElementById('emojiPicker').style.display = 'none';
 };
 
 function render(){
@@ -172,6 +183,7 @@ function render(){
   if(!editingAllowed){
     editingAvatar = false;
     document.getElementById('avatarEdit').style.display = 'none';
+    document.getElementById('emojiPicker').style.display = 'none';
   }
   switch(gameState.state){
     case 'lobby':
