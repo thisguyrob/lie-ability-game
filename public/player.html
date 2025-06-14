@@ -31,7 +31,8 @@
         <div id="avatarEdit" style="display:none; margin-top:5px;">
           <input id="emojiInput" placeholder="😊" style="width:3em;">
           <input id="colorInput" type="color">
-          <emoji-picker id="emojiPicker" style="max-width:220px; display:none;"></emoji-picker>
+          <!-- emoji picker opens below when editing -->
+          <emoji-picker id="emojiPicker" style="max-width:220px; display:none; border:1px solid #ccc; border-radius:4px;"></emoji-picker>
           <button id="avatarBtn">Update</button>
         </div>
       </div>
@@ -88,6 +89,11 @@ const emojiPickerEl = document.getElementById('emojiPicker');
 if(emojiPickerEl){
   emojiPickerEl.addEventListener('emoji-click', e => {
     document.getElementById('emojiInput').value = e.detail.unicode;
+    // immediately preview the selection
+    updateAvatarUI({
+      emoji: e.detail.unicode,
+      color: document.getElementById('colorInput').value || '#ffffff'
+    });
   });
 }
 
@@ -157,6 +163,21 @@ document.getElementById('likeBtn').onclick = () => {
     socket.emit('like_lie',{likedPlayerId:selectedOption.submittedById});
   }
 };
+
+// show picker when emoji input gains focus
+document.getElementById('emojiInput').addEventListener('focus', () => {
+  if(editingAvatar){
+    document.getElementById('emojiPicker').style.display = 'block';
+  }
+});
+
+// update preview when color changes
+document.getElementById('colorInput').addEventListener('input', e => {
+  updateAvatarUI({
+    emoji: document.getElementById('emojiInput').value || '😀',
+    color: e.target.value
+  });
+});
 
 document.getElementById('editAvatarBtn').onclick = () => {
   editingAvatar = !editingAvatar;
