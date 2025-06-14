@@ -133,6 +133,27 @@ class Game {
     return true;
   }
 
+  updatePlayerAvatar(playerId, emoji, color) {
+    if (this.state !== GAME_STATES.LOBBY) {
+      return { success: false, error: 'Cannot change avatar after game start' };
+    }
+
+    const player = this.players.get(playerId);
+    if (!player) {
+      return { success: false, error: 'Player not found' };
+    }
+
+    player.setAvatar(emoji, color);
+
+    this.broadcastToAll(SOCKET_EVENTS.PLAYER_AVATAR_UPDATED, {
+      playerId,
+      avatar: player.avatar
+    });
+
+    this.broadcastGameStateAndSubStep();
+    return { success: true };
+  }
+
   // Game Control Methods
   startGame() {
     if (this.state !== GAME_STATES.LOBBY) {

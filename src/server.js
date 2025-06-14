@@ -264,6 +264,25 @@ io.on('connection', (socket) => {
     }
   });
 
+  // Handle avatar updates
+  socket.on(SOCKET_EVENTS.UPDATE_AVATAR, (data) => {
+    try {
+      const playerId = getPlayerIdBySocketId(socket.id);
+      if (!playerId) {
+        socket.emit(SOCKET_EVENTS.ERROR, { message: 'Player not found' });
+        return;
+      }
+
+      const result = game.updatePlayerAvatar(playerId, data.emoji, data.color);
+      if (!result.success) {
+        socket.emit(SOCKET_EVENTS.ERROR, { message: result.error });
+      }
+    } catch (error) {
+      console.error('Error in UPDATE_AVATAR:', error);
+      socket.emit(SOCKET_EVENTS.ERROR, { message: 'Failed to update avatar' });
+    }
+  });
+
   // Handle game state request
   socket.on(SOCKET_EVENTS.REQUEST_GAME_STATE, () => {
     try {

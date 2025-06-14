@@ -32,6 +32,10 @@ class Player {
     return { emoji, color };
   }
 
+  setAvatar(emoji, color) {
+    this.avatar = { emoji, color };
+  }
+
   updateSocketId(newSocketId) {
     this.socketId = newSocketId;
     this.status = PLAYER_STATUS.CONNECTED;

@@ -10,6 +10,7 @@
     #options button{display:block;margin:5px 0;}
     table{border-collapse:collapse;}
     td,th{border:1px solid #ccc;padding:4px 8px;}
+    .player-avatar{width:32px;height:32px;display:inline-flex;align-items:center;justify-content:center;border-radius:4px;color:#fff;margin-right:4px;}
   </style>
 </head>
 <body>
@@ -21,7 +22,15 @@
   </div>
 
   <div id="views" style="display:none;">
-    <div id="lobbyView" class="view">Waiting for game start...</div>
+    <div id="lobbyView" class="view">
+      <p>Waiting for game start...</p>
+      <div>
+        <span id="avatarPreview" class="player-avatar"></span>
+        <input id="emojiInput" placeholder="😊" style="width:3em;">
+        <input id="colorInput" type="color">
+        <button id="avatarBtn">Update Avatar</button>
+      </div>
+    </div>
     <div id="categoryView" class="view">
       <h3 id="categoryPrompt"></h3>
       <div id="categoryButtons"></div>
@@ -73,16 +82,32 @@ function hideAll(){ Object.values(views).forEach(v=>v.style.display='none'); }
 function show(name){ hideAll(); if(views[name]) views[name].style.display='block'; }
 function log(msg){ document.getElementById('log').textContent+=msg+'\n'; }
 
+function updateAvatarUI(avatar){
+  if(!avatar) return;
+  document.getElementById('avatarPreview').textContent = avatar.emoji;
+  document.getElementById('avatarPreview').style.backgroundColor = avatar.color;
+  document.getElementById('emojiInput').value = avatar.emoji;
+  document.getElementById('colorInput').value = avatar.color;
+}
+
 socket.on('connect', () => { document.getElementById('connection').textContent = 'Connected'; });
 socket.on('player_joined', data => {
   if(!playerId && data.player){
     playerId = data.player.id;
     document.getElementById('joinSection').style.display='none';
     document.getElementById('views').style.display='block';
+    updateAvatarUI(data.player.avatar);
   }
 });
 socket.on('player_reconnected', d => { if(d.playerId === playerId) socket.emit('request_game_state'); });
-socket.on('game_state_update', d => { gameState=d; render(); });
+socket.on('game_state_update', d => {
+  gameState=d;
+  if(playerId){
+    const me = (d.players||[]).find(p=>p.id===playerId);
+    if(me) updateAvatarUI(me.avatar);
+  }
+  render();
+});
 socket.on('sub_step_info', d => { subStep=d; render(); });
 socket.on('timer_update', d => { document.getElementById('timer').textContent='⏱ '+d.secondsRemaining+'s'; });
 socket.on('lie_submitted', () => { document.getElementById('lieStatus').textContent='Lie submitted!'; });
@@ -90,6 +115,10 @@ socket.on('option_selected', () => { document.getElementById('voteStatus').textC
 socket.on('truth_reveal_start', d => renderReveal(d));
 socket.on('scoreboard_update', d => renderScoreboard(d));
 socket.on('lie_liked', () => { document.getElementById('likeBtn').style.display='none'; });
+socket.on('player_avatar_updated', d => {
+  if(d.playerId === playerId) updateAvatarUI(d.avatar);
+  socket.emit('request_game_state');
+});
 socket.on('error', data => log('Error: '+data.message));
 
 document.getElementById('joinBtn').onclick = () => {
@@ -110,8 +139,15 @@ document.getElementById('likeBtn').onclick = () => {
   }
 };
 
+document.getElementById('avatarBtn').onclick = () => {
+  const emoji = document.getElementById('emojiInput').value.trim() || '😀';
+  const color = document.getElementById('colorInput').value || '#ffffff';
+  socket.emit('update_avatar',{emoji,color});
+};
+
 function render(){
   if(!gameState) return;
+  document.getElementById('avatarBtn').disabled = gameState.state !== 'lobby';
   switch(gameState.state){
     case 'lobby':
       show('lobby');

@@ -117,6 +117,7 @@ socket.on('truth_reveal_start', d => renderReveal(d));
 socket.on('scoreboard_update', d => renderScoreboard(d));
 socket.on('player_joined', () => socket.emit('request_game_state'));
 socket.on('player_left', () => socket.emit('request_game_state'));
+socket.on('player_avatar_updated', () => socket.emit('request_game_state'));
 
 function render(){
   if(!gameState) return;
