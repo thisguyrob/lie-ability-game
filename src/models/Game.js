@@ -846,6 +846,13 @@ class Game {
     }
   }
 
+  getRandomLieForCurrentQuestion() {
+    if (!this.currentQuestionData) {
+      return null;
+    }
+    return this.questionService.getRandomLieFromQuestion(this.currentQuestionData);
+  }
+
   changeQuestionPack(packName) {
     if (this.state !== GAME_STATES.LOBBY) {
       return { success: false, error: 'Can only change question pack in lobby' };
