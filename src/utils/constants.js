@@ -75,6 +75,7 @@ const SOCKET_EVENTS = {
   GAME_ENDED: 'game_ended',
   ERROR: 'error',
   TIMER_UPDATE: 'timer_update',
+  HOST_SUB_STEP_INFO: 'host_sub_step_info',
   AVAILABLE_QUESTION_PACKS: 'available_question_packs'
 };
 

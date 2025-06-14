@@ -111,7 +111,7 @@ function log(msg){ document.getElementById('log').textContent += msg+'\n'; }
 
 socket.on('connect', () => { socket.emit('request_game_state'); });
 socket.on('game_state_update', d => { gameState = d; render(); });
-socket.on('sub_step_info', d => { subStep = d; render(); });
+socket.on('host_sub_step_info', d => { subStep = d; render(); });
 socket.on('timer_update', d => { document.getElementById('timer').textContent = '⏱ '+d.secondsRemaining+'s'; });
 socket.on('truth_reveal_start', d => renderReveal(d));
 socket.on('scoreboard_update', d => renderScoreboard(d));

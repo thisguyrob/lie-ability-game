@@ -215,11 +215,13 @@ class Game {
         console.log(`⏰ [TIMER] Category selection timer expired - auto-selecting`);
         this.autoSelectCategory();
       },
-      (secondsRemaining) => this.broadcastToAll(SOCKET_EVENTS.TIMER_UPDATE, { 
-        type: 'category_selection', 
-        secondsRemaining 
+      (secondsRemaining) => this.broadcastToAll(SOCKET_EVENTS.TIMER_UPDATE, {
+        type: 'category_selection',
+        secondsRemaining
       })
     );
+
+    this.broadcastGameStateAndSubStep();
   }
 
   selectCategory(playerId, categoryId) {
@@ -281,11 +283,13 @@ class Game {
         console.log(`⏰ [TIMER] Question reading timer expired - starting lie submission`);
         this.startLieSubmission();
       },
-      (secondsRemaining) => this.broadcastToAll(SOCKET_EVENTS.TIMER_UPDATE, { 
-        type: 'question_reading', 
-        secondsRemaining 
+      (secondsRemaining) => this.broadcastToAll(SOCKET_EVENTS.TIMER_UPDATE, {
+        type: 'question_reading',
+        secondsRemaining
       })
     );
+
+    this.broadcastGameStateAndSubStep();
   }
 
   startLieSubmission() {
@@ -304,11 +308,13 @@ class Game {
         console.log(`⏰ [TIMER] Lie submission timer expired`);
         this.autoCompleteSubmissions();
       },
-      (secondsRemaining) => this.broadcastToAll(SOCKET_EVENTS.TIMER_UPDATE, { 
-        type: 'lie_submission', 
-        secondsRemaining 
+      (secondsRemaining) => this.broadcastToAll(SOCKET_EVENTS.TIMER_UPDATE, {
+        type: 'lie_submission',
+        secondsRemaining
       })
     );
+
+    this.broadcastGameStateAndSubStep();
   }
 
   submitLie(playerId, lie) {
@@ -439,11 +445,13 @@ class Game {
         console.log(`⏰ [TIMER] Option selection timer expired`);
         this.autoCompleteVoting();
       },
-      (secondsRemaining) => this.broadcastToAll(SOCKET_EVENTS.TIMER_UPDATE, { 
-        type: 'option_selection', 
-        secondsRemaining 
+      (secondsRemaining) => this.broadcastToAll(SOCKET_EVENTS.TIMER_UPDATE, {
+        type: 'option_selection',
+        secondsRemaining
       })
     );
+
+    this.broadcastGameStateAndSubStep();
   }
 
   selectOption(playerId, optionId) {
@@ -547,6 +555,8 @@ class Game {
     });
     
     this.broadcastToAll(SOCKET_EVENTS.TRUTH_REVEAL_START, revealData);
+
+    this.broadcastGameStateAndSubStep();
 
     // Move to scoreboard after reveal
     setTimeout(() => {
@@ -697,6 +707,8 @@ class Game {
       isGameEnd: this.isGameEnd()
     });
 
+    this.broadcastGameStateAndSubStep();
+
     // Advance to next question or end game
     setTimeout(() => {
       this.advanceGame();
@@ -777,7 +789,7 @@ class Game {
       player.resetForNewGame();
     }
 
-    this.broadcastToAll(SOCKET_EVENTS.GAME_STATE_UPDATE, this.getGameState());
+    this.broadcastGameStateAndSubStep();
   }
 
   // Utility Methods
@@ -854,6 +866,21 @@ class Game {
     this.io.emit(event, data);
   }
 
+  broadcastSubStepInfo() {
+    for (const player of this.players.values()) {
+      if (player.socketId) {
+        this.io.to(player.socketId).emit('sub_step_info', this.getSubStepInfo(player.id));
+      }
+    }
+    // Generic info for observers like host
+    this.io.emit(SOCKET_EVENTS.HOST_SUB_STEP_INFO, this.getSubStepInfo(null));
+  }
+
+  broadcastGameStateAndSubStep() {
+    this.broadcastToAll(SOCKET_EVENTS.GAME_STATE_UPDATE, this.getGameState());
+    this.broadcastSubStepInfo();
+  }
+
   getRandomLieForCurrentQuestion() {
     if (!this.currentQuestionData) {
       return null;
@@ -876,7 +903,7 @@ class Game {
 
     if (this.questionService.setCurrentPack(packName)) {
       console.log(`📦 [GAME STATE] Question pack changed to: ${packName}`);
-      this.broadcastToAll(SOCKET_EVENTS.GAME_STATE_UPDATE, this.getGameState());
+      this.broadcastGameStateAndSubStep();
       return { success: true };
     }
 

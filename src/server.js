@@ -276,13 +276,7 @@ io.on('connection', (socket) => {
       if (playerId) {
         socket.emit('sub_step_info', game.getSubStepInfo(playerId));
       } else {
-        // Send basic sub-step info for non-joined users
-        socket.emit('sub_step_info', { 
-          state: game.state, 
-          isSelector: false, 
-          hasSubmittedLie: false, 
-          hasSelectedOption: false 
-        });
+        socket.emit(SOCKET_EVENTS.HOST_SUB_STEP_INFO, game.getSubStepInfo(null));
       }
     } catch (error) {
       console.error('Error in REQUEST_GAME_STATE:', error);
