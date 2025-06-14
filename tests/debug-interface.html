@@ -1,0 +1,1180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lie-Ability Game - Backend Debug Interface</title>
+    <script src="/socket.io/socket.io.js"></script>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        
+        .header {
+            text-align: center;
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        
+        .header h1 {
+            color: #333;
+            margin: 0 0 10px 0;
+        }
+        
+        .header p {
+            color: #666;
+            margin: 0;
+            font-style: italic;
+        }
+        
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        
+        .status {
+            padding: 10px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+        
+        .status.connected { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .status.disconnected { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+        
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+            font-size: 14px;
+            transition: all 0.2s;
+        }
+        
+        button:hover:not(:disabled) { background: #0056b3; }
+        button:disabled { background: #6c757d; cursor: not-allowed; opacity: 0.6; }
+        button.active { background: #28a745; }
+        
+        input[type="text"] {
+            width: 200px;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            margin: 5px;
+            transition: border-color 0.3s ease, box-shadow 0.3s ease;
+        }
+        
+        input[type="text"]:focus {
+            outline: none;
+            border-color: #007bff;
+            box-shadow: 0 0 0 2px rgba(0,123,255,.25);
+        }
+        
+        input[type="text"].error {
+            border-color: #dc3545;
+            box-shadow: 0 0 0 2px rgba(220,53,69,.25);
+            animation: shake 0.5s ease-in-out;
+        }
+        
+        input[type="text"].success {
+            border-color: #28a745;
+            box-shadow: 0 0 0 2px rgba(40,167,69,.25);
+        }
+        
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-5px); }
+            75% { transform: translateX(5px); }
+        }
+        
+        .log {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 5px;
+            padding: 15px;
+            height: 300px;
+            overflow-y: scroll;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+        }
+        
+        .log-entry {
+            margin-bottom: 5px;
+            padding: 2px 0;
+        }
+        
+        .log-entry.error { color: #dc3545; }
+        .log-entry.success { color: #28a745; }
+        .log-entry.info { color: #17a2b8; }
+        
+        .players-list {
+            background: #e9ecef;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 10px 0;
+            transition: background-color 0.5s ease;
+        }
+        
+        .player {
+            display: inline-block;
+            background: white;
+            padding: 5px 10px;
+            margin: 2px;
+            border-radius: 15px;
+            font-size: 12px;
+            transition: all 0.3s ease;
+        }
+        
+        .player:hover {
+            transform: scale(1.05);
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        }
+        
+        .game-state {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+        
+        .current-phase {
+            background: #d1ecf1;
+            border: 1px solid #bee5eb;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 10px 0;
+            font-weight: bold;
+        }
+        
+        .controls {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            align-items: center;
+            margin: 15px 0;
+        }
+        
+        .section {
+            border: 1px solid #dee2e6;
+            border-radius: 5px;
+            padding: 15px;
+            margin: 10px 0;
+        }
+        
+        .section h4 {
+            margin: 0 0 15px 0;
+            color: #495057;
+        }
+        
+        .section.hidden {
+            display: none;
+        }
+        
+        .two-column {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+        
+        @media (max-width: 768px) {
+            .two-column {
+                grid-template-columns: 1fr;
+            }
+        }
+        
+        .warning {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            color: #856404;
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+        
+        .question-display {
+            background: #f8f9fa;
+            border: 2px solid #007bff;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 15px 0;
+            text-align: center;
+        }
+        
+        .question-display h3 {
+            color: #007bff;
+            margin: 0 0 10px 0;
+        }
+        
+        .timer-display {
+            font-size: 1.2rem;
+            font-weight: bold;
+            color: #dc3545;
+            text-align: center;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🔧 Lie-Ability Game Backend Debug Interface</h1>
+        <p>This is a developer tool for testing the game backend. Open multiple tabs to simulate multiple players.</p>
+    </div>
+    
+    <div class="warning">
+        <strong>⚠️ Debug Mode:</strong> Real-time updates + smart refresh every 5 seconds. 
+        <span id="refreshStatus" title="Auto-refresh indicator">●</span>
+        <span id="refreshCounter" style="font-size: 0.9em; opacity: 0.7;">Refreshes: 0</span>
+    </div>
+    
+    <div class="two-column">
+        <div class="container">
+            <h3>🔗 Connection & Players</h3>
+            
+            <div id="connectionStatus" class="status disconnected">
+                ❌ Disconnected from server
+            </div>
+            
+            <div class="controls">
+                <input type="text" id="playerName" placeholder="Enter your name" value="">
+                <button id="joinBtn" onclick="joinGame()">Join Game</button>
+                <button id="startBtn" onclick="startGame()" disabled>Start Game</button>
+                <button id="leaveBtn" onclick="leaveGame()" disabled>Leave Game</button>
+                <button onclick="manualRefresh()" title="Force refresh game state">🔄 Manual Refresh</button>
+            </div>
+            
+            <div class="current-phase" id="currentPhase">
+                Current Phase: Waiting for connection...
+            </div>
+            
+            <div id="lastUpdateInfo" style="font-size: 0.8em; color: #666; text-align: center; margin: 5px 0;">
+                Last update: Initializing...
+            </div>
+            
+            <div class="timer-display" id="timerDisplay" style="display: none;">
+                ⏱️ 0s
+            </div>
+            
+            <div class="game-state" id="gameState">
+                Game State: Waiting for connection...
+            </div>
+            
+            <div class="players-list" id="playersList">
+                <strong>Players:</strong> None
+            </div>
+        </div>
+        
+        <div class="container">
+            <h3>🎮 Game Actions</h3>
+            
+            <div class="section" id="categorySection">
+                <h4>📝 Category Selection</h4>
+                <div id="categoryInstructions" class="warning" style="display: none;">
+                    Waiting for category selector...
+                </div>
+                <div class="controls">
+                    <button onclick="selectCategory(0)" disabled id="catBtn0">Category 1</button>
+                    <button onclick="selectCategory(1)" disabled id="catBtn1">Category 2</button>
+                    <button onclick="selectCategory(2)" disabled id="catBtn2">Category 3</button>
+                    <button onclick="selectCategory(3)" disabled id="catBtn3">Category 4</button>
+                </div>
+            </div>
+            
+            <div class="section" id="questionSection" style="display: none;">
+                <div class="question-display" id="questionDisplay">
+                    <h3>❓ Question</h3>
+                    <p id="questionText">Loading...</p>
+                </div>
+            </div>
+            
+            <div class="section" id="lieSection">
+                <h4>🤥 Lie Submission</h4>
+                <div id="lieInstructions" class="warning" style="display: none;">
+                    Submit your lie to fool other players!
+                </div>
+                <div class="controls">
+                    <input type="text" id="lieInput" placeholder="Enter a convincing lie..." disabled maxlength="100">
+                    <button onclick="submitLie()" disabled id="submitLieBtn">Submit Lie</button>
+                </div>
+                <div id="lieStatus" style="margin-top: 10px; font-style: italic; color: #666;"></div>
+            </div>
+            
+            <div class="section" id="optionSection">
+                <h4>🗳️ Vote for the Truth</h4>
+                <div id="optionInstructions" class="warning" style="display: none;">
+                    Which one is the real answer?
+                </div>
+                <div class="controls" id="optionButtons">
+                    <button onclick="selectOption('optBtn0')" disabled id="optBtn0">Option 1</button>
+                    <button onclick="selectOption('optBtn1')" disabled id="optBtn1">Option 2</button>
+                    <button onclick="selectOption('optBtn2')" disabled id="optBtn2">Option 3</button>
+                    <button onclick="selectOption('optBtn3')" disabled id="optBtn3">Option 4</button>
+                    <button onclick="selectOption('optBtn4')" disabled id="optBtn4">Option 5</button>
+                </div>
+                <div id="voteStatus" style="margin-top: 10px; font-style: italic; color: #666;"></div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="container">
+        <h3>📋 Real-Time Event Log</h3>
+        <div class="controls">
+            <button onclick="clearLog()" style="float: right;">Clear Log</button>
+            <strong>Live backend communication:</strong>
+        </div>
+        <div id="eventLog" class="log"></div>
+    </div>
+
+    <script>
+        let socket = null;
+        let playerId = null;
+        let currentGameState = null;
+        let currentSubStep = null;
+        let currentOptions = [];
+        let refreshInterval = null;
+        let refreshCount = 0;
+
+        // Generate a random player name for testing
+        function generateRandomName() {
+            const adjectives = ['Cool', 'Smart', 'Quick', 'Brave', 'Witty', 'Sharp', 'Clever', 'Bold'];
+            const nouns = ['Player', 'Gamer', 'Tester', 'User', 'Person', 'Human', 'Being'];
+            const adj = adjectives[Math.floor(Math.random() * adjectives.length)];
+            const noun = nouns[Math.floor(Math.random() * nouns.length)];
+            const num = Math.floor(Math.random() * 100);
+            return `${adj}${noun}${num}`;
+        }
+
+        // Helper function to preserve input values during UI updates
+        function preserveInputValue(inputId) {
+            const input = document.getElementById(inputId);
+            return input ? input.value : '';
+        }
+
+        function restoreInputValue(inputId, value) {
+            const input = document.getElementById(inputId);
+            if (input && value !== undefined && value !== null) {
+                input.value = value;
+            }
+        }
+
+        // Initialize socket connection
+        function initSocket() {
+            socket = io();
+            
+            // Set random name
+            document.getElementById('playerName').value = generateRandomName();
+            
+            socket.on('connect', () => {
+                log('🔗 Connected to server', 'success');
+                updateConnectionStatus(true);
+                startAutoRefresh();
+            });
+            
+            socket.on('disconnect', () => {
+                log('❌ Disconnected from server', 'error');
+                updateConnectionStatus(false);
+                stopAutoRefresh();
+            });
+            
+            // Game event listeners
+            socket.on('player_joined', (data) => {
+                // Check if this is about us joining or someone else
+                const isOurJoin = data.player && !playerId; // We don't have a playerId yet
+                
+                if (isOurJoin) {
+                    log(`✅ You joined as: ${data.player.name}`, 'success');
+                    playerId = data.player.id;
+                    updateJoinLeaveButtons(true);
+                    updateLastUpdateInfo('You joined the game');
+                } else {
+                    log(`👋 ${data.player?.name || 'Someone'} joined the game (real-time)`, 'info');
+                    updateLastUpdateInfo(`${data.player?.name} joined`);
+                }
+                
+                // Always update the game display for everyone
+                if (data.gameState) {
+                    console.log('📊 Players list updating due to player join (real-time event)');
+                    updateGameDisplay(data.gameState);
+                }
+            });
+            
+            socket.on('player_left', (data) => {
+                log(`👋 ${data.playerName} left the game (real-time)`, 'info');
+                updateLastUpdateInfo(`${data.playerName} left`);
+                
+                // Update the game display for everyone when someone leaves
+                if (data.gameState) {
+                    console.log('📊 Players list updating due to player leaving (real-time event)');
+                    updateGameDisplay(data.gameState);
+                }
+            });
+            
+            socket.on('player_reconnected', (data) => {
+                log(`🔄 ${data.playerName} reconnected (real-time)`, 'info');
+                updateLastUpdateInfo(`${data.playerName} reconnected`);
+                
+                // Update the game display when someone reconnects (including ourselves)
+                if (data.gameState) {
+                    console.log('📊 Players list updating due to player reconnection (real-time event)');
+                    updateGameDisplay(data.gameState);
+                }
+            });
+            
+            socket.on('game_started', (data) => {
+                log(`🚀 Game started! ${data.totalRounds} rounds, ${data.questionsPerRound} questions per round`, 'success');
+            });
+            
+            socket.on('category_selection_start', (data) => {
+                log(`📝 Category selection started. Selector: ${data.selectorName}`, 'info');
+                updateCategorySelection(data);
+            });
+            
+            socket.on('question_reading_start', (data) => {
+                log(`❓ Question: "${data.question}" (Category: ${data.category})`, 'info');
+                showQuestion(data);
+            });
+            
+            socket.on('lie_submission_start', (data) => {
+                log(`🤥 Lie submission phase started (${data.timeLimit}s)`, 'info');
+                
+                // Force show lie submission section
+                const lieSection = document.getElementById('lieSection');
+                if (lieSection) {
+                    lieSection.style.display = 'block';
+                }
+                
+                // Enable lie submission controls
+                showLieSubmission();
+            });
+            
+            socket.on('option_selection_start', (data) => {
+                log(`🗳️ Voting phase started`, 'info');
+                showOptionSelection(data);
+            });
+            
+            socket.on('truth_reveal_start', (data) => {
+                log(`🎯 Truth revealed! Answer: "${data.truth.answer}"`, 'success');
+                showTruthReveal(data);
+            });
+            
+            socket.on('scoreboard_update', (data) => {
+                log(`🏆 Scoreboard - Round ${data.round}, Question ${data.question}`, 'success');
+                showScoreboard(data);
+            });
+            
+            socket.on('game_ended', (data) => {
+                log(`🎊 Game ended! Winner: ${data.winner.name} with ${data.winner.points} points!`, 'success');
+                showGameEnd(data);
+            });
+            
+            socket.on('game_state_update', (data) => {
+                console.log('📊 Game state update received (background refresh)');
+                updateLastUpdateInfo('Background sync');
+                updateGameDisplay(data);
+            });
+            
+            socket.on('sub_step_info', (data) => {
+                console.log('🔄 Sub-step info received:', data);
+                currentSubStep = data;
+                updateUIBasedOnSubStep(data);
+            });
+            
+            socket.on('timer_update', (data) => {
+                updateTimer(data.secondsRemaining);
+            });
+            
+            socket.on('error', (data) => {
+                log(`❌ Error: ${data.message}`, 'error');
+                
+                // Handle specific error types with user-friendly popups
+                if (data.message.includes("That's the truth!") || data.message.includes("Submit a lie instead")) {
+                    const lieInput = document.getElementById('lieInput');
+                    const submittedValue = lieInput ? lieInput.value : 'your answer';
+                    
+                    // Truth submission error - show popup and refocus
+                    alert(`🎯 Oops! "${submittedValue}" is the correct answer!\n\n🤥 You need to submit a LIE to fool other players.\n💡 Try something that sounds believable but is wrong!`);
+                    
+                    // Clear the input and refocus with error styling
+                    if (lieInput) {
+                        lieInput.value = '';
+                        lieInput.focus();
+                        lieInput.className = 'error'; // Use CSS class
+                        
+                        // Reset styling after animation
+                        setTimeout(() => {
+                            lieInput.className = '';
+                        }, 3000);
+                    }
+                    
+                    // Update status message with helpful hint
+                    const lieStatus = document.getElementById('lieStatus');
+                    if (lieStatus) {
+                        lieStatus.innerHTML = '❌ That was the truth! Try a <strong>fake</strong> answer that sounds believable.';
+                        lieStatus.style.color = '#dc3545';
+                    }
+                    
+                    // Keep the lie submission active - don't disable it
+                    const submitBtn = document.getElementById('submitLieBtn');
+                    if (submitBtn) {
+                        submitBtn.disabled = false; // Make sure it stays enabled
+                    }
+                    
+                    return; // Don't process other error handling for this case
+                }
+                
+                // Show user-friendly error message in the UI for server initialization
+                const phaseElement = document.getElementById('currentPhase');
+                if (phaseElement && data.message.includes('initializing')) {
+                    phaseElement.innerHTML = '⏳ <strong>Server Initializing...</strong> Please wait a moment and try again...';
+                    phaseElement.style.background = '#fff3cd';
+                    phaseElement.style.color = '#856404';
+                    
+                    // Disable join button temporarily
+                    const joinBtn = document.getElementById('joinBtn');
+                    if (joinBtn) {
+                        joinBtn.disabled = true;
+                        joinBtn.textContent = 'Server Starting...';
+                        
+                        // Re-enable after a few seconds
+                        setTimeout(() => {
+                            joinBtn.disabled = false;
+                            joinBtn.textContent = 'Join Game';
+                        }, 3000);
+                    }
+                }
+            });
+            
+            socket.on('lie_submitted', (data) => {
+                log('✅ Your lie was submitted', 'success');
+                
+                const lieStatus = document.getElementById('lieStatus');
+                if (lieStatus) {
+                    lieStatus.textContent = '✅ Lie submitted successfully! Waiting for other players...';
+                    lieStatus.style.color = '#28a745';
+                }
+                
+                disableLieSubmission();
+                
+                // Give positive feedback with CSS class
+                const lieInput = document.getElementById('lieInput');
+                if (lieInput) {
+                    lieInput.className = 'success'; // Use CSS class for green styling
+                    setTimeout(() => {
+                        lieInput.className = ''; // Reset styling
+                    }, 2000);
+                }
+            });
+            
+            socket.on('option_selected', (data) => {
+                log('✅ Your vote was recorded', 'success');
+                document.getElementById('voteStatus').textContent = '✅ Vote submitted successfully!';
+                disableOptionSelection();
+            });
+        }
+        
+        function startAutoRefresh() {
+            console.log('🔄 Starting smart refresh system...');
+            refreshCount = 0;
+            
+            // Reduced frequency since we have real-time events for most updates
+            refreshInterval = setInterval(() => {
+                if (socket && socket.connected) {
+                    refreshCount++;
+                    socket.emit('request_game_state');
+                    
+                    // Update refresh indicator
+                    const refreshStatus = document.getElementById('refreshStatus');
+                    const refreshCounter = document.getElementById('refreshCounter');
+                    
+                    if (refreshStatus) {
+                        refreshStatus.style.color = '#28a745';
+                        setTimeout(() => {
+                            refreshStatus.style.color = '#6c757d';
+                        }, 300);
+                    }
+                    
+                    if (refreshCounter) {
+                        refreshCounter.textContent = `Refreshes: ${refreshCount}`;
+                    }
+                    
+                    console.log(`🔄 Smart refresh #${refreshCount} (background sync)`);
+                } else {
+                    console.log('❌ Socket not connected, skipping refresh');
+                }
+            }, 5000); // Changed from 1000ms to 5000ms since we have real-time events
+        }
+        
+        function stopAutoRefresh() {
+            console.log('🛑 Stopping auto-refresh...');
+            if (refreshInterval) {
+                clearInterval(refreshInterval);
+                refreshInterval = null;
+            }
+        }
+        
+        function updateConnectionStatus(connected) {
+            const status = document.getElementById('connectionStatus');
+            if (!status) {
+                console.warn('❌ Connection status element not found');
+                return;
+            }
+            
+            if (connected) {
+                status.className = 'status connected';
+                status.innerHTML = '✅ Connected to server';
+            } else {
+                status.className = 'status disconnected';
+                status.innerHTML = '❌ Disconnected from server';
+            }
+        }
+        
+        function updateJoinLeaveButtons(joined) {
+            const joinBtn = document.getElementById('joinBtn');
+            const leaveBtn = document.getElementById('leaveBtn');
+            const startBtn = document.getElementById('startBtn');
+            
+            if (joinBtn) joinBtn.disabled = joined;
+            if (leaveBtn) leaveBtn.disabled = !joined;
+            if (startBtn) startBtn.disabled = !joined;
+        }
+        
+        function updateGameDisplay(gameState) {
+            if (!gameState) return;
+            
+            // PRESERVE INPUT VALUES BEFORE UPDATING UI
+            const lieInputValue = preserveInputValue('lieInput');
+            const playerNameValue = preserveInputValue('playerName');
+            
+            currentGameState = gameState;
+            
+            // Update phase display - check if element exists
+            const phaseElement = document.getElementById('currentPhase');
+            if (phaseElement) {
+                const phaseText = getPhaseDescription(gameState.state);
+                phaseElement.innerHTML = `Current Phase: ${phaseText}`;
+                phaseElement.style.background = '#d1ecf1';
+                phaseElement.style.color = '#0c5460';
+            }
+            
+            // Update game state - check if element exists
+            const stateDiv = document.getElementById('gameState');
+            if (stateDiv) {
+                // Calculate correct number of questions for current round
+                const questionsInCurrentRound = getQuestionsForRound(gameState.currentRound);
+                
+                stateDiv.innerHTML = `
+                    <strong>Game State:</strong> ${gameState.state}<br>
+                    <strong>Round:</strong> ${gameState.currentRound}/${gameState.totalRounds}<br>
+                    <strong>Question:</strong> ${gameState.currentQuestion}/${questionsInCurrentRound}<br>
+                    <strong>Players:</strong> ${gameState.players.length}
+                `;
+            }
+            
+            // Update players list with animation - check if element exists
+            const playersDiv = document.getElementById('playersList');
+            if (playersDiv) {
+                const playerNames = gameState.players.map(p => 
+                    `<span class="player" style="background-color: ${p.avatar.color}20; border: 2px solid ${p.avatar.color};">
+                        ${p.avatar.emoji} ${p.name} (${p.points}pts)
+                    </span>`
+                ).join('');
+                playersDiv.innerHTML = `<strong>Players (${gameState.players.length}):</strong> ${playerNames || 'None'}`;
+                
+                // Add a brief highlight to show the list updated (shorter for background refreshes)
+                playersDiv.style.backgroundColor = '#d4edda';
+                setTimeout(() => {
+                    playersDiv.style.backgroundColor = '#e9ecef';
+                }, 300); // Reduced from 500ms
+                
+                console.log(`👥 Players list updated: ${gameState.players.length} players`);
+            }
+            
+            // Update UI based on state
+            updateUIBasedOnGameState(gameState);
+            
+            // RESTORE INPUT VALUES AFTER UPDATING UI
+            restoreInputValue('lieInput', lieInputValue);
+            restoreInputValue('playerName', playerNameValue);
+        }
+        
+        function getPhaseDescription(state) {
+            switch (state) {
+                case 'lobby': return '🏠 Lobby - Waiting for players';
+                case 'category_selection': return '📝 Category Selection';
+                case 'question_reading': return '❓ Reading Question';
+                case 'lie_submission': return '🤥 Submit Lies';
+                case 'option_selection': return '🗳️ Vote for Truth';
+                case 'truth_reveal': return '🎯 Truth Reveal';
+                case 'scoreboard': return '🏆 Scoreboard';
+                case 'game_ended': return '🎊 Game Ended';
+                default: return state;
+            }
+        }
+        
+        function getQuestionsForRound(roundNumber) {
+            // Round 3 has only 1 question, rounds 1 and 2 have 8 questions each
+            if (roundNumber === 3) {
+                return 1;
+            } else {
+                return 8; // Default for rounds 1 and 2
+            }
+        }
+        
+        function updateUIBasedOnGameState(gameState) {
+            console.log('🔧 Updating UI for game state:', gameState.state);
+            
+            // Get all section elements
+            const categorySection = document.getElementById('categorySection');
+            const questionSection = document.getElementById('questionSection');
+            const lieSection = document.getElementById('lieSection');
+            const optionSection = document.getElementById('optionSection');
+            
+            // Hide all sections first
+            if (categorySection) categorySection.style.display = 'none';
+            if (questionSection) questionSection.style.display = 'none';
+            if (lieSection) lieSection.style.display = 'none';
+            if (optionSection) optionSection.style.display = 'none';
+            
+            // Show relevant section based on state
+            switch (gameState.state) {
+                case 'category_selection':
+                    if (categorySection) {
+                        categorySection.style.display = 'block';
+                        console.log('✅ Showing category selection');
+                    }
+                    break;
+                case 'question_reading':
+                    if (questionSection) {
+                        questionSection.style.display = 'block';
+                        console.log('✅ Showing question reading');
+                    }
+                    break;
+                case 'lie_submission':
+                    if (lieSection) {
+                        lieSection.style.display = 'block';
+                        console.log('✅ Showing lie submission');
+                        // DON'T call showLieSubmission() here to avoid clearing input
+                        // Only call it for fresh lie submission phases
+                    }
+                    break;
+                case 'option_selection':
+                    if (optionSection) {
+                        optionSection.style.display = 'block';
+                        console.log('✅ Showing option selection');
+                    }
+                    break;
+                default:
+                    console.log('🔧 No specific section for state:', gameState.state);
+            }
+        }
+        
+        function updateUIBasedOnSubStep(subStep) {
+            console.log('🔧 Updating UI based on sub-step:', subStep);
+            if (!subStep) return;
+            
+            // PRESERVE INPUT VALUES
+            const lieInputValue = preserveInputValue('lieInput');
+            
+            switch (subStep.state) {
+                case 'category_selection':
+                    updateCategoryButtons(subStep.categories, subStep.isSelector);
+                    break;
+                case 'lie_submission':
+                    updateLieSubmission(subStep);
+                    break;
+                case 'option_selection':
+                    // Only update option buttons if we have new options or if buttons aren't set up yet
+                    if (subStep.options) {
+                        const firstBtn = document.getElementById('optBtn0');
+                        const needsUpdate = !firstBtn || 
+                                          !firstBtn.getAttribute('data-option-id') || 
+                                          firstBtn.style.display === 'none';
+                        
+                        if (needsUpdate) {
+                            console.log('🔄 Option buttons need updating');
+                            updateOptionButtons(subStep.options);
+                        } else {
+                            console.log('🔄 Option buttons already set up, skipping update');
+                        }
+                    }
+                    break;
+                default:
+                    console.log('🔧 No specific UI update for state:', subStep.state);
+            }
+            
+            // RESTORE INPUT VALUES
+            restoreInputValue('lieInput', lieInputValue);
+        }
+        
+        function updateCategorySelection(data) {
+            const isSelector = data.selectorId === playerId;
+            const instructions = document.getElementById('categoryInstructions');
+            
+            if (isSelector) {
+                instructions.innerHTML = '🎯 <strong>You are selecting the category!</strong> Choose one:';
+                instructions.style.display = 'block';
+            } else {
+                instructions.innerHTML = `⏳ Waiting for <strong>${data.selectorName}</strong> to select a category...`;
+                instructions.style.display = 'block';
+            }
+            
+            updateCategoryButtons(data.categories, isSelector);
+        }
+        
+        function updateCategoryButtons(categories, isSelector) {
+            console.log('🎯 Updating category buttons:', { categories, isSelector });
+            for (let i = 0; i < 4; i++) {
+                const btn = document.getElementById(`catBtn${i}`);
+                if (categories && categories[i]) {
+                    btn.textContent = categories[i].category;
+                    btn.disabled = !isSelector;
+                    console.log(`Category ${i}: "${categories[i].category}" (ID: ${categories[i].id}) - ${isSelector ? 'enabled' : 'disabled'}`);
+                } else {
+                    btn.textContent = `Category ${i + 1}`;
+                    btn.disabled = true;
+                }
+            }
+        }
+        
+        function showQuestion(data) {
+            document.getElementById('questionText').textContent = data.question;
+            document.getElementById('questionSection').style.display = 'block';
+        }
+        
+        function showLieSubmission() {
+            console.log('🤥 Enabling lie submission UI...');
+            
+            const instructions = document.getElementById('lieInstructions');
+            const lieInput = document.getElementById('lieInput');
+            const submitBtn = document.getElementById('submitLieBtn');
+            const lieStatus = document.getElementById('lieStatus');
+            
+            if (instructions) {
+                instructions.innerHTML = '🤥 <strong>Submit your lie!</strong> Make it convincing to fool other players. <em>(Don\'t submit the real answer!)</em>';
+                instructions.style.display = 'block';
+            }
+            
+            if (lieInput) {
+                lieInput.disabled = false;
+                // DON'T clear the value here - preserve what user is typing
+                lieInput.className = ''; // Reset any CSS classes
+                
+                // Set helpful placeholder based on question type
+                if (currentGameState && currentGameState.currentQuestionData) {
+                    lieInput.placeholder = 'Enter a fake answer that sounds believable...';
+                } else {
+                    lieInput.placeholder = 'Enter a convincing lie...';
+                }
+                
+                console.log('✅ Lie input enabled');
+            } else {
+                console.error('❌ Lie input element not found');
+            }
+            
+            if (submitBtn) {
+                submitBtn.disabled = false;
+                console.log('✅ Submit button enabled');
+            } else {
+                console.error('❌ Submit button element not found');
+            }
+            
+            if (lieStatus) {
+                lieStatus.textContent = '';
+                lieStatus.style.color = '#666';
+            }
+            
+            // Focus on the input after a short delay to ensure it's enabled, but only if it's empty
+            setTimeout(() => {
+                if (lieInput && !lieInput.disabled && !lieInput.value.trim()) {
+                    lieInput.focus();
+                    console.log('✅ Focused on lie input');
+                }
+            }, 100);
+        }
+        
+        function disableLieSubmission() {
+            document.getElementById('lieInput').disabled = true;
+            document.getElementById('submitLieBtn').disabled = true;
+        }
+        
+        function updateLieSubmission(subStep) {
+            // PRESERVE the current input value
+            const lieInputValue = preserveInputValue('lieInput');
+            
+            if (subStep.hasSubmittedLie) {
+                disableLieSubmission();
+                document.getElementById('lieStatus').textContent = '✅ Waiting for other players...';
+            }
+            
+            // RESTORE the input value
+            restoreInputValue('lieInput', lieInputValue);
+        }
+        
+        function showOptionSelection(data) {
+            const instructions = document.getElementById('optionInstructions');
+            instructions.innerHTML = '🗳️ <strong>Vote for the truth!</strong> Which option is the real answer?';
+            instructions.style.display = 'block';
+            
+            currentOptions = data.options;
+            updateOptionButtons(data.options);
+            document.getElementById('voteStatus').textContent = '';
+        }
+        
+        function updateOptionButtons(options) {
+            console.log('🗳️ Updating option buttons with:', options);
+            
+            // Reset all buttons first
+            for (let i = 0; i < 5; i++) {
+                const btn = document.getElementById(`optBtn${i}`);
+                if (btn) {
+                    btn.style.display = 'none';
+                    btn.disabled = true;
+                    btn.removeAttribute('data-option-id');
+                    btn.textContent = `Option ${i + 1}`;
+                    console.log(`🔄 Reset button optBtn${i}`);
+                } else {
+                    console.warn(`⚠️ Button optBtn${i} not found in DOM`);
+                }
+            }
+            
+            // Update with actual options
+            if (options && Array.isArray(options)) {
+                options.forEach((option, i) => {
+                    const btn = document.getElementById(`optBtn${i}`);
+                    if (btn && option && option.id && option.text) {
+                        btn.textContent = option.text.length > 40 ? 
+                            option.text.substring(0, 37) + '...' : 
+                            option.text;
+                        btn.disabled = false;
+                        btn.style.display = 'inline-block';
+                        btn.setAttribute('data-option-id', option.id);
+                        console.log(`✅ Set up optBtn${i}: "${option.text}" (ID: ${option.id})`);
+                    } else {
+                        console.warn(`⚠️ Could not set up option ${i}:`, { btn: !!btn, option });
+                    }
+                });
+            } else {
+                console.warn('❌ Invalid options data:', options);
+            }
+            
+            // Final verification
+            console.log('🔍 Final button state:');
+            for (let i = 0; i < 3; i++) { // Only check first 3 for brevity
+                const btn = document.getElementById(`optBtn${i}`);
+                if (btn) {
+                    console.log(`  optBtn${i}: display=${btn.style.display}, disabled=${btn.disabled}, data-option-id=${btn.getAttribute('data-option-id')}`);
+                }
+            }
+        }
+        
+        function disableOptionSelection() {
+            for (let i = 0; i < 5; i++) {
+                const btn = document.getElementById(`optBtn${i}`);
+                if (btn) {
+                    btn.disabled = true;
+                }
+            }
+        }
+        
+        function showTruthReveal(data) {
+            // Hide action sections during reveal
+            document.getElementById('lieSection').style.display = 'none';
+            document.getElementById('optionSection').style.display = 'none';
+            
+            // Show question with truth
+            document.getElementById('questionSection').style.display = 'block';
+            document.getElementById('questionText').innerHTML = 
+                `<strong>${data.question}</strong><br><br>
+                 <span style="color: #28a745; font-size: 1.2em;">✅ Answer: ${data.truth.answer}</span>`;
+        }
+        
+        function showScoreboard(data) {
+            // Clear previous displays
+            document.getElementById('questionSection').style.display = 'none';
+        }
+        
+        function showGameEnd(data) {
+            document.getElementById('currentPhase').innerHTML = 
+                `🎊 <strong>Game Over!</strong> Winner: ${data.winner.name} (${data.winner.points} points)`;
+        }
+        
+        function updateTimer(seconds) {
+            const timerDiv = document.getElementById('timerDisplay');
+            if (seconds > 0) {
+                timerDiv.textContent = `⏱️ ${seconds}s`;
+                timerDiv.style.display = 'block';
+                timerDiv.style.color = seconds <= 5 ? '#dc3545' : '#007bff';
+            } else {
+                timerDiv.style.display = 'none';
+            }
+        }
+        
+        // Action functions
+        function joinGame() {
+            const name = document.getElementById('playerName').value.trim();
+            if (!name) {
+                alert('Please enter a name');
+                return;
+            }
+            
+            socket.emit('join_game', { playerName: name, playerId: playerId });
+        }
+        
+        function startGame() {
+            socket.emit('start_game');
+        }
+        
+        function leaveGame() {
+            socket.emit('leave_game');
+            playerId = null;
+            updateJoinLeaveButtons(false);
+        }
+        
+        function selectCategory(categoryId) {
+            console.log(`🎯 Attempting to select category ${categoryId}`);
+            console.log('Current player ID:', playerId);
+            console.log('Current game state:', currentGameState?.state);
+            socket.emit('select_category', { categoryId });
+        }
+        
+        function submitLie() {
+            const lieInput = document.getElementById('lieInput');
+            const lie = lieInput.value.trim();
+            
+            if (!lie) {
+                alert('Please enter a lie');
+                return;
+            }
+            
+            // Reset any previous error styling
+            lieInput.className = '';
+            
+            const lieStatus = document.getElementById('lieStatus');
+            if (lieStatus) {
+                lieStatus.textContent = '📤 Submitting lie...';
+                lieStatus.style.color = '#007bff';
+            }
+            
+            socket.emit('submit_lie', { lie });
+        }
+        
+        function selectOption(buttonId) {
+            console.log(`🗳️ Attempting to select option via button: ${buttonId}`);
+            
+            const btn = document.getElementById(buttonId);
+            if (!btn) {
+                console.error(`❌ Button ${buttonId} not found`);
+                console.log('Available button IDs:', ['optBtn0', 'optBtn1', 'optBtn2', 'optBtn3', 'optBtn4'].map(id => 
+                    document.getElementById(id) ? `${id}:exists` : `${id}:missing`
+                ));
+                return;
+            }
+            
+            const optionId = btn.getAttribute('data-option-id');
+            if (!optionId) {
+                console.error(`❌ Button ${buttonId} has no data-option-id attribute`);
+                console.log('Button attributes:', Array.from(btn.attributes).map(attr => `${attr.name}="${attr.value}"`));
+                log('❌ Vote failed: Invalid option button', 'error');
+                return;
+            }
+            
+            console.log(`🗳️ Voting for option ID: ${optionId}`);
+            socket.emit('select_option', { optionId });
+        }
+        
+        function updateLastUpdateInfo(message) {
+            const updateInfo = document.getElementById('lastUpdateInfo');
+            if (updateInfo) {
+                const time = new Date().toLocaleTimeString();
+                updateInfo.textContent = `Last update: ${message} (${time})`;
+            }
+        }
+        
+        function manualRefresh() {
+            if (socket && socket.connected) {
+                log('🔄 Manual refresh requested', 'info');
+                updateLastUpdateInfo('Manual refresh');
+                socket.emit('request_game_state');
+            } else {
+                log('❌ Cannot refresh - not connected', 'error');
+            }
+        }
+        
+        // Enable Enter key for lie submission
+        document.addEventListener('DOMContentLoaded', function() {
+            const lieInput = document.getElementById('lieInput');
+            if (lieInput) {
+                lieInput.addEventListener('keypress', function(e) {
+                    if (e.key === 'Enter' && !this.disabled) {
+                        submitLie();
+                    }
+                });
+            }
+        });
+        
+        function log(message, type = 'info') {
+            const logDiv = document.getElementById('eventLog');
+            if (!logDiv) {
+                console.log(`[${type.toUpperCase()}] ${message}`);
+                return;
+            }
+            
+            const timestamp = new Date().toLocaleTimeString();
+            const entry = document.createElement('div');
+            entry.className = `log-entry ${type}`;
+            entry.innerHTML = `<strong>[${timestamp}]</strong> ${message}`;
+            logDiv.appendChild(entry);
+            logDiv.scrollTop = logDiv.scrollHeight;
+            
+            // Limit log entries to prevent memory issues
+            if (logDiv.children.length > 100) {
+                logDiv.removeChild(logDiv.firstChild);
+            }
+        }
+        
+        function clearLog() {
+            const logDiv = document.getElementById('eventLog');
+            if (logDiv) {
+                logDiv.innerHTML = '';
+            }
+        }
+        
+        // Initialize when page loads
+        function initializeWhenReady() {
+            // Check if DOM is ready
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', initializeWhenReady);
+                return;
+            }
+            
+            // DOM is ready, initialize socket
+            initSocket();
+            log('🔧 Debug interface loaded, connecting to server...', 'info');
+        }
+        
+        // Start initialization
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initializeWhenReady);
+        } else {
+            initializeWhenReady();
+        }
+        
+        // Cleanup on page unload
+        window.addEventListener('beforeunload', () => {
+            stopAutoRefresh();
+        });
+    </script>
+</body>
+</html>
