@@ -19,7 +19,10 @@
   const startGame = () => socket.emit('start_game')
 
   onMount(() => {
-    socket = io()
+    const socketUrl = window.location.port === '5173'
+      ? 'http://localhost:3000'
+      : window.location.origin
+    socket = io(socketUrl)
     socket.on('connect', () => socket.emit('request_game_state'))
     socket.on('game_state_update', d => { gameState = d })
     socket.on('host_sub_step_info', d => { subStep = d })

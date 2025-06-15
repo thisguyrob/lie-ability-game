@@ -4,7 +4,10 @@
 
   let socket
   onMount(() => {
-    socket = io()
+    const socketUrl = window.location.port === '5173'
+      ? 'http://localhost:3000'
+      : window.location.origin
+    socket = io(socketUrl)
   })
 </script>
 
