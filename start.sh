@@ -6,13 +6,13 @@ backend_port=3000
 frontend_port=5173
 shared_screen_url="http://localhost:${frontend_port}/host"
 
-# Install backend dependencies if missing
-if [ ! -d node_modules/express ]; then
+# Ensure backend dependencies are installed
+if ! npm ls express >/dev/null 2>&1; then
   npm install --legacy-peer-deps
 fi
 
-# Install frontend dependencies if missing or incomplete
-if [ ! -d svelte/node_modules/socket.io-client ]; then
+# Ensure frontend dependencies are installed
+if ! (cd svelte && npm ls socket.io-client >/dev/null 2>&1); then
   (cd svelte && npm install --legacy-peer-deps)
 fi
 

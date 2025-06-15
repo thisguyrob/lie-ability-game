@@ -52,8 +52,9 @@ npm install
 ```bash
 ./start.sh
 ```
-4. The script installs missing packages with `npm install --legacy-peer-deps`
-   and opens the host UI automatically at http://localhost:5173/host
+4. The script ensures all backend and frontend packages are installed with
+   `npm install --legacy-peer-deps` and opens the host UI automatically at
+   http://localhost:5173/host
 
 ### For Production
 ```bash
