@@ -1366,7 +1366,7 @@ function renderCategory(){
   const container=document.getElementById('categoryButtons');
   container.innerHTML='';
   
-  if(subStep?.categories){
+  if(subStep && subStep.categories){
     subStep.categories.forEach(c => {
       const btn=document.createElement('button');
       btn.className = 'btn-option';
@@ -1386,14 +1386,15 @@ function renderCategory(){
     });
   }
   
-  const selectorName=gameState.players.find(p=>p.id===gameState.categorySelector)?.name || '';
-  document.getElementById('categoryPrompt').textContent=subStep.isSelector ? 
-    'Choose a category for the next question' : 
+  const selectorPlayer = gameState.players.find(p => p.id === gameState.categorySelector) || {}
+  const selectorName = selectorPlayer.name || ''
+  document.getElementById('categoryPrompt').textContent=subStep.isSelector ?
+    'Choose a category for the next question' :
     `Waiting for ${selectorName} to choose...`;
 }
 
 function renderQuestion(){
-  const q=subStep?.question || gameState.currentQuestionData;
+  const q=(subStep && subStep.question) ? subStep.question : gameState.currentQuestionData;
   if(q) {
     document.getElementById('questionCategory').textContent = q.category;
     document.getElementById('questionText').textContent = q.question;
@@ -1403,8 +1404,8 @@ function renderQuestion(){
 function renderOptions(){
   const container=document.getElementById('options');
   container.innerHTML='';
-  
-  if(subStep?.options){
+
+  if(subStep && subStep.options){
     subStep.options.forEach(opt => {
       const btn=document.createElement('button');
       btn.className = 'btn-option';
