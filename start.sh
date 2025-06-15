@@ -4,7 +4,7 @@
 
 backend_port=3000
 frontend_port=5173
-shared_screen_url="http://localhost:${backend_port}/host"
+shared_screen_url="http://localhost:${frontend_port}/host"
 
 # Ensure backend dependencies are installed
 if ! npm ls express >/dev/null 2>&1; then
