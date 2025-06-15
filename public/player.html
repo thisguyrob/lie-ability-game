@@ -1475,7 +1475,14 @@ socket.on('player_avatar_updated', d => {
   document.getElementById('customEmojiPicker').style.display = 'none';
 });
 
-socket.on('error', data => log('Error: '+data.message));
+socket.on('error', data => {
+  log('Error: '+data.message)
+  if(data.message === 'Failed to reconnect'){
+    localStorage.removeItem('playerId')
+    document.getElementById('joinSection').style.display='block'
+    document.getElementById('views').style.display='none'
+  }
+})
 
 document.getElementById('joinBtn').onclick = () => {
   const name=document.getElementById('nameInput').value.trim();
