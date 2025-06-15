@@ -8,12 +8,12 @@ shared_screen_url="http://localhost:${frontend_port}/host"
 
 # Install backend dependencies if missing
 if [ ! -d node_modules/express ]; then
-  npm install
+  npm install --legacy-peer-deps
 fi
 
 # Install frontend dependencies if missing or incomplete
 if [ ! -d svelte/node_modules/socket.io-client ]; then
-  (cd svelte && npm install)
+  (cd svelte && npm install --legacy-peer-deps)
 fi
 
 npm run dev &
