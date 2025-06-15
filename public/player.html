@@ -1440,6 +1440,19 @@ function renderReveal(data){
       <strong>${l.lie}</strong><br>
       <small>${l.voteCount} vote${l.voteCount !== 1 ? 's' : ''}</small>
     `;
+
+    if(l.submittedById !== playerId){
+      const likeBtn=document.createElement('button');
+      likeBtn.className='btn-secondary';
+      likeBtn.style.marginLeft='8px';
+      likeBtn.textContent='👍 Like';
+      likeBtn.onclick=()=>{
+        socket.emit('like_lie',{likedPlayerId:l.submittedById});
+        likeBtn.disabled=true;
+      };
+      li.appendChild(likeBtn);
+    }
+
     list.appendChild(li);
   });
   
