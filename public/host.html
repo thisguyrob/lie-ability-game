@@ -495,15 +495,18 @@
     #optionList {
       list-style: none;
       padding: 0;
-      max-width: 700px;
+      max-width: 900px;
       margin: 0 auto;
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 20px;
     }
 
     #optionList li {
       background: rgba(255, 255, 255, 0.9);
       color: #2d3748;
       padding: 20px 30px;
-      margin-bottom: 16px;
+      margin: 0;
       border-radius: 20px;
       font-size: 22px;
       font-weight: 500;
