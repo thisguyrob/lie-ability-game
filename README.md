@@ -89,11 +89,18 @@ lie-ability-game/
 │   ├── unit/                # Unit tests (future)
 │   └── integration/         # Integration tests (future)
 ├── public/
-│   └── index.html           # Main frontend (placeholder for now)
+│   └── index.html           # Built frontend assets
+├── svelte/                  # Svelte source for the new frontend
 ├── docs/                    # Documentation (future)
 ├── package.json
 └── README.md
 ```
+
+## 🎨 Frontend Development
+
+The frontend is being rewritten in **Svelte** under the `svelte/` directory.
+Run `npm install` inside that folder and `npm run dev` to start the Vite dev server.
+The build output is placed in `public/`, which is served by the Express backend.
 
 ## 🎯 Question Packs
 
