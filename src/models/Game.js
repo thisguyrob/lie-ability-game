@@ -246,6 +246,12 @@ class Game {
     // Get category options and select random player to choose
     this.categoryOptions = this.questionService.getRandomCategories(false, this.askedQuestions);
     const connectedPlayers = Array.from(this.players.values()).filter(p => p.status === 'connected');
+    if (connectedPlayers.length === 0) {
+      console.log('⚠️ [GAME STATE] No connected players - returning to lobby');
+      this.returnToLobby();
+      return;
+    }
+
     this.categorySelector = connectedPlayers[Math.floor(Math.random() * connectedPlayers.length)].id;
     const selector = this.players.get(this.categorySelector);
 
@@ -318,13 +324,15 @@ class Game {
   }
 
   autoSelectCategory() {
-    if (this.categoryOptions.length > 0) {
-      const randomOption = this.categoryOptions[Math.floor(Math.random() * this.categoryOptions.length)];
-      console.log(`🎲 [GAME STATE] Auto-selected category: "${randomOption.category}"`);
-      this.currentQuestionData = randomOption.question;
-      this.askedQuestions.add(this.currentQuestionData.question);
-      this.startQuestionReading();
+    if (this.state !== GAME_STATES.CATEGORY_SELECTION || this.categoryOptions.length === 0) {
+      return;
     }
+
+    const randomOption = this.categoryOptions[Math.floor(Math.random() * this.categoryOptions.length)];
+    console.log(`🎲 [GAME STATE] Auto-selected category: "${randomOption.category}"`);
+    this.currentQuestionData = randomOption.question;
+    this.askedQuestions.add(this.currentQuestionData.question);
+    this.startQuestionReading();
   }
 
   startQuestionReading() {
