@@ -1289,7 +1289,15 @@ document.addEventListener('DOMContentLoaded', () => {
           picker.style.left = 'auto';
           picker.style.right = '0';
         } else {
-          picker.style.left = '0';
+
+
+  // Reset like button between stages
+  const likeBtnElem = document.getElementById('likeBtn')
+  if (likeBtnElem) {
+    likeBtnElem.style.display = 'none'
+    likeBtnElem.disabled = false
+    likeBtnElem.innerHTML = '👍 Like This Answer'
+  }
           picker.style.right = 'auto';
         }
       }
