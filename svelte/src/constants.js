@@ -1,0 +1,43 @@
+export const GAME_STATES = {
+  LOBBY: 'lobby',
+  CATEGORY_SELECTION: 'category_selection',
+  QUESTION_READING: 'question_reading',
+  LIE_SUBMISSION: 'lie_submission',
+  OPTION_SELECTION: 'option_selection',
+  TRUTH_REVEAL: 'truth_reveal',
+  SCOREBOARD: 'scoreboard',
+  GAME_ENDED: 'game_ended'
+}
+
+export const SOCKET_EVENTS = {
+  JOIN_GAME: 'join_game',
+  LEAVE_GAME: 'leave_game',
+  START_GAME: 'start_game',
+  SELECT_CATEGORY: 'select_category',
+  SUBMIT_LIE: 'submit_lie',
+  AUTO_LIE: 'auto_lie',
+  SELECT_OPTION: 'select_option',
+  LIKE_LIE: 'like_lie',
+  UPDATE_AVATAR: 'update_avatar',
+  UPDATE_NAME: 'update_name',
+  REQUEST_GAME_STATE: 'request_game_state',
+  CHANGE_QUESTION_PACK: 'change_question_pack',
+  PLAYER_JOINED: 'player_joined',
+  PLAYER_LEFT: 'player_left',
+  PLAYER_RECONNECTED: 'player_reconnected',
+  GAME_STATE_UPDATE: 'game_state_update',
+  GAME_STARTED: 'game_started',
+  CATEGORY_SELECTION_START: 'category_selection_start',
+  QUESTION_READING_START: 'question_reading_start',
+  LIE_SUBMISSION_START: 'lie_submission_start',
+  OPTION_SELECTION_START: 'option_selection_start',
+  TRUTH_REVEAL_START: 'truth_reveal_start',
+  SCOREBOARD_UPDATE: 'scoreboard_update',
+  GAME_ENDED: 'game_ended',
+  ERROR: 'error',
+  TIMER_UPDATE: 'timer_update',
+  PLAYER_AVATAR_UPDATED: 'player_avatar_updated',
+  PLAYER_NAME_UPDATED: 'player_name_updated',
+  HOST_SUB_STEP_INFO: 'host_sub_step_info',
+  AVAILABLE_QUESTION_PACKS: 'available_question_packs'
+}
