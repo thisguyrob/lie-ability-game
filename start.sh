@@ -6,6 +6,15 @@ backend_port=3000
 frontend_port=5173
 shared_screen_url="http://localhost:${frontend_port}/host"
 
+# Install dependencies if missing
+if [ ! -d node_modules ]; then
+  npm install
+fi
+
+if [ ! -d svelte/node_modules ]; then
+  (cd svelte && npm install)
+fi
+
 npm run dev &
 backend_pid=$!
 
