@@ -106,6 +106,19 @@
       animation: fadeInUp 0.6s ease-out;
     }
 
+    #categoryView,
+    #questionView,
+    #lieView,
+    #optionView,
+    #revealView,
+    #scoreboardView {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      min-height: calc(100vh - 60px);
+    }
+
     @keyframes fadeInUp {
       from {
         opacity: 0;
@@ -343,7 +356,7 @@
     /* Category View */
     .category-container {
       text-align: center;
-      margin-top: 60px;
+      margin: 0 auto;
     }
 
     #categoryPrompt {
@@ -351,6 +364,7 @@
       font-weight: 700;
       margin-bottom: 40px;
       text-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+      text-align: center;
     }
 
     #categoryList {
@@ -400,9 +414,10 @@
     /* Question View */
     .question-container {
       max-width: 800px;
-      margin: 80px auto;
+      margin: 0 auto;
       text-align: center;
     }
+
 
     .question-category-label {
       font-size: 24px;
@@ -420,6 +435,7 @@
       text-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
       margin-bottom: 30px;
       animation: fadeInScale 0.8s ease-out;
+      text-align: center;
     }
 
     @keyframes fadeInScale {
@@ -436,7 +452,7 @@
     /* Lie Submission View */
     .waiting-container {
       text-align: center;
-      margin-top: 100px;
+      margin: 0 auto;
     }
 
     .waiting-title {
@@ -479,15 +495,18 @@
     #optionList {
       list-style: none;
       padding: 0;
-      max-width: 700px;
-      margin: 60px auto;
+      max-width: 900px;
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 20px;
     }
 
     #optionList li {
       background: rgba(255, 255, 255, 0.9);
       color: #2d3748;
       padding: 20px 30px;
-      margin-bottom: 16px;
+      margin: 0;
       border-radius: 20px;
       font-size: 22px;
       font-weight: 500;
@@ -535,7 +554,7 @@
     /* Reveal View */
     .reveal-container {
       max-width: 800px;
-      margin: 60px auto;
+      margin: 0 auto;
     }
 
     #revealQuestion {
@@ -601,7 +620,7 @@
     /* Scoreboard */
     .scoreboard-container {
       max-width: 900px;
-      margin: 60px auto;
+      margin: 0 auto;
     }
 
     .scoreboard-title {
@@ -737,6 +756,7 @@
 
       #questionText {
         font-size: 32px;
+        text-align: center;
       }
 
       #categoryList {
@@ -865,6 +885,7 @@ const sections = {
   reveal: document.getElementById('revealView'),
   score: document.getElementById('scoreboardView')
 };
+const pageContainer = document.querySelector('.container');
 const startBtn = document.getElementById('startBtn');
 startBtn.onclick = () => socket.emit('start_game');
 
@@ -960,11 +981,13 @@ function render(){
   
   // Show/hide global player list based on state
   const globalPlayerList = document.getElementById('globalPlayerList');
-  if(gameState.state === 'scoreboard' || gameState.state === 'game_ended') {
-    globalPlayerList.style.display = 'none';
-  } else {
+  if(gameState.state === 'lobby') {
     globalPlayerList.style.display = 'block';
-    renderPlayerList(); // Always render player list when visible
+    pageContainer.style.paddingRight = '300px';
+    renderPlayerList();
+  } else {
+    globalPlayerList.style.display = 'none';
+    pageContainer.style.paddingRight = '0';
   }
   
   switch(gameState.state){
@@ -1065,6 +1088,7 @@ function renderReveal(data){
 function renderScoreboard(data){
   show('score');
   document.getElementById('globalPlayerList').style.display = 'none';
+  pageContainer.style.paddingRight = '0';
   const table=document.getElementById('scoreTable');
   table.innerHTML='<tr><th>Rank</th><th>Name</th><th>Last Lie</th><th>Fooled</th><th>Score</th></tr>';
   data.players.forEach((p, index) => {

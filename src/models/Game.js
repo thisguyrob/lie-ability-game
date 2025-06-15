@@ -251,12 +251,23 @@ class Game {
 
     console.log(`🎯 [GAME STATE] ${selector.name} selected to choose category (${TIMERS.CATEGORY_SELECTION / 1000}s timer)`);
 
-    this.broadcastToAll(SOCKET_EVENTS.CATEGORY_SELECTION_START, {
+    const selectorPayload = {
       categories: this.categoryOptions.map(opt => ({ id: opt.id, category: opt.category })),
       selectorId: this.categorySelector,
       selectorName: selector.name,
       timeLimit: TIMERS.CATEGORY_SELECTION / 1000
-    });
+    }
+
+    const genericPayload = {
+      ...selectorPayload,
+      categories: []
+    }
+
+    this.broadcastToAll(SOCKET_EVENTS.CATEGORY_SELECTION_START, genericPayload)
+
+    if (selector.socketId) {
+      this.io.to(selector.socketId).emit(SOCKET_EVENTS.CATEGORY_SELECTION_START, selectorPayload)
+    }
 
     // Start timer
     this.timerService.startTimer(
@@ -876,7 +887,8 @@ class Game {
       case GAME_STATES.CATEGORY_SELECTION:
         return {
           ...baseInfo,
-          categories: this.categoryOptions?.map(opt => ({ id: opt.id, category: opt.category })),
+          categories: playerId === this.categorySelector ?
+            this.categoryOptions?.map(opt => ({ id: opt.id, category: opt.category })) : [],
           timeRemaining: Math.ceil(this.timerService.getRemainingTime('category_selection') / 1000)
         };
       case GAME_STATES.QUESTION_READING:
