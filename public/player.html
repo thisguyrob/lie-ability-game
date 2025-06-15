@@ -717,12 +717,11 @@
       padding: 32px 16px;
       font-size: 14px;
     }
-
-    /* IMPROVED DARK MODE STYLES */
+    /* Enhanced Dark Mode Support */
     @media (prefers-color-scheme: dark) {
       body {
-        background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
-        color: #e2e8f0;
+        background: linear-gradient(135deg, #1a202c 0%, #2d3748 100%);
+        color: #f7fafc;
       }
 
       .header {
@@ -762,6 +761,22 @@
         color: #94a3b8;
       }
 
+      /* Join Section Dark Mode */
+      .join-section {
+        background: #2d3748;
+        color: #f7fafc;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+      }
+
+      .join-title {
+        color: #f7fafc;
+      }
+
+      .join-subtitle {
+        color: #a0aec0;
+      }
+
+      /* Card Elements */
       .card {
         background: #1e293b;
         color: #e2e8f0;
@@ -777,6 +792,11 @@
         color: #94a3b8;
       }
 
+      .card-subtitle {
+        color: #a0aec0;
+      }
+
+      /* Input Fields */
       .input-field {
         background: #0f172a;
         border-color: #475569;
@@ -793,6 +813,17 @@
         color: #64748b;
       }
 
+      .input-field:focus {
+        background: #4a5568;
+        border-color: #667eea;
+        box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.2);
+      }
+
+      .input-field::placeholder {
+        color: #a0aec0;
+      }
+
+      /* Buttons */
       .btn-secondary {
         background: #0f172a;
         color: #e2e8f0;
@@ -800,154 +831,141 @@
       }
 
       .btn-secondary:hover {
-        background: #1e293b;
-        border-color: #64748b;
+        background: #718096;
+        border-color: #a0aec0;
       }
 
       .btn-option {
-        background: #1e293b;
-        color: #e2e8f0;
-        border-color: #475569;
+        background: #4a5568;
+        color: #f7fafc;
+        border-color: #718096;
       }
 
       .btn-option:hover {
-        border-color: #6366f1;
-        background: #0f172a;
-        box-shadow: 0 4px 15px rgba(99, 102, 241, 0.2);
+        background: #718096;
+        border-color: #667eea;
       }
 
       .btn-option.selected {
-        background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
         color: white;
-        border-color: #6366f1;
+        border-color: #667eea;
       }
 
-      .btn-option:disabled {
-        background: #334155;
-        color: #64748b;
-        border-color: #475569;
-        opacity: 0.7;
-      }
-
+      /* Avatar Section */
       .avatar-edit {
-        background: #0f172a;
-        border-color: #475569;
+        background: #4a5568;
+        border-color: #718096;
       }
 
       .emoji-button {
-        background: #1e293b;
-        border-color: #475569;
-        color: #e2e8f0;
+        background: #4a5568;
+        color: #f7fafc;
+        border-color: #718096;
       }
 
       .emoji-button:hover {
-        background: #0f172a;
-        border-color: #64748b;
+        background: #718096;
+        border-color: #a0aec0;
       }
 
+      /* Emoji Picker */
       .custom-emoji-picker {
-        background: #1e293b;
-        border: 1px solid #475569;
-        box-shadow: 0 20px 50px rgba(0, 0, 0, 0.4);
-      }
-
-      .picker-header {
-        background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
-      }
-
-      .emoji-search {
-        background: rgba(15, 23, 42, 0.3);
-        color: #e2e8f0;
-      }
-
-      .emoji-search::placeholder {
-        color: rgba(226, 232, 240, 0.6);
-      }
-
-      .emoji-search:focus {
-        background: rgba(15, 23, 42, 0.5);
+        background: #2d3748;
+        box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
       }
 
       .emoji-categories {
-        background: #0f172a;
-        border-bottom-color: #334155;
+        background: #4a5568;
+        border-bottom-color: #718096;
+      }
+
+      .emoji-category-tab {
+        color: #f7fafc;
       }
 
       .emoji-category-tab:hover {
-        background: #334155;
+        background: #718096;
       }
 
       .emoji-category-tab.active {
-        background: #1e293b;
-        border-bottom-color: #6366f1;
+        background: #2d3748;
+        border-bottom-color: #667eea;
+      }
+
+      .emoji-grid-container {
+        background: #2d3748;
       }
 
       .emoji-option:hover {
-        background: #334155;
+        background: #4a5568;
       }
 
+      /* Reveal Items */
       .reveal-item {
-        background: #0f172a;
-        border-left-color: #475569;
-        color: #e2e8f0;
+        background: #4a5568;
+        color: #f7fafc;
+        border-left-color: #718096;
       }
 
       .reveal-item.truth {
-        background: #064e3b;
-        border-left-color: #10b981;
-        color: #a7f3d0;
+        background: #22543d;
+        border-left-color: #38a169;
+        color: #c6f6d5;
       }
 
+      /* Score Table */
       .score-table th {
-        background: #0f172a;
-        color: #e2e8f0;
-        border-bottom-color: #475569;
+        background: #4a5568;
+        color: #f7fafc;
+        border-bottom-color: #718096;
       }
 
       .score-table td {
-        color: #e2e8f0;
-        border-bottom-color: #475569;
+        color: #f7fafc;
+        border-bottom-color: #718096;
       }
 
       .score-table tr:hover {
-        background: #0f172a;
+        background: #4a5568;
       }
 
-      .loading {
-        color: #94a3b8;
-      }
-
-      .spinner {
-        border-color: #475569;
-        border-top-color: #6366f1;
-      }
-
+      /* Status Messages */
       .status-success {
-        background: #064e3b;
-        color: #a7f3d0;
-        border-color: #10b981;
+        background: #22543d;
+        color: #c6f6d5;
+        border-color: #38a169;
       }
 
       .status-info {
-        background: #0c4a6e;
-        color: #93c5fd;
-        border-color: #3b82f6;
+        background: #2a4365;
+        color: #bee3f8;
+        border-color: #3182ce;
       }
 
+      /* Loading and Spinner */
+      .loading {
+        color: #a0aec0;
+      }
+
+      .spinner {
+        border-color: #718096;
+        border-top-color: #667eea;
+      }
+
+      /* Timer and Connection Status */
+      .timer {
+        background: rgba(26, 32, 44, 0.95);
+        color: #f56565;
+      }
+
+      .connection-status {
+        background: rgba(26, 32, 44, 0.95);
+      }
+
+      /* No Results */
       .no-results {
-        color: #94a3b8;
-      }
-
-      /* Dark mode color input styling */
-      .color-input {
-        border: 2px solid #475569;
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
-      }
-
-      /* Ensure proper contrast for avatars in dark mode */
-      .player-avatar {
-        border-color: rgba(226, 232, 240, 0.2);
-        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4);
+        color: #a0aec0;
       }
     }
   </style>
@@ -1313,7 +1331,15 @@ document.addEventListener('DOMContentLoaded', () => {
           picker.style.left = 'auto';
           picker.style.right = '0';
         } else {
-          picker.style.left = '0';
+
+
+  // Reset like button between stages
+  const likeBtnElem = document.getElementById('likeBtn')
+  if (likeBtnElem) {
+    likeBtnElem.style.display = 'none'
+    likeBtnElem.disabled = false
+    likeBtnElem.innerHTML = '👍 Like This Answer'
+  }
           picker.style.right = 'auto';
         }
       }
@@ -1421,9 +1447,10 @@ socket.on('timer_update', d => {
   }
 });
 
-socket.on('lie_submitted', () => { 
-  const status = document.getElementById('lieStatus');
-  status.innerHTML = '<div class="status-message status-success">✅ Lie submitted successfully!</div>';
+          likeBtnElem.style.display = 'block'
+          likeBtnElem.disabled = false
+          likeBtnElem.style.display = 'none'
+          likeBtnElem.disabled = true
 });
 
 socket.on('option_selected', () => { 
@@ -1466,8 +1493,9 @@ document.getElementById('submitLie').onclick = () => {
 document.getElementById('autoLie').onclick = () => { socket.emit('auto_lie'); };
 
 document.getElementById('likeBtn').onclick = () => {
-  if(selectedOption && selectedOption.submittedById){
-    socket.emit('like_lie',{likedPlayerId:selectedOption.submittedById});
+  if(selectedOption && selectedOption.submittedById && selectedOption.submittedById !== playerId){
+    socket.emit('like_lie', { likedPlayerId: selectedOption.submittedById });
+    document.getElementById('likeBtn').disabled = true;
   }
 };
 
@@ -1581,16 +1609,15 @@ function renderCategory(){
     });
   }
   
-  let selectorName = ''
-  const selectorPlayer = gameState.players.find(p => p.id === gameState.categorySelector)
-  if(selectorPlayer) selectorName = selectorPlayer.name || ''
+  const selectorPlayer = gameState.players.find(p => p.id === gameState.categorySelector) || {}
+  const selectorName = selectorPlayer.name || ''
   document.getElementById('categoryPrompt').textContent=subStep.isSelector ?
     'Choose a category for the next question' :
     `Waiting for ${selectorName} to choose...`;
 }
 
 function renderQuestion(){
-  const q = subStep && subStep.question ? subStep.question : gameState.currentQuestionData;
+  const q=(subStep && subStep.question) ? subStep.question : gameState.currentQuestionData;
   if(q) {
     document.getElementById('questionCategory').textContent = q.category;
     document.getElementById('questionText').textContent = q.question;
@@ -1608,15 +1635,19 @@ function renderOptions(){
       btn.textContent=opt.text;
       btn.onclick=()=>{
         // Clear previous selections
-        document.querySelectorAll('.btn-option').forEach(b => b.classList.remove('selected'))
-        btn.classList.add('selected')
-
-        selectedOption=opt
-        socket.emit('select_option',{optionId:opt.id})
-
-        // Show like button if it's a lie from another player
+        document.querySelectorAll('.btn-option').forEach(b => b.classList.remove('selected'));
+        btn.classList.add('selected');
+        
+        selectedOption=opt;
+        socket.emit('select_option',{optionId:opt.id});
+        
+        // Toggle like button only for lies from other players
+        const likeBtnElem = document.getElementById('likeBtn');
         if(opt.submittedById && opt.submittedById !== playerId) {
-          document.getElementById('likeBtn').style.display='block'
+          likeBtnElem.style.display = 'block';
+          likeBtnElem.disabled = false;
+        } else {
+          likeBtnElem.style.display = 'none';
         }
       }
       container.appendChild(btn)
@@ -1637,6 +1668,19 @@ function renderReveal(data){
       <strong>${l.lie}</strong><br>
       <small>${l.voteCount} vote${l.voteCount !== 1 ? 's' : ''}</small>
     `;
+
+    if(l.submittedById !== playerId){
+      const likeBtn=document.createElement('button');
+      likeBtn.className='btn-secondary';
+      likeBtn.style.marginLeft='8px';
+      likeBtn.textContent='👍 Like';
+      likeBtn.onclick=()=>{
+        socket.emit('like_lie',{likedPlayerId:l.submittedById});
+        likeBtn.disabled=true;
+      };
+      li.appendChild(likeBtn);
+    }
+
     list.appendChild(li);
   });
   
