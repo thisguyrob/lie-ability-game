@@ -405,6 +405,12 @@
       text-align: center;
     }
 
+    #questionView {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
     .question-category-label {
       font-size: 24px;
       font-weight: 500;
@@ -868,6 +874,7 @@ const sections = {
   reveal: document.getElementById('revealView'),
   score: document.getElementById('scoreboardView')
 };
+const pageContainer = document.querySelector('.container');
 const startBtn = document.getElementById('startBtn');
 startBtn.onclick = () => socket.emit('start_game');
 
@@ -963,11 +970,13 @@ function render(){
   
   // Show/hide global player list based on state
   const globalPlayerList = document.getElementById('globalPlayerList');
-  if(gameState.state === 'scoreboard' || gameState.state === 'game_ended') {
-    globalPlayerList.style.display = 'none';
-  } else {
+  if(gameState.state === 'lobby') {
     globalPlayerList.style.display = 'block';
-    renderPlayerList(); // Always render player list when visible
+    pageContainer.style.paddingRight = '300px';
+    renderPlayerList();
+  } else {
+    globalPlayerList.style.display = 'none';
+    pageContainer.style.paddingRight = '0';
   }
   
   switch(gameState.state){
@@ -1068,6 +1077,7 @@ function renderReveal(data){
 function renderScoreboard(data){
   show('score');
   document.getElementById('globalPlayerList').style.display = 'none';
+  pageContainer.style.paddingRight = '0';
   const table=document.getElementById('scoreTable');
   table.innerHTML='<tr><th>Rank</th><th>Name</th><th>Last Lie</th><th>Fooled</th><th>Score</th></tr>';
   data.players.forEach((p, index) => {
