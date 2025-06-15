@@ -1,0 +1,2 @@
+import{S as r,i as o,s as l,e as i,b as c,c as p,n,f as m,q as u}from"./index-73177419.js";import{l as f}from"./index-d9998155.js";function _(a){let e;return{c(){e=i("main"),e.innerHTML=`<h1>Player Screen</h1> 
+  <p>Your personal interactions will go here.</p>`,c(e,"class","svelte-pnca9")},m(t,s){p(t,e,s)},p:n,i:n,o:n,d(t){t&&m(e)}}}function y(a){return u(()=>{f()}),[]}class d extends r{constructor(e){super(),o(this,e,y,_,l,{})}}new d({target:document.getElementById("player")});

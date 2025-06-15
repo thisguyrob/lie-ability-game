@@ -63,7 +63,6 @@
 <style>
   main {
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-    padding: 2rem;
     text-align: center;
   }
   .timer {

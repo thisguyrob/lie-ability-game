@@ -1,37 +1,62 @@
 #!/bin/bash
 
-# Start backend and frontend concurrently
+echo "🚀 Starting Lie-Ability Game..."
 
-backend_port=3000
-frontend_port=5173
-shared_screen_url="http://localhost:${frontend_port}/host"
-
-# Ensure backend dependencies are installed
-if ! npm ls express >/dev/null 2>&1; then
-  npm install --legacy-peer-deps
+# Check if port 3000 is already in use and kill existing processes
+if lsof -Pi :3000 -sTCP:LISTEN -t >/dev/null ; then
+    echo "🔄 Port 3000 is in use. Stopping existing server..."
+    kill $(lsof -ti:3000) 2>/dev/null || true
+    sleep 2
 fi
 
-# Ensure frontend dependencies are installed
-if ! (cd svelte && npm ls socket.io-client >/dev/null 2>&1); then
-  (cd svelte && npm install --legacy-peer-deps)
-fi
+# Build the Svelte frontend first
+echo "📦 Building Svelte frontend..."
+cd svelte && npm run build && cd ..
 
-npm run dev &
-backend_pid=$!
+# Start the server in the background
+echo "🎮 Starting game server..."
+node src/server.js &
+SERVER_PID=$!
 
-(cd svelte && npm run dev &) 
-frontend_pid=$!
-
-# Wait a moment for servers to start
+# Wait a moment for the server to start
 sleep 3
 
-if command -v xdg-open >/dev/null; then
-  xdg-open "$shared_screen_url" &
-elif command -v open >/dev/null; then
-  open "$shared_screen_url" &
+# Get the server URL (defaulting to localhost if we can't detect the IP)
+SERVER_URL="http://localhost:3000"
+
+echo "🌐 Server running at: $SERVER_URL"
+echo "🖥️  Host interface: $SERVER_URL/host"
+echo "📱 Player interface: $SERVER_URL/player"
+
+# Try to open the host interface in the default browser
+if command -v open &> /dev/null; then
+    # macOS
+    echo "🌐 Opening host interface in browser..."
+    open "$SERVER_URL/host"
+elif command -v xdg-open &> /dev/null; then
+    # Linux
+    echo "🌐 Opening host interface in browser..."
+    xdg-open "$SERVER_URL/host"
+elif command -v start &> /dev/null; then
+    # Windows
+    echo "🌐 Opening host interface in browser..."
+    start "$SERVER_URL/host"
 else
-  echo "Open $shared_screen_url in your browser"
+    echo "📋 Please open your browser and go to: $SERVER_URL/host"
 fi
 
-trap 'kill $backend_pid $frontend_pid' INT TERM
-wait $backend_pid $frontend_pid
+echo ""
+echo "✅ Game is ready\! Press Ctrl+C to stop the server."
+
+# Function to cleanup on exit
+cleanup() {
+    echo "🛑 Shutting down server..."
+    kill $SERVER_PID 2>/dev/null || true
+    exit 0
+}
+
+# Set trap to cleanup on script exit
+trap cleanup SIGINT SIGTERM
+
+# Wait for the server process
+wait $SERVER_PID

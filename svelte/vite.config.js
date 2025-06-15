@@ -5,6 +5,16 @@ export default defineConfig({
   plugins: [svelte()],
   build: {
     outDir: '../public',
-    emptyOutDir: false
+    emptyOutDir: false,
+    rollupOptions: {
+      input: {
+        main: 'index.html',
+        host: 'host.html',
+        player: 'player.html'
+      }
+    }
+  },
+  server: {
+    port: 5173
   }
 })

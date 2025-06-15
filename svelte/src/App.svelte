@@ -12,7 +12,9 @@
 </main>
 
 <style>
-  main {
+:global(body) { /* this will apply to <body> */ margin: 0; padding: 0; }
+
+main {
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     padding: 2rem;
     text-align: center;
