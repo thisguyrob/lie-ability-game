@@ -896,7 +896,11 @@ class Game {
         return {
           ...baseInfo,
           categories: playerId === this.categorySelector ?
-            this.categoryOptions?.map(opt => ({ id: opt.id, category: opt.category })) : [],
+            this.categoryOptions?.map(opt => ({ 
+              id: opt.id, 
+              name: opt.category,
+              emoji: this.getCategoryEmoji(opt.category)
+            })) : [],
           timeRemaining: Math.ceil(this.timerService.getRemainingTime('category_selection') / 1000)
         };
       case GAME_STATES.QUESTION_READING:
@@ -987,6 +991,43 @@ class Game {
     }
 
     return { success: false, error: 'Question pack not found' };
+  }
+
+  getCategoryEmoji(category) {
+    const emojiMap = {
+      'History': '📚',
+      'Animals': '🐾',
+      'Food': '🍎',
+      'Science': '🔬',
+      'Sports': '⚽',
+      'Entertainment': '🎬',
+      'Geography': '🌍',
+      'Music': '🎵',
+      'Art': '🎨',
+      'Technology': '💻',
+      'Literature': '📖',
+      'Movies': '🎭',
+      'TV Shows': '📺',
+      'Celebrities': '⭐',
+      'Nature': '🌿',
+      'Space': '🚀',
+      'Medicine': '⚕️',
+      'Politics': '🏛️',
+      'Business': '💼',
+      'Religion': '⛪',
+      'Philosophy': '🤔',
+      'Psychology': '🧠',
+      'Education': '🎓',
+      'Fashion': '👗',
+      'Architecture': '🏗️',
+      'Transportation': '🚗',
+      'Weather': '🌤️',
+      'Holidays': '🎉',
+      'Travel': '✈️',
+      'Culture': '🏛️'
+    };
+    
+    return emojiMap[category] || '📝';
   }
 }
 
