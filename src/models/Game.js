@@ -556,9 +556,9 @@ class Game {
   }
 
   likeLie(playerId, likedPlayerId) {
-    // Players can like lies during option selection
-    if (this.state !== GAME_STATES.OPTION_SELECTION) {
-      return { success: false, error: 'Can only like lies during option selection' };
+    // Players can like lies during option selection or truth reveal
+    if (![GAME_STATES.OPTION_SELECTION, GAME_STATES.TRUTH_REVEAL].includes(this.state)) {
+      return { success: false, error: 'Can only like lies during option selection or truth reveal' };
     }
 
     const player = this.players.get(playerId);

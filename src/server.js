@@ -493,30 +493,25 @@ async function startServer() {
 startServer();
 
 // Graceful shutdown
-process.on('SIGINT', () => {
-  console.log('\n🛑 Shutting down gracefully...');
-  
+function gracefulShutdown(message) {
+  console.log(message)
+
   if (game) {
-    game.timerService.cancelAllTimers();
-    game.broadcastToAll(SOCKET_EVENTS.ERROR, { message: 'Server shutting down' });
+    game.timerService.cancelAllTimers()
+    game.broadcastToAll(SOCKET_EVENTS.ERROR, { message: 'Server shutting down' })
   }
-  
+
   server.close(() => {
-    console.log('✅ Server closed');
-    process.exit(0);
-  });
-});
+    process.stdout.write('✅ Server closed\n', () => {
+      process.exit(0)
+    })
+  })
+}
+
+process.on('SIGINT', () => {
+  gracefulShutdown('\n🛑 Shutting down gracefully...')
+})
 
 process.on('SIGTERM', () => {
-  console.log('🛑 Received SIGTERM, shutting down gracefully...');
-  
-  if (game) {
-    game.timerService.cancelAllTimers();
-    game.broadcastToAll(SOCKET_EVENTS.ERROR, { message: 'Server shutting down' });
-  }
-  
-  server.close(() => {
-    console.log('✅ Server closed');
-    process.exit(0);
-  });
-});
+  gracefulShutdown('🛑 Received SIGTERM, shutting down gracefully...')
+})
