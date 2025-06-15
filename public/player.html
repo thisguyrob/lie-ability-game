@@ -1366,7 +1366,7 @@ function renderCategory(){
   const container=document.getElementById('categoryButtons');
   container.innerHTML='';
   
-  if(subStep?.categories){
+  if(subStep && subStep.categories){
     subStep.categories.forEach(c => {
       const btn=document.createElement('button');
       btn.className = 'btn-option';
@@ -1386,14 +1386,16 @@ function renderCategory(){
     });
   }
   
-  const selectorName=gameState.players.find(p=>p.id===gameState.categorySelector)?.name || '';
-  document.getElementById('categoryPrompt').textContent=subStep.isSelector ? 
-    'Choose a category for the next question' : 
+  let selectorName = ''
+  const selectorPlayer = gameState.players.find(p => p.id === gameState.categorySelector)
+  if(selectorPlayer) selectorName = selectorPlayer.name || ''
+  document.getElementById('categoryPrompt').textContent=subStep.isSelector ?
+    'Choose a category for the next question' :
     `Waiting for ${selectorName} to choose...`;
 }
 
 function renderQuestion(){
-  const q=subStep?.question || gameState.currentQuestionData;
+  const q = subStep && subStep.question ? subStep.question : gameState.currentQuestionData;
   if(q) {
     document.getElementById('questionCategory').textContent = q.category;
     document.getElementById('questionText').textContent = q.question;
@@ -1403,27 +1405,27 @@ function renderQuestion(){
 function renderOptions(){
   const container=document.getElementById('options');
   container.innerHTML='';
-  
-  if(subStep?.options){
+
+  if(subStep && subStep.options){
     subStep.options.forEach(opt => {
       const btn=document.createElement('button');
       btn.className = 'btn-option';
       btn.textContent=opt.text;
       btn.onclick=()=>{
         // Clear previous selections
-        document.querySelectorAll('.btn-option').forEach(b => b.classList.remove('selected'));
-        btn.classList.add('selected');
-        
-        selectedOption=opt;
-        socket.emit('select_option',{optionId:opt.id});
-        
+        document.querySelectorAll('.btn-option').forEach(b => b.classList.remove('selected'))
+        btn.classList.add('selected')
+
+        selectedOption=opt
+        socket.emit('select_option',{optionId:opt.id})
+
         // Show like button if it's a lie from another player
         if(opt.submittedById && opt.submittedById !== playerId) {
-          document.getElementById('likeBtn').style.display='block';
+          document.getElementById('likeBtn').style.display='block'
         }
-      };
-      container.appendChild(btn);
-    });
+      }
+      container.appendChild(btn)
+    })
   }
 }
 
