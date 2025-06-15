@@ -717,7 +717,6 @@
       padding: 32px 16px;
       font-size: 14px;
     }
-
     /* Enhanced Dark Mode Support */
     @media (prefers-color-scheme: dark) {
       body {
@@ -726,12 +725,40 @@
       }
 
       .header {
-        background: rgba(26, 32, 44, 0.95);
-        border-bottom-color: rgba(255, 255, 255, 0.1);
+        background: rgba(15, 23, 42, 0.95);
+        border-bottom-color: rgba(148, 163, 184, 0.2);
+        backdrop-filter: blur(20px);
       }
 
       .header h1 {
-        color: #f7fafc;
+        color: #f1f5f9;
+      }
+
+      .connection-status {
+        background: rgba(15, 23, 42, 0.95);
+        color: #34d399;
+        backdrop-filter: blur(20px);
+      }
+
+      .timer {
+        background: rgba(15, 23, 42, 0.95);
+        color: #fbbf24;
+        backdrop-filter: blur(20px);
+      }
+
+      .join-section {
+        background: #1e293b;
+        color: #e2e8f0;
+        border: 1px solid #334155;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+      }
+
+      .join-title {
+        color: #f1f5f9;
+      }
+
+      .join-subtitle {
+        color: #94a3b8;
       }
 
       /* Join Section Dark Mode */
@@ -751,13 +778,18 @@
 
       /* Card Elements */
       .card {
-        background: #2d3748;
-        color: #f7fafc;
-        border-color: rgba(255, 255, 255, 0.1);
+        background: #1e293b;
+        color: #e2e8f0;
+        border: 1px solid #334155;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
       }
 
       .card-title {
-        color: #f7fafc;
+        color: #f1f5f9;
+      }
+
+      .card-subtitle {
+        color: #94a3b8;
       }
 
       .card-subtitle {
@@ -766,9 +798,19 @@
 
       /* Input Fields */
       .input-field {
-        background: #4a5568;
-        border-color: #718096;
-        color: #f7fafc;
+        background: #0f172a;
+        border-color: #475569;
+        color: #e2e8f0;
+      }
+
+      .input-field:focus {
+        border-color: #6366f1;
+        background: #1e293b;
+        box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2);
+      }
+
+      .input-field::placeholder {
+        color: #64748b;
       }
 
       .input-field:focus {
@@ -783,9 +825,9 @@
 
       /* Buttons */
       .btn-secondary {
-        background: #4a5568;
-        color: #f7fafc;
-        border-color: #718096;
+        background: #0f172a;
+        color: #e2e8f0;
+        border-color: #475569;
       }
 
       .btn-secondary:hover {
@@ -1433,7 +1475,14 @@ socket.on('player_avatar_updated', d => {
   document.getElementById('customEmojiPicker').style.display = 'none';
 });
 
-socket.on('error', data => log('Error: '+data.message));
+socket.on('error', data => {
+  log('Error: '+data.message)
+  if(data.message === 'Failed to reconnect'){
+    localStorage.removeItem('playerId')
+    document.getElementById('joinSection').style.display='block'
+    document.getElementById('views').style.display='none'
+  }
+})
 
 document.getElementById('joinBtn').onclick = () => {
   const name=document.getElementById('nameInput').value.trim();
@@ -1607,9 +1656,9 @@ function renderOptions(){
         } else {
           likeBtnElem.style.display = 'none';
         }
-      };
-      container.appendChild(btn);
-    });
+      }
+      container.appendChild(btn)
+    })
   }
 }
 
