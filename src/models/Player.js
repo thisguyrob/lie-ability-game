@@ -2,13 +2,13 @@ const { v4: uuidv4 } = require('uuid');
 const { PLAYER_STATUS, AVATAR_EMOJIS, AVATAR_COLORS } = require('../utils/constants');
 
 class Player {
-  constructor(name, socketId) {
+  constructor(name, socketId, avatar = null) {
     this.id = uuidv4();
     this.name = name;
     this.socketId = socketId;
     this.status = PLAYER_STATUS.CONNECTED;
     this.points = 0;
-    this.avatar = this.generateAvatar();
+    this.avatar = avatar || this.generateAvatar();
     
     // Game state tracking
     this.currentLie = null;

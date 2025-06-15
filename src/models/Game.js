@@ -49,7 +49,7 @@ class Game {
   }
 
   // Player Management Methods
-  addPlayer(name, socketId) {
+  addPlayer(name, socketId, avatar = null) {
     if (!this.initialized) {
       return { success: false, error: 'Game still initializing, please wait' };
     }
@@ -69,7 +69,7 @@ class Game {
       }
     }
 
-    const player = new Player(name, socketId);
+    const player = new Player(name, socketId, avatar);
     this.players.set(player.id, player);
     
     console.log(`👥 [GAME STATE] Player ${name} joined game ${this.id} (${this.players.size}/${GAME_CONFIG.MAX_PLAYERS})`);

@@ -62,7 +62,7 @@ io.on('connection', (socket) => {
 
   // Handle player joining
   socket.on(SOCKET_EVENTS.JOIN_GAME, (data) => {
-    const { playerName, playerId } = data;
+    const { name: playerName, playerId, avatar } = data;
     
     try {
       if (playerId && game.players.has(playerId)) {
@@ -83,12 +83,12 @@ io.on('connection', (socket) => {
       } else {
         // New player
         console.log(`👋 [PLAYER ACTION] New player joining: ${playerName}`);
-        const result = game.addPlayer(playerName, socket.id);
+        const result = game.addPlayer(playerName, socket.id, avatar);
         if (result.success) {
           console.log(`✅ [PLAYER ACTION] ${playerName} joined successfully (ID: ${result.player.id})`);
           
           // Send success response to the joining player
-          socket.emit(SOCKET_EVENTS.PLAYER_JOINED, {
+          socket.emit('player_joined_response', {
             success: true,
             player: result.player.getPublicData(),
             gameState: game.getGameState()
@@ -100,12 +100,18 @@ io.on('connection', (socket) => {
           // The addPlayer method already broadcasts to all players including the new one
         } else {
           console.log(`❌ [PLAYER ACTION] ${playerName} failed to join: ${result.error}`);
-          socket.emit(SOCKET_EVENTS.ERROR, { message: result.error });
+          socket.emit('player_joined_response', { 
+            success: false, 
+            error: result.error 
+          });
         }
       }
     } catch (error) {
       console.error('Error in JOIN_GAME:', error);
-      socket.emit(SOCKET_EVENTS.ERROR, { message: 'Failed to join game' });
+      socket.emit('player_joined_response', { 
+        success: false, 
+        error: 'Failed to join game' 
+      });
     }
   });
 
