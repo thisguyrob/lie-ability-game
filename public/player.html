@@ -1271,8 +1271,9 @@ document.getElementById('submitLie').onclick = () => {
 document.getElementById('autoLie').onclick = () => { socket.emit('auto_lie'); };
 
 document.getElementById('likeBtn').onclick = () => {
-  if(selectedOption && selectedOption.submittedById){
-    socket.emit('like_lie',{likedPlayerId:selectedOption.submittedById});
+  if(selectedOption && selectedOption.submittedById && selectedOption.submittedById !== playerId){
+    socket.emit('like_lie', { likedPlayerId: selectedOption.submittedById });
+    document.getElementById('likeBtn').disabled = true;
   }
 };
 
@@ -1417,9 +1418,13 @@ function renderOptions(){
         selectedOption=opt;
         socket.emit('select_option',{optionId:opt.id});
         
-        // Show like button if it's a lie from another player
+        // Toggle like button only for lies from other players
+        const likeBtnElem = document.getElementById('likeBtn');
         if(opt.submittedById && opt.submittedById !== playerId) {
-          document.getElementById('likeBtn').style.display='block';
+          likeBtnElem.style.display = 'block';
+          likeBtnElem.disabled = false;
+        } else {
+          likeBtnElem.style.display = 'none';
         }
       };
       container.appendChild(btn);
