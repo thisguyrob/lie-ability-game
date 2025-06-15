@@ -710,50 +710,245 @@
       }
     }
 
-    /* Dark mode support */
-    @media (prefers-color-scheme: dark) {
-      body {
-        background: linear-gradient(135deg, #1a202c 0%, #2d3748 100%);
-      }
-
-      .header {
-        background: rgba(26, 32, 44, 0.95);
-        border-bottom-color: rgba(255, 255, 255, 0.1);
-      }
-
-      .header h1 {
-        color: #f7fafc;
-      }
-
-      .card {
-        background: #2d3748;
-        color: #f7fafc;
-        border-color: rgba(255, 255, 255, 0.1);
-      }
-
-      .card-title {
-        color: #f7fafc;
-      }
-
-      .input-field {
-        background: #4a5568;
-        border-color: #718096;
-        color: #f7fafc;
-      }
-
-      .btn-secondary {
-        background: #4a5568;
-        color: #f7fafc;
-        border-color: #718096;
-      }
-    }
-
     .no-results {
       text-align: center;
       color: #718096;
       font-style: italic;
       padding: 32px 16px;
       font-size: 14px;
+    }
+
+    /* IMPROVED DARK MODE STYLES */
+    @media (prefers-color-scheme: dark) {
+      body {
+        background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+        color: #e2e8f0;
+      }
+
+      .header {
+        background: rgba(15, 23, 42, 0.95);
+        border-bottom-color: rgba(148, 163, 184, 0.2);
+        backdrop-filter: blur(20px);
+      }
+
+      .header h1 {
+        color: #f1f5f9;
+      }
+
+      .connection-status {
+        background: rgba(15, 23, 42, 0.95);
+        color: #34d399;
+        backdrop-filter: blur(20px);
+      }
+
+      .timer {
+        background: rgba(15, 23, 42, 0.95);
+        color: #fbbf24;
+        backdrop-filter: blur(20px);
+      }
+
+      .join-section {
+        background: #1e293b;
+        color: #e2e8f0;
+        border: 1px solid #334155;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+      }
+
+      .join-title {
+        color: #f1f5f9;
+      }
+
+      .join-subtitle {
+        color: #94a3b8;
+      }
+
+      .card {
+        background: #1e293b;
+        color: #e2e8f0;
+        border: 1px solid #334155;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+      }
+
+      .card-title {
+        color: #f1f5f9;
+      }
+
+      .card-subtitle {
+        color: #94a3b8;
+      }
+
+      .input-field {
+        background: #0f172a;
+        border-color: #475569;
+        color: #e2e8f0;
+      }
+
+      .input-field:focus {
+        border-color: #6366f1;
+        background: #1e293b;
+        box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2);
+      }
+
+      .input-field::placeholder {
+        color: #64748b;
+      }
+
+      .btn-secondary {
+        background: #0f172a;
+        color: #e2e8f0;
+        border-color: #475569;
+      }
+
+      .btn-secondary:hover {
+        background: #1e293b;
+        border-color: #64748b;
+      }
+
+      .btn-option {
+        background: #1e293b;
+        color: #e2e8f0;
+        border-color: #475569;
+      }
+
+      .btn-option:hover {
+        border-color: #6366f1;
+        background: #0f172a;
+        box-shadow: 0 4px 15px rgba(99, 102, 241, 0.2);
+      }
+
+      .btn-option.selected {
+        background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+        color: white;
+        border-color: #6366f1;
+      }
+
+      .btn-option:disabled {
+        background: #334155;
+        color: #64748b;
+        border-color: #475569;
+        opacity: 0.7;
+      }
+
+      .avatar-edit {
+        background: #0f172a;
+        border-color: #475569;
+      }
+
+      .emoji-button {
+        background: #1e293b;
+        border-color: #475569;
+        color: #e2e8f0;
+      }
+
+      .emoji-button:hover {
+        background: #0f172a;
+        border-color: #64748b;
+      }
+
+      .custom-emoji-picker {
+        background: #1e293b;
+        border: 1px solid #475569;
+        box-shadow: 0 20px 50px rgba(0, 0, 0, 0.4);
+      }
+
+      .picker-header {
+        background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+      }
+
+      .emoji-search {
+        background: rgba(15, 23, 42, 0.3);
+        color: #e2e8f0;
+      }
+
+      .emoji-search::placeholder {
+        color: rgba(226, 232, 240, 0.6);
+      }
+
+      .emoji-search:focus {
+        background: rgba(15, 23, 42, 0.5);
+      }
+
+      .emoji-categories {
+        background: #0f172a;
+        border-bottom-color: #334155;
+      }
+
+      .emoji-category-tab:hover {
+        background: #334155;
+      }
+
+      .emoji-category-tab.active {
+        background: #1e293b;
+        border-bottom-color: #6366f1;
+      }
+
+      .emoji-option:hover {
+        background: #334155;
+      }
+
+      .reveal-item {
+        background: #0f172a;
+        border-left-color: #475569;
+        color: #e2e8f0;
+      }
+
+      .reveal-item.truth {
+        background: #064e3b;
+        border-left-color: #10b981;
+        color: #a7f3d0;
+      }
+
+      .score-table th {
+        background: #0f172a;
+        color: #e2e8f0;
+        border-bottom-color: #475569;
+      }
+
+      .score-table td {
+        color: #e2e8f0;
+        border-bottom-color: #475569;
+      }
+
+      .score-table tr:hover {
+        background: #0f172a;
+      }
+
+      .loading {
+        color: #94a3b8;
+      }
+
+      .spinner {
+        border-color: #475569;
+        border-top-color: #6366f1;
+      }
+
+      .status-success {
+        background: #064e3b;
+        color: #a7f3d0;
+        border-color: #10b981;
+      }
+
+      .status-info {
+        background: #0c4a6e;
+        color: #93c5fd;
+        border-color: #3b82f6;
+      }
+
+      .no-results {
+        color: #94a3b8;
+      }
+
+      /* Dark mode color input styling */
+      .color-input {
+        border: 2px solid #475569;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+      }
+
+      /* Ensure proper contrast for avatars in dark mode */
+      .player-avatar {
+        border-color: rgba(226, 232, 240, 0.2);
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4);
+      }
     }
   </style>
 </head>
