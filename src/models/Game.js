@@ -410,6 +410,9 @@ class Game {
     
     console.log(`📝 [GAME STATE] Lie submitted (${submittedCount}/${connectedPlayers.length} players)`);
 
+    // Broadcast updated state so UI can show waiting screen
+    this.broadcastGameStateAndSubStep();
+
     // Check if all connected players have submitted
     this.checkLieSubmissionComplete();
     
@@ -550,6 +553,9 @@ class Game {
     const selectedCount = connectedPlayers.filter(p => p.hasSelectedOption).length;
     
     console.log(`🗳️ [GAME STATE] Vote recorded (${selectedCount}/${connectedPlayers.length} players)`);
+
+    // Broadcast updated state so UI can show waiting screen
+    this.broadcastGameStateAndSubStep();
 
     this.checkOptionSelectionComplete();
     return { success: true };
