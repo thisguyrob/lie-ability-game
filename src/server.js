@@ -2,6 +2,7 @@ const express = require('express');
 const http = require('http');
 const socketIo = require('socket.io');
 const path = require('path');
+const os = require('os');
 const Game = require('./models/Game');
 const { SOCKET_EVENTS } = require('./utils/constants');
 
@@ -13,6 +14,18 @@ const io = socketIo(server, {
     methods: ["GET", "POST"]
   }
 });
+
+function getLocalIpAddress() {
+  const nets = os.networkInterfaces();
+  for (const name of Object.keys(nets)) {
+    for (const net of nets[name]) {
+      if (net.family === 'IPv4' && !net.internal) {
+        return net.address;
+      }
+    }
+  }
+  return 'localhost';
+}
 
 // Middleware
 app.use(express.json());
@@ -384,13 +397,17 @@ function getPlayerIdBySocketId(socketId) {
 
 // API Routes
 app.get('/api/health', (req, res) => {
-  res.json({ 
-    status: 'healthy', 
+  res.json({
+    status: 'healthy',
     gameActive: !!game,
     playerCount: game ? game.players.size : 0,
     gameState: game ? game.state : null
   });
 });
+
+app.get('/api/server-info', (req, res) => {
+  res.json({ publicUrl: SERVER_URL })
+})
 
 app.get('/api/game-info', (req, res) => {
   if (!game) {
@@ -447,6 +464,7 @@ app.use((err, req, res, next) => {
 
 // Start server
 const PORT = process.env.PORT || 3000;
+const SERVER_URL = `http://${getLocalIpAddress()}:${PORT}`;
 
 async function startServer() {
   try {
@@ -461,7 +479,7 @@ async function startServer() {
     // Then start the server
     server.listen(PORT, () => {
       console.log(`🎮 Lie-Ability Game Server running on port ${PORT}`);
-      console.log(`🌐 Server URL: http://localhost:${PORT}`);
+      console.log(`🌐 Server URL: ${SERVER_URL}`);
       console.log(`🔧 Debug Interface: http://localhost:${PORT}/tests/debug-interface.html`);
       console.log(`📁 Question packs directory: ${path.join(process.cwd(), 'question_packs')}`);
       console.log(`✅ Server ready to accept connections`);

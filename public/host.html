@@ -889,19 +889,26 @@ const pageContainer = document.querySelector('.container');
 const startBtn = document.getElementById('startBtn');
 startBtn.onclick = () => socket.emit('start_game');
 
-function generateQRCode(){
-  const url = window.location.origin + '/player';
-  const container = document.getElementById('qrCode');
-  if(!container) return;
-  container.innerHTML = '';
-  
-  // Also show the URL
-  const urlElement = document.getElementById('joinUrl');
-  if(urlElement) urlElement.textContent = url;
-  
+async function generateQRCode(){
+  let baseUrl = window.location.origin
+  try{
+    const res = await fetch('/api/server-info')
+    const info = await res.json()
+    if(info.publicUrl) baseUrl = info.publicUrl
+  }catch(e){
+    console.error('Failed to fetch server info', e)
+  }
+  const url = baseUrl + '/player'
+  const container = document.getElementById('qrCode')
+  if(!container) return
+  container.innerHTML = ''
+
+  const urlElement = document.getElementById('joinUrl')
+  if(urlElement) urlElement.textContent = url
+
   if(window.QRCode){
-    const canvas = document.createElement('canvas');
-    QRCode.toCanvas(canvas, url, { 
+    const canvas = document.createElement('canvas')
+    QRCode.toCanvas(canvas, url, {
       width: 250,
       margin: 2,
       color: {
@@ -909,12 +916,12 @@ function generateQRCode(){
         light: '#ffffff'
       }
     }, err => {
-      if(!err) container.appendChild(canvas);
-    });
+      if(!err) container.appendChild(canvas)
+    })
   } else {
-    const img=document.createElement('img');
-    img.src = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(url)}`;
-    container.appendChild(img);
+    const img=document.createElement('img')
+    img.src = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(url)}`
+    container.appendChild(img)
   }
 }
 

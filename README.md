@@ -63,6 +63,9 @@ http://localhost:3000
 npm start
 ```
 
+The server detects your local IP address automatically so QR codes work out of the box.
+Override this by setting the `PUBLIC_URL` environment variable if you need a custom domain.
+
 ## 📁 Project Structure
 
 ```
@@ -149,6 +152,7 @@ Question packs are JSON files in the `question_packs/` directory with the follow
 
 ### REST API
 - `GET /api/health` - Server health check
+- `GET /api/server-info` - Detected server URL
 - `GET /api/game-info` - Current game state
 - `GET /api/question-packs` - Available question packs
 
