@@ -1405,9 +1405,10 @@ socket.on('timer_update', d => {
   }
 });
 
-socket.on('lie_submitted', () => { 
-  const status = document.getElementById('lieStatus');
-  status.innerHTML = '<div class="status-message status-success">✅ Lie submitted successfully!</div>';
+          likeBtnElem.style.display = 'block'
+          likeBtnElem.disabled = false
+          likeBtnElem.style.display = 'none'
+          likeBtnElem.disabled = true
 });
 
 socket.on('option_selected', () => { 
