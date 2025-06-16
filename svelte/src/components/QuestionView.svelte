@@ -16,38 +16,9 @@
     return categoryEmojis[category] || '❓';
   }
   
-  function getStateTitle(state) {
-    switch (state) {
-      case 'question_reading':
-        return 'Read the Question';
-      case 'lie_submission':
-        return 'Players Are Creating Lies';
-      case 'option_selection':
-        return 'Time to Vote!';
-      default:
-        return 'Question';
-    }
-  }
-  
-  function getStateSubtitle(state) {
-    switch (state) {
-      case 'question_reading':
-        return 'Everyone study this question carefully';
-      case 'lie_submission':
-        return 'Players are crafting their most convincing lies...';
-      case 'option_selection':
-        return 'Which option is the real answer?';
-      default:
-        return '';
-    }
-  }
 </script>
 
 <div class="question-container">
-  <div class="state-header">
-    <h2 class="state-title">{getStateTitle(state)}</h2>
-    <p class="state-subtitle">{getStateSubtitle(state)}</p>
-  </div>
   
   <div class="question-card">
     <div class="category-badge">
@@ -100,23 +71,6 @@
     animation: fadeIn 0.6s ease;
   }
   
-  .state-header {
-    text-align: center;
-  }
-  
-  .state-title {
-    font-size: 3rem;
-    font-weight: 700;
-    color: white;
-    margin: 0 0 0.5rem 0;
-    text-shadow: 0 4px 20px rgba(0,0,0,0.3);
-  }
-  
-  .state-subtitle {
-    font-size: 1.3rem;
-    color: rgba(255, 255, 255, 0.8);
-    margin: 0;
-  }
   
   .question-card {
     background: rgba(255, 255, 255, 0.95);
@@ -314,14 +268,6 @@
       gap: 1.5rem;
     }
     
-    .state-title {
-      font-size: 2.5rem;
-    }
-    
-    .state-subtitle {
-      font-size: 1.1rem;
-    }
-    
     .question-card {
       padding: 2rem 1.5rem;
     }
@@ -329,7 +275,7 @@
     .question-text {
       font-size: 2rem;
     }
-    
+
     .category-badge {
       padding: 0.6rem 1.2rem;
       font-size: 1rem;
@@ -353,15 +299,11 @@
     .question-card {
       padding: 1.5rem 1rem;
     }
-    
+
     .question-text {
       font-size: 1.8rem;
     }
-    
-    .state-title {
-      font-size: 2rem;
-    }
-    
+
     .category-badge {
       font-size: 0.9rem;
       padding: 0.5rem 1rem;
