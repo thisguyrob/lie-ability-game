@@ -62,30 +62,39 @@ io.on('connection', (socket) => {
 
   // Handle player joining
   socket.on(SOCKET_EVENTS.JOIN_GAME, (data) => {
-    const { name: playerName, playerId, avatar } = data;
+    const { name, playerName, playerId, avatar } = data
+    const joinName = name || playerName
+
+    if (!joinName) {
+      socket.emit('player_joined_response', {
+        success: false,
+        error: 'Name is required'
+      })
+      return
+    }
     
     try {
       if (playerId && game.players.has(playerId)) {
         // Reconnecting player
-        console.log(`🔄 [PLAYER ACTION] ${playerName} is reconnecting (ID: ${playerId})`);
+        console.log(`🔄 [PLAYER ACTION] ${joinName} is reconnecting (ID: ${playerId})`);
         const success = game.reconnectPlayer(playerId, socket.id);
         if (success) {
-          console.log(`✅ [PLAYER ACTION] ${playerName} reconnected successfully`);
+          console.log(`✅ [PLAYER ACTION] ${joinName} reconnected successfully`);
           socket.emit(SOCKET_EVENTS.PLAYER_RECONNECTED, {
             success: true,
             playerId,
             gameState: game.getGameState()
           });
         } else {
-          console.log(`❌ [PLAYER ACTION] ${playerName} failed to reconnect`);
+          console.log(`❌ [PLAYER ACTION] ${joinName} failed to reconnect`);
           socket.emit(SOCKET_EVENTS.ERROR, { message: 'Failed to reconnect' });
         }
       } else {
         // New player
-        console.log(`👋 [PLAYER ACTION] New player joining: ${playerName}`);
-        const result = game.addPlayer(playerName, socket.id, avatar);
+        console.log(`👋 [PLAYER ACTION] New player joining: ${joinName}`);
+        const result = game.addPlayer(joinName, socket.id, avatar);
         if (result.success) {
-          console.log(`✅ [PLAYER ACTION] ${playerName} joined successfully (ID: ${result.player.id})`);
+          console.log(`✅ [PLAYER ACTION] ${joinName} joined successfully (ID: ${result.player.id})`);
           
           // Send success response to the joining player
           socket.emit('player_joined_response', {
@@ -99,7 +108,7 @@ io.on('connection', (socket) => {
           
           // The addPlayer method already broadcasts to all players including the new one
         } else {
-          console.log(`❌ [PLAYER ACTION] ${playerName} failed to join: ${result.error}`);
+          console.log(`❌ [PLAYER ACTION] ${joinName} failed to join: ${result.error}`);
           socket.emit('player_joined_response', { 
             success: false, 
             error: result.error 
