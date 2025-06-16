@@ -127,11 +127,6 @@
 </script>
 
 <main class="host-container">
-  <div class="game-header">
-    <div class="round-info" class:visible={gameState.state !== 'lobby'}>
-      Round {gameState.currentRound}/{gameState.totalRounds} • Question {gameState.currentQuestion}
-    </div>
-  </div>
   
   {#if timer > 0}
     <div class="timer-display" class:urgent={timer <= 5}>
@@ -172,28 +167,6 @@
     overflow: hidden;
   }
   
-  .game-header {
-    padding: 2rem;
-    text-align: center;
-    position: relative;
-    z-index: 10;
-  }
-  
-  
-  .round-info {
-    font-size: 1.5rem;
-    font-weight: 500;
-    color: rgba(255, 255, 255, 0.9);
-    margin-top: 0.5rem;
-    opacity: 0;
-    transform: translateY(-10px);
-    transition: all 0.3s ease;
-  }
-  
-  .round-info.visible {
-    opacity: 1;
-    transform: translateY(0);
-  }
   
   .timer-display {
     position: absolute;
@@ -245,22 +218,14 @@
   
   
   @media (max-width: 768px) {
-    .round-info {
-      font-size: 1.2rem;
-    }
-    
     .timer-circle {
       width: 60px;
       height: 60px;
     }
-    
+
     .timer-text {
       font-size: 1.4rem;
     }
-    
-    .game-header {
-      padding: 1rem;
-    }
-    
+
   }
 </style>
