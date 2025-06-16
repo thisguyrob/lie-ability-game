@@ -111,9 +111,13 @@
       timer = data.secondsRemaining;
     });
     
-    socket.on('lie_submitted', () => {
-      // Update substep info to reflect lie submitted
-      subStepInfo = { ...subStepInfo, hasSubmittedLie: true };
+    socket.on('lie_submitted', (data) => {
+      if (data.success) {
+        // Update substep info to reflect lie submitted
+        subStepInfo = { ...subStepInfo, hasSubmittedLie: true };
+      } else {
+        alert(data.error || 'Failed to submit lie');
+      }
     });
     
     socket.on('option_selected', () => {
@@ -123,10 +127,7 @@
     
     socket.on('error', (data) => {
       console.error('Socket error:', data.message);
-      // Handle specific errors without showing alert for truth submissions
-      if (!data.message.includes("That's the truth!")) {
-        alert('Error: ' + data.message);
-      }
+      alert('Error: ' + data.message);
     });
   }
   

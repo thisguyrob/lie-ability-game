@@ -190,6 +190,7 @@ io.on('connection', (socket) => {
       const result = game.submitLie(playerId, data.lie);
       if (!result.success) {
         console.log(`❌ [PLAYER ACTION] Lie submission failed for ${playerName}: ${result.error}`);
+        socket.emit('lie_submitted', { success: false, error: result.error });
         socket.emit(SOCKET_EVENTS.ERROR, { message: result.error });
       } else {
         console.log(`✅ [PLAYER ACTION] Lie accepted from ${playerName}`);

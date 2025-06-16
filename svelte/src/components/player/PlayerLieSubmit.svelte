@@ -12,9 +12,10 @@
   
   function handleSubmit() {
     if (!canSubmit) return;
-    
+
     isSubmitting = true;
     onSubmit(lieText.trim());
+    isSubmitting = false;
   }
   
   function handleAutoLie() {
