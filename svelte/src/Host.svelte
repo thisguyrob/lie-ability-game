@@ -23,7 +23,7 @@
   let qrCodeUrl = '';
   let serverUrl = '';
   let truthRevealData = null;
-  let scoreboardData = null;
+  let scoreboardData = { players: [] };
   let gameEndData = null;
   
   // Debug reactive statement
@@ -79,18 +79,18 @@
     });
 
     socket.on('host_sub_step_info', (info) => {
-      if (info.state === 'option_selection') {
+      if (info.state === 'option_selection' && info.options) {
         currentQuestion = { ...currentQuestion, options: info.options };
       }
     });
     
     socket.on('truth_reveal_start', (data) => {
-      truthRevealData = data;
+      truthRevealData = data || null;
       gameState = { ...gameState, state: 'truth_reveal' };
     });
     
     socket.on('scoreboard_update', (data) => {
-      scoreboardData = data;
+      scoreboardData = data || { players: [] };
       gameState = { ...gameState, state: 'scoreboard' };
     });
     

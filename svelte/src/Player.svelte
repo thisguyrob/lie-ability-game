@@ -26,7 +26,7 @@
   let timer = 0;
   let currentQuestion = null;
   let truthRevealData = null;
-  let scoreboardData = null;
+  let scoreboardData = { players: [] };
   let gameEndData = null;
   let connectionStatus = 'disconnected';
   
@@ -95,12 +95,12 @@
     });
     
     socket.on('truth_reveal_start', (data) => {
-      truthRevealData = data;
+      truthRevealData = data || null;
       gameState = { ...gameState, state: 'truth_reveal' };
     });
     
     socket.on('scoreboard_update', (data) => {
-      scoreboardData = data;
+      scoreboardData = data || { players: [] };
       gameState = { ...gameState, state: 'scoreboard' };
     });
     
