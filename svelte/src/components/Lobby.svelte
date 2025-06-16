@@ -32,23 +32,6 @@
       </div>
     </div>
     
-    <div class="instructions">
-      <h3>How to Join</h3>
-      <div class="instruction-steps">
-        <div class="step">
-          <span class="step-number">1</span>
-          <span class="step-text">Scan the QR code with your phone</span>
-        </div>
-        <div class="step">
-          <span class="step-number">2</span>
-          <span class="step-text">Enter your name</span>
-        </div>
-        <div class="step">
-          <span class="step-number">3</span>
-          <span class="step-text">Wait for the game to start!</span>
-        </div>
-      </div>
-    </div>
   </div>
   
   <div class="players-section">
@@ -214,49 +197,6 @@
     border-radius: 8px;
   }
   
-  .instructions h3 {
-    font-size: 1.5rem;
-    font-weight: 600;
-    color: white;
-    margin: 0 0 1.5rem 0;
-    text-align: center;
-  }
-  
-  .instruction-steps {
-    display: flex;
-    flex-direction: column;
-    gap: 1rem;
-  }
-  
-  .step {
-    display: flex;
-    align-items: center;
-    gap: 1rem;
-    padding: 1rem;
-    background: rgba(255, 255, 255, 0.1);
-    backdrop-filter: blur(10px);
-    border-radius: 12px;
-    color: white;
-  }
-  
-  .step-number {
-    width: 32px;
-    height: 32px;
-    background: white;
-    color: #667eea;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-weight: 700;
-    font-size: 1rem;
-    flex-shrink: 0;
-  }
-  
-  .step-text {
-    font-size: 1.1rem;
-    font-weight: 500;
-  }
   
   .players-section {
     animation: fadeInRight 0.8s ease 0.4s both;
@@ -468,17 +408,6 @@
       height: 150px;
     }
     
-    .instruction-steps {
-      gap: 0.75rem;
-    }
-    
-    .step {
-      padding: 0.75rem;
-    }
-    
-    .step-text {
-      font-size: 1rem;
-    }
     
     .start-button {
       padding: 1rem 2rem;
