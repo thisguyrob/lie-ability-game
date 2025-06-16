@@ -208,7 +208,8 @@
     padding: 1.5rem;
     display: flex;
     align-items: center;
-    gap: 1rem;
+    justify-content: center;
+    text-align: center;
     transition: all 0.3s ease;
     animation: slideInUp 0.5s ease both;
   }
@@ -219,7 +220,7 @@
     font-size: 1.1rem;
     font-weight: 500;
     color: #333;
-    text-align: left;
+    text-align: center;
   }
   
   @keyframes fadeIn {
