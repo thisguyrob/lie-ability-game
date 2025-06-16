@@ -128,10 +128,6 @@
 
 <main class="host-container">
   <div class="game-header">
-    <h1 class="game-title">
-      <span class="title-icon">🎯</span>
-      Lie-Ability
-    </h1>
     <div class="round-info" class:visible={gameState.state !== 'lobby'}>
       Round {gameState.currentRound}/{gameState.totalRounds} • Question {gameState.currentQuestion}
     </div>
@@ -183,26 +179,6 @@
     z-index: 10;
   }
   
-  .game-title {
-    font-size: 4rem;
-    font-weight: 700;
-    color: white;
-    margin: 0;
-    text-shadow: 0 4px 20px rgba(0,0,0,0.3);
-    letter-spacing: -0.02em;
-  }
-  
-  .title-icon {
-    display: inline-block;
-    margin-right: 1rem;
-    animation: bounce 2s infinite;
-  }
-  
-  @keyframes bounce {
-    0%, 20%, 50%, 80%, 100% { transform: translateY(0); }
-    40% { transform: translateY(-10px); }
-    60% { transform: translateY(-5px); }
-  }
   
   .round-info {
     font-size: 1.5rem;
@@ -269,10 +245,6 @@
   
   
   @media (max-width: 768px) {
-    .game-title {
-      font-size: 2.5rem;
-    }
-    
     .round-info {
       font-size: 1.2rem;
     }
