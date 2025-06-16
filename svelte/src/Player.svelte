@@ -95,8 +95,8 @@
     });
     
     socket.on('truth_reveal_start', (data) => {
-      gameState = { ...gameState, state: 'truth_reveal' };
       truthRevealData = data;
+      gameState = { ...gameState, state: 'truth_reveal' };
     });
     
     socket.on('scoreboard_update', (data) => {
