@@ -15,7 +15,7 @@ cd svelte && npm run build && cd ..
 
 # Start the server in the background
 echo "🎮 Starting game server..."
-node src/server.js &
+cd /Users/robfalk/lie-ability-game && node src/server.js &
 SERVER_PID=$!
 
 # Wait a moment for the server to start

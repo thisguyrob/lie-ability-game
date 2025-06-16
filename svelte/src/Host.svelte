@@ -3,180 +3,120 @@
   import { io } from 'socket.io-client';
   import QRCode from 'qrcode';
   
-  // Components
   import Lobby from './components/Lobby.svelte';
+  import CategorySelection from './components/CategorySelection.svelte';
   import QuestionView from './components/QuestionView.svelte';
   import TruthReveal from './components/TruthReveal.svelte';
   import Scoreboard from './components/Scoreboard.svelte';
+  import GameEnd from './components/GameEnd.svelte';
   
-  // State
   let socket;
   let gameState = {
-    phase: 'lobby',
-    round: 1,
-    question: 1,
-    subStep: 'waiting',
+    state: 'lobby',
     players: [],
-    currentQuestion: null,
-    options: [],
-    scores: {},
-    timer: null,
-    hostSubStepInfo: null
+    currentRound: 1,
+    totalRounds: 3,
+    currentQuestion: 1
   };
+  let currentQuestion = null;
+  let timer = 0;
+  let qrCodeUrl = '';
+  let serverUrl = '';
+  let truthRevealData = null;
+  let scoreboardData = null;
+  let gameEndData = null;
   
-  let serverInfo = {
-    playerUrl: '',
-    qrCodeDataUrl: ''
-  };
+  // Debug reactive statement
+  $: console.log('Host gameState changed:', gameState);
   
-  let connectionStatus = 'connecting';
-  let errorMessage = '';
-  
-  // Socket connection and event handlers
-  onMount(async () => {
-    // Get server info for QR code
+  // Get server URL for QR code
+  async function getServerInfo() {
     try {
       const response = await fetch('/api/server-info');
-      if (response.ok) {
-        const info = await response.json();
-        serverInfo.playerUrl = info.playerUrl;
-        
-        // Generate QR code
-        serverInfo.qrCodeDataUrl = await QRCode.toDataURL(info.playerUrl, {
-          width: 200,
-          margin: 2,
-          color: {
-            dark: '#374151',
-            light: '#ffffff'
-          }
-        });
-      }
+      const data = await response.json();
+      serverUrl = data.playerUrl;
+      qrCodeUrl = await QRCode.toDataURL(serverUrl);
     } catch (error) {
       console.error('Failed to get server info:', error);
+      serverUrl = window.location.origin + '/player';
+      qrCodeUrl = await QRCode.toDataURL(serverUrl);
     }
-    
-    // Initialize socket connection
+  }
+  
+  function initSocket() {
     socket = io();
     
     socket.on('connect', () => {
-      connectionStatus = 'connected';
       console.log('Host connected to server');
-      requestGameState();
+      socket.emit('request_game_state');
     });
     
-    socket.on('disconnect', () => {
-      connectionStatus = 'disconnected';
-      console.log('Host disconnected from server');
+    socket.on('game_state_update', (data) => {
+      // Force reactivity by creating a new object
+      gameState = { ...data };
     });
     
-    socket.on('connect_error', (error) => {
-      connectionStatus = 'error';
-      errorMessage = 'Failed to connect to game server';
-      console.error('Connection error:', error);
+    socket.on('category_selection_start', (data) => {
+      gameState = { ...gameState, state: 'category_selection' };
+      currentQuestion = {
+        categories: data.categories,
+        selectorName: data.selectorName
+      };
     });
     
-    socket.on('game_state_update', (newState) => {
-      console.log('Game state update:', newState);
-      // Ensure players array is always an array
-      if (newState.players && !Array.isArray(newState.players)) {
-        newState.players = [];
-      }
-      gameState = { ...gameState, ...newState };
+    socket.on('question_reading_start', (data) => {
+      gameState = { ...gameState, state: 'question_reading' };
+      currentQuestion = data;
     });
-
-    // Listen for specific player events for real-time updates
+    
+    socket.on('lie_submission_start', (data) => {
+      gameState = { ...gameState, state: 'lie_submission' };
+    });
+    
+    socket.on('option_selection_start', (data) => {
+      gameState = { ...gameState, state: 'option_selection' };
+      currentQuestion = { ...currentQuestion, options: data.options };
+    });
+    
+    socket.on('truth_reveal_start', (data) => {
+      gameState = { ...gameState, state: 'truth_reveal' };
+      truthRevealData = data;
+    });
+    
+    socket.on('scoreboard_update', (data) => {
+      gameState = { ...gameState, state: 'scoreboard' };
+      scoreboardData = data;
+    });
+    
+    socket.on('game_ended', (data) => {
+      gameState = { ...gameState, state: 'game_ended' };
+      gameEndData = data;
+    });
+    
+    socket.on('timer_update', (data) => {
+      timer = data.secondsRemaining;
+    });
+    
     socket.on('player_joined', (data) => {
-      console.log('Player joined:', data);
-      // Update players list immediately for real-time display
-      if (data.player) {
-        if (!gameState.players) {
-          gameState.players = [];
-        }
-        const existingIndex = gameState.players.findIndex(p => p.id === data.player.id);
-        if (existingIndex === -1) {
-          gameState.players = [...gameState.players, data.player];
-        } else {
-          gameState.players[existingIndex] = data.player;
-        }
-        // Trigger reactivity
-        gameState = gameState;
+      if (data.gameState) {
+        gameState = data.gameState;
       }
-      // Request fresh game state after a delay to ensure consistency
-      setTimeout(() => requestGameState(), 500);
     });
-
+    
     socket.on('player_left', (data) => {
-      console.log('Player left:', data);
-      // Remove player immediately for real-time display
-      if (data.playerId) {
-        if (!gameState.players) {
-          gameState.players = [];
-        } else {
-          gameState.players = gameState.players.filter(p => p.id !== data.playerId);
-        }
-        // Trigger reactivity
-        gameState = gameState;
-      }
-      // Request fresh game state after a delay to ensure consistency
-      setTimeout(() => requestGameState(), 500);
-    });
-
-    socket.on('player_reconnected', (data) => {
-      console.log('Player reconnected:', data);
-      // Request fresh game state since reconnection might change player states
-      requestGameState();
-    });
-
-    socket.on('player_avatar_updated', (data) => {
-      console.log('Player avatar updated:', data);
-      // Update specific player's avatar immediately
-      if (data.playerId) {
-        if (!gameState.players) {
-          gameState.players = [];
-        } else {
-          const playerIndex = gameState.players.findIndex(p => p.id === data.playerId);
-          if (playerIndex !== -1) {
-            gameState.players[playerIndex].avatar = data.avatar;
-            gameState.players = [...gameState.players]; // Trigger reactivity
-          }
-        }
+      if (data.gameState) {
+        gameState = data.gameState;
       }
     });
-
-    socket.on('player_name_updated', (data) => {
-      console.log('Player name updated:', data);
-      // Update specific player's name immediately
-      if (data.playerId) {
-        if (!gameState.players) {
-          gameState.players = [];
-        } else {
-          const playerIndex = gameState.players.findIndex(p => p.id === data.playerId);
-          if (playerIndex !== -1) {
-            gameState.players[playerIndex].name = data.name;
-            gameState.players = [...gameState.players]; // Trigger reactivity
-          }
-        }
-      }
-    });
-
-    socket.on('host_sub_step_info', (hostInfo) => {
-      console.log('Host sub-step info:', hostInfo);
-      // Update host-specific sub-step information
-      gameState.hostSubStepInfo = hostInfo;
-    });
-    
-    socket.on('timer_update', (timerData) => {
-      gameState.timer = timerData;
-    });
-    
-    socket.on('truth_reveal_start', (revealData) => {
-      gameState.revealData = revealData;
-    });
-    
-    socket.on('error', (error) => {
-      errorMessage = error.message || 'An error occurred';
-      console.error('Socket error:', error);
-    });
+  }
+  
+  function startGame() {
+    socket.emit('start_game');
+  }
+  
+  onMount(async () => {
+    await getServerInfo();
+    initSocket();
   });
   
   onDestroy(() => {
@@ -184,243 +124,265 @@
       socket.disconnect();
     }
   });
-  
-  // Helper functions
-  function requestGameState() {
-    if (socket) {
-      socket.emit('request_game_state');
-    }
-  }
-  
-  function startGame() {
-    if (socket && gameState.players.length >= 2) {
-      socket.emit('start_game');
-    }
-  }
-  
-  function resetGame() {
-    if (socket) {
-      socket.emit('reset_game');
-      // Reset local game state to default
-      gameState = {
-        phase: 'lobby',
-        round: 1,
-        question: 1,
-        subStep: 'waiting',
-        players: [],
-        currentQuestion: null,
-        options: [],
-        scores: {},
-        timer: null,
-        hostSubStepInfo: null
-      };
-      // Request fresh game state after reset
-      setTimeout(() => requestGameState(), 100);
-    }
-  }
-  
-  // Computed values
-  $: canStartGame = (gameState.players || []).length >= 2 && gameState.phase === 'lobby';
-  $: connectedPlayers = (gameState.players || []).filter(p => p.connected);
-  $: gameInProgress = gameState.phase !== 'lobby';
 </script>
 
 <main class="host-container">
-  <!-- Status Bar (always visible with player count) -->
-  <div class="status-bar" class:connected={connectionStatus === 'connected'} 
-       class:disconnected={connectionStatus === 'disconnected'}
-       class:error={connectionStatus === 'error'}
-       class:minimal={connectionStatus === 'connected' && !errorMessage}>
-    <div class="container">
-      <div class="status-content">
-        <!-- Connection status (only show when not connected or has errors) -->
-        {#if connectionStatus !== 'connected' || errorMessage}
-          <div class="status-indicator">
-            <div class="status-dot"></div>
-            <span class="status-text">
-              {#if connectionStatus === 'connected'}
-                🟢 Connected
-              {:else if connectionStatus === 'disconnected'}
-                🔴 Disconnected
-              {:else if connectionStatus === 'error'}
-                ⚠️ Connection Error
-              {:else}
-                🟡 Connecting...
-              {/if}
-            </span>
-          </div>
-          
-          {#if errorMessage}
-            <div class="error-message">{errorMessage}</div>
-          {/if}
-        {/if}
-        
-        <!-- Player count (always visible) -->
-        <div class="player-count">
-          {connectedPlayers.length} player{connectedPlayers.length !== 1 ? 's' : ''} connected
-        </div>
-      </div>
+  <div class="game-header">
+    <h1 class="game-title">
+      <span class="title-icon">🎯</span>
+      Lie-Ability
+    </h1>
+    <div class="round-info" class:visible={gameState.state !== 'lobby'}>
+      Round {gameState.currentRound}/{gameState.totalRounds} • Question {gameState.currentQuestion}
     </div>
   </div>
-
-  <!-- Main Game Content -->
+  
+  {#if timer > 0}
+    <div class="timer-display" class:urgent={timer <= 5}>
+      <div class="timer-circle">
+        <span class="timer-text">{timer}</span>
+      </div>
+    </div>
+  {/if}
+  
   <div class="game-content">
-    {#if gameState.phase === 'lobby'}
-      <Lobby 
-        {gameState}
-        {serverInfo}
-        {canStartGame}
-        on:startGame={startGame}
-        on:resetGame={resetGame}
-      />
-    {:else if gameState.phase === 'playing'}
-      {#if gameState.subStep === 'category_selection' || gameState.subStep === 'question_reading' || gameState.subStep === 'lie_submission' || gameState.subStep === 'option_selection'}
-        <QuestionView {gameState} />
-      {:else if gameState.subStep === 'truth_reveal'}
-        <TruthReveal {gameState} />
-      {:else if gameState.subStep === 'scoreboard'}
-        <Scoreboard {gameState} />
-      {/if}
-    {:else if gameState.phase === 'game_over'}
-      <Scoreboard {gameState} isGameOver={true} on:resetGame={resetGame} />
+    {#if gameState.state === 'lobby'}
+      <Lobby {gameState} {qrCodeUrl} {serverUrl} onStart={startGame} />
+    {:else if gameState.state === 'category_selection'}
+      <CategorySelection {currentQuestion} />
+    {:else if gameState.state === 'question_reading' || gameState.state === 'lie_submission'}
+      <QuestionView {currentQuestion} state={gameState.state} />
+    {:else if gameState.state === 'option_selection'}
+      <QuestionView {currentQuestion} state={gameState.state} />
+    {:else if gameState.state === 'truth_reveal'}
+      <TruthReveal data={truthRevealData} />
+    {:else if gameState.state === 'scoreboard'}
+      <Scoreboard data={scoreboardData} />
+    {:else if gameState.state === 'game_ended'}
+      <GameEnd data={gameEndData} />
     {/if}
   </div>
   
-  <!-- Debug Info (only in development) -->
-  {#if import.meta.env.DEV && gameState.phase !== 'lobby'}
-    <div class="debug-panel">
-      <details>
-        <summary>🔧 Debug</summary>
-        <pre>{JSON.stringify({phase: gameState.phase, subStep: gameState.subStep, players: gameState.players?.length}, null, 2)}</pre>
-      </details>
+  <div class="players-bar">
+    <div class="players-count">
+      <span class="players-icon">👥</span>
+      {gameState.players.length} Player{gameState.players.length !== 1 ? 's' : ''}
     </div>
-  {/if}
+    <div class="players-list">
+      {#each gameState.players as player}
+        <div class="player-chip" style="background-color: {player.avatar.color}22; border-color: {player.avatar.color}">
+          <span class="player-emoji">{player.avatar.emoji}</span>
+          <span class="player-name">{player.name}</span>
+          <span class="player-points">{player.points}pts</span>
+        </div>
+      {/each}
+    </div>
+  </div>
 </main>
 
 <style>
   .host-container {
-    min-height: 100vh;
-    background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+    width: 100vw;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
     position: relative;
+    overflow: hidden;
   }
   
-  .status-bar {
-    background: rgba(0, 0, 0, 0.1);
-    backdrop-filter: blur(10px);
-    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-    padding: var(--space-3) 0;
-    transition: all var(--transition);
+  .game-header {
+    padding: 2rem;
+    text-align: center;
+    position: relative;
+    z-index: 10;
   }
   
-  .status-bar.connected {
-    background: rgba(16, 185, 129, 0.1);
+  .game-title {
+    font-size: 4rem;
+    font-weight: 700;
+    color: white;
+    margin: 0;
+    text-shadow: 0 4px 20px rgba(0,0,0,0.3);
+    letter-spacing: -0.02em;
   }
   
-  .status-bar.disconnected {
-    background: rgba(239, 68, 68, 0.1);
+  .title-icon {
+    display: inline-block;
+    margin-right: 1rem;
+    animation: bounce 2s infinite;
   }
   
-  .status-bar.error {
-    background: rgba(245, 158, 11, 0.1);
-  }
-
-  .status-bar.minimal {
-    background: rgba(0, 0, 0, 0.05);
-    padding: var(--space-2) 0;
+  @keyframes bounce {
+    0%, 20%, 50%, 80%, 100% { transform: translateY(0); }
+    40% { transform: translateY(-10px); }
+    60% { transform: translateY(-5px); }
   }
   
-  .status-content {
+  .round-info {
+    font-size: 1.5rem;
+    font-weight: 500;
+    color: rgba(255, 255, 255, 0.9);
+    margin-top: 0.5rem;
+    opacity: 0;
+    transform: translateY(-10px);
+    transition: all 0.3s ease;
+  }
+  
+  .round-info.visible {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  
+  .timer-display {
+    position: absolute;
+    top: 2rem;
+    right: 2rem;
+    z-index: 20;
+  }
+  
+  .timer-circle {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.9);
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    flex-wrap: wrap;
-    gap: var(--space-4);
+    justify-content: center;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+    transition: all 0.3s ease;
   }
   
-  .status-indicator {
-    display: flex;
-    align-items: center;
-    gap: var(--space-2);
+  .timer-display.urgent .timer-circle {
+    background: #ff4757;
+    animation: pulse 0.5s infinite alternate;
   }
   
-  .status-dot {
-    width: 8px;
-    height: 8px;
-    border-radius: var(--radius-full);
-    background: var(--success);
-    animation: pulse 2s infinite;
+  @keyframes pulse {
+    0% { transform: scale(1); }
+    100% { transform: scale(1.1); }
   }
   
-  .status-text {
-    color: var(--white);
-    font-weight: 600;
-    font-size: var(--font-size-sm);
+  .timer-text {
+    font-size: 1.8rem;
+    font-weight: 700;
+    color: #333;
   }
   
-  .error-message {
-    color: var(--white);
-    background: rgba(239, 68, 68, 0.2);
-    padding: var(--space-2) var(--space-3);
-    border-radius: var(--radius);
-    font-size: var(--font-size-sm);
-    border: 1px solid rgba(239, 68, 68, 0.3);
-  }
-  
-  .player-count {
-    color: var(--white);
-    font-size: var(--font-size-sm);
-    opacity: 0.9;
+  .timer-display.urgent .timer-text {
+    color: white;
   }
   
   .game-content {
     flex: 1;
-    padding: var(--space-6) 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 2rem;
+    min-height: 0;
   }
   
-  .debug-panel {
-    position: fixed;
-    bottom: var(--space-4);
-    right: var(--space-4);
-    background: rgba(0, 0, 0, 0.8);
-    color: var(--white);
-    padding: var(--space-3);
-    border-radius: var(--radius-lg);
-    font-size: var(--font-size-xs);
-    max-width: 300px;
-    max-height: 200px;
-    overflow: auto;
-    z-index: 1000;
+  .players-bar {
+    background: rgba(255, 255, 255, 0.15);
+    backdrop-filter: blur(20px);
+    border-top: 1px solid rgba(255, 255, 255, 0.2);
+    padding: 1.5rem 2rem;
+    display: flex;
+    align-items: center;
+    gap: 2rem;
+    overflow-x: auto;
+    flex-shrink: 0;
   }
   
-  .debug-panel summary {
-    cursor: pointer;
+  .players-count {
+    font-size: 1.2rem;
     font-weight: 600;
-    margin-bottom: var(--space-2);
+    color: white;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-shrink: 0;
   }
   
-  .debug-panel pre {
-    font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
-    font-size: 10px;
-    line-height: 1.2;
-    white-space: pre-wrap;
-    word-break: break-all;
+  .players-icon {
+    font-size: 1.4rem;
+  }
+  
+  .players-list {
+    display: flex;
+    gap: 1rem;
+    overflow-x: auto;
+    padding-bottom: 0.5rem;
+    flex: 1;
+  }
+  
+  .player-chip {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.75rem 1.25rem;
+    background: rgba(255, 255, 255, 0.1);
+    border: 2px solid;
+    border-radius: 50px;
+    color: white;
+    font-weight: 500;
+    white-space: nowrap;
+    transition: all 0.3s ease;
+    backdrop-filter: blur(10px);
+  }
+  
+  .player-chip:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+  }
+  
+  .player-emoji {
+    font-size: 1.2rem;
+  }
+  
+  .player-name {
+    font-size: 1rem;
+  }
+  
+  .player-points {
+    font-size: 0.9rem;
+    opacity: 0.8;
   }
   
   @media (max-width: 768px) {
-    .status-content {
-      flex-direction: column;
-      align-items: flex-start;
-      gap: var(--space-2);
+    .game-title {
+      font-size: 2.5rem;
     }
     
-    .game-content {
-      padding: var(--space-4) 0;
+    .round-info {
+      font-size: 1.2rem;
     }
     
-    .debug-panel {
-      bottom: var(--space-2);
-      right: var(--space-2);
-      max-width: calc(100vw - var(--space-4));
+    .timer-circle {
+      width: 60px;
+      height: 60px;
+    }
+    
+    .timer-text {
+      font-size: 1.4rem;
+    }
+    
+    .game-header {
+      padding: 1rem;
+    }
+    
+    .players-bar {
+      padding: 1rem;
+      gap: 1rem;
+    }
+    
+    .players-count {
+      font-size: 1rem;
+    }
+    
+    .player-chip {
+      padding: 0.5rem 1rem;
+      gap: 0.5rem;
     }
   }
 </style>

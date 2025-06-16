@@ -1,22 +1,32 @@
 import { defineConfig } from 'vite'
 import { svelte } from '@sveltejs/vite-plugin-svelte'
-import { resolve } from 'path'
 
 export default defineConfig({
   plugins: [svelte()],
   build: {
     outDir: '../public',
-    emptyOutDir: true,
+    emptyOutDir: false, // Don't clear the entire public directory
     rollupOptions: {
       input: {
-        host: resolve(__dirname, 'host.html'),
-        player: resolve(__dirname, 'player.html'),
-        landing: resolve(__dirname, 'index.html')
+        host: 'src/host.html',
+        player: 'src/player.html'
+      },
+      output: {
+        entryFileNames: 'assets/[name]-[hash].js',
+        chunkFileNames: 'assets/[name]-[hash].js',
+        assetFileNames: 'assets/[name]-[hash].[ext]'
       }
     }
   },
   server: {
-    port: 5173,
-    host: true
+    proxy: {
+      '/socket.io': {
+        target: 'http://localhost:3000',
+        ws: true
+      },
+      '/api': {
+        target: 'http://localhost:3000'
+      }
+    }
   }
 })

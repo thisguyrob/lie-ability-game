@@ -1,669 +1,419 @@
 <script>
-  export let gameState;
-  export let myPlayerData;
+  export let truthRevealData;
+  export let onLike;
   
-  // Category emoji mappings
+  let likedLies = new Set();
+  
+  $: data = truthRevealData;
+  
+  function handleLikeLie(lieId) {
+    if (likedLies.has(lieId)) return;
+    
+    likedLies.add(lieId);
+    likedLies = likedLies; // Trigger reactivity
+    onLike(lieId);
+  }
+  
+  // Category emoji mapping
   const categoryEmojis = {
-    'History': '📚', 'Animals': '🐾', 'Food': '🍎', 'Science': '🔬',
-    'Sports': '⚽', 'Entertainment': '🎬', 'Geography': '🌍', 'Music': '🎵',
-    'Art': '🎨', 'Technology': '💻', 'Nature': '🌿', 'Space': '🚀',
-    'Movies': '🎬', 'TV': '📺', 'Games': '🎮', 'Literature': '📖',
-    'Mythology': '🏛️', 'Fashion': '👗', 'Language': '💬', 'Inventions': '💡',
-    'Comics': '💥', 'Tech': '⚙️', 'Misc': '🎲', 'Bonus': '⭐'
+    'History': '📚', 'Animals': '🐾', 'Food': '🍎', 'Sports': '⚽',
+    'Geography': '🌍', 'Music': '🎵', 'Science': '🔬', 'Literature': '📖',
+    'Inventions': '💡', 'TV': '📺', 'Art': '🎨', 'Language': '🗣️',
+    'Movies': '🎬', 'Tech': '💻', 'Fashion': '👗', 'Mythology': '⚡',
+    'Games': '🎮', 'Space': '🚀', 'Comics': '💥', 'Misc': '🎯',
+    'Bonus': '✨', 'Entertainment': '🎭', 'Nature': '🌿', 'Travel': '✈️'
   };
   
-  function getCategoryEmoji(category) {
+  function getEmoji(category) {
     return categoryEmojis[category] || '❓';
   }
-  
-  // Get option letter (A, B, C, etc.)
-  function getOptionLetter(index) {
-    return String.fromCharCode(65 + index);
-  }
-  
-  // Computed values
-  $: currentQuestion = gameState.currentQuestion;
-  $: options = gameState.options || [];
-  $: revealData = gameState.revealData || {};
-  $: myChoice = revealData.playerChoices?.[myPlayerData.id];
-  $: myLie = revealData.playerLies?.[myPlayerData.id];
-  $: correctAnswerIndex = revealData.correctAnswerIndex;
-  $: pointsEarned = revealData.pointsEarned?.[myPlayerData.id] || 0;
-  
-  // Determine result status
-  $: isCorrect = myChoice === correctAnswerIndex;
-  $: fooledSomeone = myLie && revealData.lieVotes?.[myLie] > 0;
-  $: pointsFromLies = revealData.liePoints?.[myPlayerData.id] || 0;
-  $: pointsFromTruth = revealData.truthPoints?.[myPlayerData.id] || 0;
-  
-  // Get result icon and message
-  function getResultStatus() {
-    if (isCorrect && fooledSomeone) {
-      return {
-        icon: '🏆',
-        title: 'Perfect Round!',
-        message: 'You found the truth AND fooled other players!',
-        color: 'success'
-      };
-    } else if (isCorrect) {
-      return {
-        icon: '🎯',
-        title: 'Found the Truth!',
-        message: 'Great detective work!',
-        color: 'success'
-      };
-    } else if (fooledSomeone) {
-      return {
-        icon: '🎭',
-        title: 'Master of Deception!',
-        message: 'Your lie fooled other players!',
-        color: 'warning'
-      };
-    } else {
-      return {
-        icon: '😅',
-        title: 'Better Luck Next Time',
-        message: 'Keep trying - every round is a new chance!',
-        color: 'neutral'
-      };
-    }
-  }
-  
-  $: resultStatus = getResultStatus();
 </script>
 
-<div class="truth-reveal-container">
-  <!-- Result Header -->
-  <div class="result-header fade-in">
-    <div class="result-icon" class:success={resultStatus.color === 'success'} 
-         class:warning={resultStatus.color === 'warning'}>
-      {resultStatus.icon}
-    </div>
-    <h1 class="result-title">{resultStatus.title}</h1>
-    <p class="result-message">{resultStatus.message}</p>
-  </div>
-  
-  <!-- Question Context -->
-  {#if currentQuestion}
-    <div class="question-reminder glass slide-up">
-      <div class="reminder-header">
-        <span class="category-emoji">{getCategoryEmoji(currentQuestion.category)}</span>
-        <span class="category-name">{currentQuestion.category}</span>
+<div class="reveal-container">
+  <div class="reveal-card">
+    <div class="question-section">
+      <div class="category-badge">
+        <span class="category-emoji">{getEmoji(data.category)}</span>
+        <span class="category-name">{data.category}</span>
       </div>
-      <div class="reminder-question">
-        {currentQuestion.question}
-      </div>
+      <div class="question-text">{data.question}</div>
     </div>
-  {/if}
-  
-  <!-- Your Performance -->
-  <div class="performance-section scale-in">
-    <div class="performance-card glass">
-      <h2>📊 Your Performance</h2>
-      
-      <div class="performance-grid">
-        <!-- Your Choice -->
-        <div class="performance-item">
-          <div class="item-header">
-            <span class="item-icon">🗳️</span>
-            <span class="item-title">Your Vote</span>
-          </div>
-          <div class="choice-display" class:correct={isCorrect} class:incorrect={!isCorrect}>
-            <span class="choice-letter">{getOptionLetter(myChoice)}</span>
-            <span class="choice-text">{options[myChoice]?.text}</span>
-            <span class="choice-result">
-              {isCorrect ? '✅ Correct!' : '❌ Wrong'}
-            </span>
-          </div>
-        </div>
-        
-        <!-- Your Lie -->
-        {#if myLie}
-          <div class="performance-item">
-            <div class="item-header">
-              <span class="item-icon">🎭</span>
-              <span class="item-title">Your Lie</span>
-            </div>
-            <div class="lie-display">
-              <span class="lie-text">"{myLie}"</span>
-              <span class="lie-votes">
-                {revealData.lieVotes?.[myLie] || 0} player{(revealData.lieVotes?.[myLie] || 0) !== 1 ? 's' : ''} believed it
-              </span>
-            </div>
-          </div>
-        {/if}
-        
-        <!-- Points Breakdown -->
-        <div class="performance-item">
-          <div class="item-header">
-            <span class="item-icon">🏆</span>
-            <span class="item-title">Points Earned</span>
-          </div>
-          <div class="points-breakdown">
-            {#if pointsFromTruth > 0}
-              <div class="points-item">
-                <span class="points-label">Finding truth:</span>
-                <span class="points-value">+{pointsFromTruth}</span>
-              </div>
-            {/if}
-            {#if pointsFromLies > 0}
-              <div class="points-item">
-                <span class="points-label">Fooling others:</span>
-                <span class="points-value">+{pointsFromLies}</span>
-              </div>
-            {/if}
-            {#if pointsEarned === 0}
-              <div class="points-item no-points">
-                <span class="points-label">No points this round</span>
-                <span class="points-value">0</span>
-              </div>
-            {/if}
-            <div class="points-total">
-              <span class="total-label">Total:</span>
-              <span class="total-value">+{pointsEarned}</span>
-            </div>
-          </div>
-        </div>
-      </div>
+    
+    <div class="truth-section">
+      <div class="truth-label">The Truth</div>
+      <div class="truth-answer">{data.truth.answer}</div>
+      <div class="truth-celebration">🎯</div>
     </div>
-  </div>
-  
-  <!-- The Truth -->
-  {#if correctAnswerIndex !== undefined}
-    <div class="truth-section scale-in">
-      <div class="truth-card">
-        <h2>✨ The Truth Revealed</h2>
-        <div class="truth-display">
-          <div class="truth-answer">
-            <span class="truth-letter">{getOptionLetter(correctAnswerIndex)}</span>
-            <span class="truth-text">{options[correctAnswerIndex]?.text}</span>
-          </div>
-          <div class="truth-voters">
-            {#if revealData.truthVoters?.length > 0}
-              <h4>🎯 Players who found the truth:</h4>
-              <div class="voters-list">
-                {#each revealData.truthVoters as voter}
-                  <div class="voter-item" class:me={voter.id === myPlayerData.id}>
-                    <div 
-                      class="voter-avatar"
-                      style="background: {voter.avatar.color}"
-                    >
-                      {voter.avatar.emoji}
-                    </div>
-                    <span class="voter-name">
-                      {voter.id === myPlayerData.id ? 'You' : voter.name}
+    
+    {#if data.lies && data.lies.length > 0}
+      <div class="lies-section">
+        <h3 class="lies-title">The Lies That Fooled Players</h3>
+        <div class="lies-list">
+          {#each data.lies as lie, index}
+            <div class="lie-item" style="animation-delay: {index * 0.1}s">
+              <div class="lie-header">
+                <div class="lie-votes">
+                  <span class="votes-icon">🗳️</span>
+                  <span class="votes-count">{lie.votes}</span>
+                </div>
+                <button
+                  class="like-button"
+                  class:liked={likedLies.has(lie.id)}
+                  disabled={likedLies.has(lie.id)}
+                  on:click={() => handleLikeLie(lie.id)}
+                >
+                  <span class="like-icon">{likedLies.has(lie.id) ? '❤️' : '🤍'}</span>
+                  <span class="like-text">{likedLies.has(lie.id) ? 'Liked!' : 'Like'}</span>
+                </button>
+              </div>
+              
+              <div class="lie-text">"{lie.text}"</div>
+              
+              <div class="lie-attribution">
+                <div class="authors">
+                  <span class="authors-label">By:</span>
+                  {#each lie.authors as author, authorIndex}
+                    <span class="author" style="color: {author.avatar.color}">
+                      {author.avatar.emoji} {author.name}
                     </span>
+                    {#if authorIndex < lie.authors.length - 1}, {/if}
+                  {/each}
+                </div>
+                
+                {#if lie.voters && lie.voters.length > 0}
+                  <div class="voters">
+                    <span class="voters-label">Fooled:</span>
+                    {#each lie.voters as voter, voterIndex}
+                      <span class="voter" style="color: {voter.avatar.color}">
+                        {voter.avatar.emoji} {voter.name}
+                      </span>
+                      {#if voterIndex < lie.voters.length - 1}, {/if}
+                    {/each}
                   </div>
-                {/each}
+                {/if}
               </div>
-            {:else}
-              <p class="no-voters">😱 Nobody found the truth this round!</p>
-            {/if}
-          </div>
+            </div>
+          {/each}
         </div>
       </div>
-    </div>
-  {/if}
-  
-  <!-- Updated Score -->
-  <div class="score-update slide-up">
-    <div class="score-card glass">
-      <h3>💰 Your Total Score</h3>
-      <div class="score-display">
-        <div class="score-previous">
-          Previous: {(myPlayerData.score || 0) - pointsEarned}
-        </div>
-        <div class="score-change">
-          {pointsEarned > 0 ? `+${pointsEarned}` : '0'}
-        </div>
-        <div class="score-current">
-          Current: {myPlayerData.score || 0}
+    {/if}
+    
+    {#if data.truthVoters && data.truthVoters.length > 0}
+      <div class="truth-voters-section">
+        <h3 class="truth-voters-title">Truth Detectives 🕵️</h3>
+        <div class="truth-voters">
+          {#each data.truthVoters as voter, index}
+            <div class="truth-voter" style="animation-delay: {index * 0.1}s">
+              <div class="voter-avatar" style="background-color: {voter.avatar.color}">
+                <span class="voter-emoji">{voter.avatar.emoji}</span>
+              </div>
+              <div class="voter-name">{voter.name}</div>
+            </div>
+          {/each}
         </div>
       </div>
-    </div>
-  </div>
-  
-  <!-- Game Progress -->
-  <div class="progress-info">
-    <div class="progress-items">
-      <div class="progress-item">
-        <span class="progress-emoji">🎯</span>
-        <span>Round {gameState.round || 1} • Question {gameState.question || 1}</span>
-      </div>
-      <div class="progress-item">
-        <span class="progress-emoji">📈</span>
-        <span>Points multiply each round</span>
-      </div>
-    </div>
+    {/if}
   </div>
 </div>
 
 <style>
-  .truth-reveal-container {
-    height: 100%;
-    overflow-y: auto;
-    padding: var(--space-4);
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-6);
+  .reveal-container {
+    width: 100%;
+    max-width: 500px;
+    padding: 1rem;
+    animation: fadeIn 0.8s ease;
   }
   
-  .result-header {
+  .reveal-card {
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(20px);
+    border-radius: 24px;
+    padding: 2rem;
+    box-shadow: 0 12px 40px rgba(0,0,0,0.15);
+    border: 2px solid rgba(255, 255, 255, 0.2);
+  }
+  
+  .question-section {
     text-align: center;
+    margin-bottom: 2rem;
   }
   
-  .result-icon {
-    font-size: var(--font-size-6xl);
-    margin-bottom: var(--space-3);
-    display: block;
-    animation: bounce-in 0.8s ease-out;
-  }
-  
-  .result-icon.success {
-    filter: drop-shadow(0 0 20px rgba(16, 185, 129, 0.5));
-  }
-  
-  .result-icon.warning {
-    filter: drop-shadow(0 0 20px rgba(245, 158, 11, 0.5));
-  }
-  
-  .result-title {
-    color: var(--white);
-    font-size: var(--font-size-3xl);
-    margin-bottom: var(--space-2);
-    font-weight: 900;
-    text-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
-  }
-  
-  .result-message {
-    color: rgba(255, 255, 255, 0.9);
-    font-size: var(--font-size-lg);
-    font-weight: 500;
-  }
-  
-  .question-reminder {
-    padding: var(--space-4);
-    border-radius: var(--radius-xl);
-    text-align: center;
-  }
-  
-  .reminder-header {
-    display: flex;
+  .category-badge {
+    display: inline-flex;
     align-items: center;
-    justify-content: center;
-    gap: var(--space-2);
-    margin-bottom: var(--space-2);
+    gap: 0.5rem;
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    color: white;
+    padding: 0.5rem 1rem;
+    border-radius: 20px;
+    font-weight: 600;
+    font-size: 0.9rem;
+    margin-bottom: 1rem;
   }
   
   .category-emoji {
-    font-size: var(--font-size-xl);
+    font-size: 1.1rem;
   }
   
-  .category-name {
-    color: var(--white);
-    font-weight: 700;
-    font-size: var(--font-size-lg);
+  .question-text {
+    font-size: 1.2rem;
+    font-weight: 600;
+    color: #333;
+    line-height: 1.3;
   }
   
-  .reminder-question {
-    color: rgba(255, 255, 255, 0.9);
-    font-size: var(--font-size-base);
-    font-weight: 500;
-    line-height: 1.4;
-  }
-  
-  .performance-card {
-    padding: var(--space-5);
-    border-radius: var(--radius-xl);
-  }
-  
-  .performance-card h2 {
-    color: var(--white);
-    font-size: var(--font-size-2xl);
-    margin-bottom: var(--space-4);
-    font-weight: 700;
+  .truth-section {
+    background: linear-gradient(135deg, #4ade80, #22c55e);
+    color: white;
+    border-radius: 16px;
+    padding: 2rem;
     text-align: center;
+    margin-bottom: 2rem;
+    position: relative;
+    overflow: hidden;
+    animation: bounceIn 0.8s ease;
   }
   
-  .performance-grid {
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-4);
+  .truth-section::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: linear-gradient(45deg, transparent, rgba(255,255,255,0.1), transparent);
+    animation: shine 2s infinite;
   }
   
-  .performance-item {
-    background: rgba(255, 255, 255, 0.1);
-    border-radius: var(--radius-lg);
-    padding: var(--space-4);
+  @keyframes shine {
+    0% { transform: translateX(-100%) translateY(-100%) rotate(45deg); }
+    100% { transform: translateX(100%) translateY(100%) rotate(45deg); }
   }
   
-  .item-header {
-    display: flex;
-    align-items: center;
-    gap: var(--space-2);
-    margin-bottom: var(--space-3);
-  }
-  
-  .item-icon {
-    font-size: var(--font-size-lg);
-  }
-  
-  .item-title {
-    color: var(--white);
-    font-weight: 700;
-    font-size: var(--font-size-base);
-  }
-  
-  .choice-display {
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-2);
-  }
-  
-  .choice-letter {
-    width: 32px;
-    height: 32px;
-    border-radius: var(--radius-full);
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    font-weight: 900;
-    font-size: var(--font-size-base);
-    background: var(--gray-300);
-    color: var(--gray-800);
-  }
-  
-  .choice-display.correct .choice-letter {
-    background: var(--success);
-    color: var(--white);
-  }
-  
-  .choice-display.incorrect .choice-letter {
-    background: var(--error);
-    color: var(--white);
-  }
-  
-  .choice-text {
-    color: var(--white);
+  .truth-label {
+    font-size: 1rem;
     font-weight: 600;
-    font-size: var(--font-size-base);
-  }
-  
-  .choice-result {
-    color: rgba(255, 255, 255, 0.8);
-    font-size: var(--font-size-sm);
-    font-weight: 600;
-  }
-  
-  .choice-display.correct .choice-result {
-    color: var(--success);
-  }
-  
-  .choice-display.incorrect .choice-result {
-    color: var(--error);
-  }
-  
-  .lie-display {
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-2);
-  }
-  
-  .lie-text {
-    color: var(--white);
-    font-weight: 600;
-    font-size: var(--font-size-base);
-    font-style: italic;
-  }
-  
-  .lie-votes {
-    color: rgba(255, 255, 255, 0.8);
-    font-size: var(--font-size-sm);
-    font-weight: 500;
-  }
-  
-  .points-breakdown {
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-2);
-  }
-  
-  .points-item {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-  }
-  
-  .points-item.no-points {
-    opacity: 0.7;
-  }
-  
-  .points-label {
-    color: rgba(255, 255, 255, 0.8);
-    font-size: var(--font-size-sm);
-  }
-  
-  .points-value {
-    color: var(--success);
-    font-weight: 700;
-    font-size: var(--font-size-sm);
-  }
-  
-  .points-item.no-points .points-value {
-    color: rgba(255, 255, 255, 0.6);
-  }
-  
-  .points-total {
-    border-top: 1px solid rgba(255, 255, 255, 0.2);
-    padding-top: var(--space-2);
-    margin-top: var(--space-2);
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-  }
-  
-  .total-label {
-    color: var(--white);
-    font-weight: 700;
-    font-size: var(--font-size-base);
-  }
-  
-  .total-value {
-    color: var(--success);
-    font-weight: 900;
-    font-size: var(--font-size-lg);
-  }
-  
-  .truth-card {
-    background: var(--white);
-    border-radius: var(--radius-2xl);
-    padding: var(--space-6);
-    box-shadow: var(--shadow-2xl);
-    text-align: center;
-  }
-  
-  .truth-card h2 {
-    color: var(--gray-800);
-    font-size: var(--font-size-2xl);
-    margin-bottom: var(--space-4);
-    font-weight: 700;
+    opacity: 0.9;
+    margin-bottom: 0.75rem;
   }
   
   .truth-answer {
-    display: flex;
-    align-items: center;
-    gap: var(--space-3);
-    justify-content: center;
-    margin-bottom: var(--space-5);
-    padding: var(--space-4);
-    background: var(--gray-50);
-    border-radius: var(--radius-xl);
-    border: 2px solid var(--success);
-  }
-  
-  .truth-letter {
-    width: 48px;
-    height: 48px;
-    background: var(--success);
-    color: var(--white);
-    border-radius: var(--radius-full);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-weight: 900;
-    font-size: var(--font-size-xl);
-    flex-shrink: 0;
-  }
-  
-  .truth-text {
-    color: var(--gray-800);
+    font-size: 1.8rem;
     font-weight: 700;
-    font-size: var(--font-size-xl);
-    flex: 1;
+    margin-bottom: 0.75rem;
+    position: relative;
+    z-index: 2;
   }
   
-  .truth-voters h4 {
-    color: var(--gray-700);
-    font-size: var(--font-size-lg);
-    margin-bottom: var(--space-3);
-    font-weight: 600;
+  .truth-celebration {
+    font-size: 1.5rem;
+    animation: bounce 1s infinite alternate;
   }
   
-  .voters-list {
-    display: flex;
-    justify-content: center;
-    flex-wrap: wrap;
-    gap: var(--space-3);
+  @keyframes bounce {
+    0% { transform: translateY(0); }
+    100% { transform: translateY(-5px); }
   }
   
-  .voter-item {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: var(--space-2);
-    padding: var(--space-3);
-    background: var(--gray-50);
-    border-radius: var(--radius-lg);
-    border: 2px solid transparent;
-    transition: all var(--transition);
+  .lies-section {
+    margin-bottom: 2rem;
   }
   
-  .voter-item.me {
-    border-color: var(--primary);
-    background: rgba(102, 126, 234, 0.1);
-  }
-  
-  .voter-avatar {
-    width: 36px;
-    height: 36px;
-    border-radius: var(--radius-full);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: var(--font-size-lg);
-    border: 2px solid rgba(255, 255, 255, 0.3);
-  }
-  
-  .voter-name {
-    color: var(--gray-700);
-    font-size: var(--font-size-sm);
-    font-weight: 600;
-  }
-  
-  .voter-item.me .voter-name {
-    color: var(--primary);
+  .lies-title {
+    font-size: 1.3rem;
     font-weight: 700;
-  }
-  
-  .no-voters {
-    color: var(--gray-600);
-    font-size: var(--font-size-lg);
-    font-style: italic;
-    margin: 0;
-  }
-  
-  .score-card {
-    padding: var(--space-4);
-    border-radius: var(--radius-xl);
+    color: #333;
+    margin: 0 0 1.5rem 0;
     text-align: center;
   }
   
-  .score-card h3 {
-    color: var(--white);
-    font-size: var(--font-size-xl);
-    margin-bottom: var(--space-3);
-    font-weight: 700;
+  .lies-list {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
   }
   
-  .score-display {
+  .lie-item {
+    background: linear-gradient(135deg, #f8fafc, #e2e8f0);
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 1.25rem;
+    animation: slideInUp 0.5s ease both;
+    transition: all 0.3s ease;
+  }
+  
+  .lie-item:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+  }
+  
+  .lie-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+  }
+  
+  .lie-votes {
     display: flex;
     align-items: center;
-    justify-content: center;
-    gap: var(--space-4);
-    flex-wrap: wrap;
+    gap: 0.5rem;
+    color: #666;
+    font-weight: 600;
+    font-size: 0.9rem;
   }
   
-  .score-previous,
-  .score-current {
-    color: rgba(255, 255, 255, 0.8);
-    font-size: var(--font-size-base);
+  .votes-icon {
+    font-size: 1rem;
+  }
+  
+  .like-button {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    background: rgba(255, 255, 255, 0.7);
+    border: 1px solid #e2e8f0;
+    border-radius: 20px;
+    padding: 0.5rem 1rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-size: 0.8rem;
     font-weight: 600;
   }
   
-  .score-change {
-    color: var(--success);
-    font-size: var(--font-size-2xl);
-    font-weight: 900;
-    background: rgba(16, 185, 129, 0.2);
-    padding: var(--space-2) var(--space-3);
-    border-radius: var(--radius-lg);
-    border: 1px solid rgba(16, 185, 129, 0.3);
+  .like-button:hover:not(:disabled) {
+    background: #fecaca;
+    border-color: #ef4444;
+    transform: scale(1.05);
   }
   
-  .score-current {
-    color: var(--white);
-    font-weight: 700;
+  .like-button.liked {
+    background: #fecaca;
+    border-color: #ef4444;
+    color: #dc2626;
+    cursor: default;
   }
   
-  .progress-info {
-    margin-top: auto;
+  .like-button:disabled {
+    cursor: default;
   }
   
-  .progress-items {
+  .like-icon {
+    font-size: 1rem;
+  }
+  
+  .lie-text {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: #333;
+    margin-bottom: 1rem;
+    font-style: italic;
+    line-height: 1.4;
+  }
+  
+  .lie-attribution {
     display: flex;
-    justify-content: center;
-    gap: var(--space-4);
-    flex-wrap: wrap;
+    flex-direction: column;
+    gap: 0.5rem;
+    padding-top: 1rem;
+    border-top: 1px solid #e2e8f0;
+    font-size: 0.85rem;
   }
   
-  .progress-item {
+  .authors, .voters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    align-items: center;
+  }
+  
+  .authors-label, .voters-label {
+    font-weight: 600;
+    color: #666;
+  }
+  
+  .author, .voter {
+    font-weight: 500;
+    padding: 0.2rem 0.5rem;
+    background: rgba(255, 255, 255, 0.7);
+    border-radius: 8px;
+    border: 1px solid currentColor;
+  }
+  
+  .truth-voters-section {
+    text-align: center;
+  }
+  
+  .truth-voters-title {
+    font-size: 1.3rem;
+    font-weight: 700;
+    color: #333;
+    margin: 0 0 1.5rem 0;
+  }
+  
+  .truth-voters {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 1rem;
+  }
+  
+  .truth-voter {
+    background: linear-gradient(135deg, #22c55e20, #4ade8020);
+    border: 1px solid rgba(34, 197, 94, 0.2);
+    border-radius: 12px;
+    padding: 1rem;
+    text-align: center;
+    animation: slideInUp 0.5s ease both;
+    transition: all 0.3s ease;
+    min-width: 80px;
+  }
+  
+  .truth-voter:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 15px rgba(34, 197, 94, 0.2);
+  }
+  
+  .voter-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
     display: flex;
     align-items: center;
-    gap: var(--space-2);
-    color: rgba(255, 255, 255, 0.8);
-    font-size: var(--font-size-sm);
-    font-weight: 500;
-    background: rgba(255, 255, 255, 0.1);
-    padding: var(--space-2) var(--space-3);
-    border-radius: var(--radius-lg);
-    backdrop-filter: blur(10px);
+    justify-content: center;
+    margin: 0 auto 0.75rem auto;
+    border: 2px solid rgba(255, 255, 255, 0.3);
   }
   
-  .progress-emoji {
-    font-size: var(--font-size-base);
+  .voter-emoji {
+    font-size: 1.2rem;
   }
   
-  @keyframes bounce-in {
+  .voter-name {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: #333;
+  }
+  
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+      transform: scale(0.95);
+    }
+    to {
+      opacity: 1;
+      transform: scale(1);
+    }
+  }
+  
+  @keyframes bounceIn {
     0% {
       opacity: 0;
       transform: scale(0.3);
     }
     50% {
       opacity: 1;
-      transform: scale(1.05);
-    }
-    70% {
-      transform: scale(0.9);
+      transform: scale(1.1);
     }
     100% {
       opacity: 1;
@@ -671,57 +421,60 @@
     }
   }
   
-  @media (max-width: 768px) {
-    .truth-reveal-container {
-      padding: var(--space-3);
-      gap: var(--space-4);
+  @keyframes slideInUp {
+    from {
+      opacity: 0;
+      transform: translateY(20px);
     }
-    
-    .result-title {
-      font-size: var(--font-size-2xl);
-    }
-    
-    .result-icon {
-      font-size: var(--font-size-4xl);
-    }
-    
-    .truth-text {
-      font-size: var(--font-size-base);
-    }
-    
-    .truth-letter {
-      width: 40px;
-      height: 40px;
-      font-size: var(--font-size-lg);
-    }
-    
-    .score-display {
-      flex-direction: column;
-      gap: var(--space-2);
-    }
-    
-    .voters-list {
-      justify-content: flex-start;
-    }
-    
-    .progress-items {
-      flex-direction: column;
-      align-items: center;
+    to {
+      opacity: 1;
+      transform: translateY(0);
     }
   }
   
   @media (max-width: 480px) {
+    .reveal-container {
+      padding: 0.5rem;
+    }
+    
+    .reveal-card {
+      padding: 1.5rem;
+    }
+    
+    .question-text {
+      font-size: 1.1rem;
+    }
+    
     .truth-answer {
+      font-size: 1.5rem;
+    }
+    
+    .lie-item {
+      padding: 1rem;
+    }
+    
+    .lie-header {
       flex-direction: column;
-      text-align: center;
+      gap: 0.75rem;
+      align-items: flex-start;
     }
     
-    .performance-grid {
-      gap: var(--space-3);
+    .lie-attribution {
+      flex-direction: column;
+      gap: 0.75rem;
     }
     
-    .performance-item {
-      padding: var(--space-3);
+    .authors, .voters {
+      justify-content: flex-start;
+    }
+    
+    .truth-voters {
+      gap: 0.75rem;
+    }
+    
+    .truth-voter {
+      min-width: 70px;
+      padding: 0.75rem;
     }
   }
 </style>

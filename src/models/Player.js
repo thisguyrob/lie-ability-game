@@ -97,7 +97,7 @@ class Player {
 
   // Get safe player data for sending to clients
   getPublicData() {
-    return {
+    const data = {
       id: this.id,
       name: this.name,
       status: this.status,
@@ -108,6 +108,8 @@ class Player {
       currentLie: this.currentLie, // Only include this in certain contexts
       likesCount: this.likes.length
     };
+    console.log(`👤 [PLAYER DATA] getPublicData for ${this.name}:`, data);
+    return data;
   }
 
   // Get minimal data for scoreboard

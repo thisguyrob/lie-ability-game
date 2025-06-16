@@ -1,243 +1,116 @@
 <script>
-  import { createEventDispatcher } from 'svelte';
-  
   export let connectionStatus;
-  export let isReconnecting;
-  
-  const dispatch = createEventDispatcher();
+  export let onJoin;
   
   let playerName = '';
-  let selectedAvatar = {
-    emoji: '😊',
-    color: '#667eea'
-  };
   let isJoining = false;
   
-  // Available avatar options
-  const avatarEmojis = [
-    '😊', '😎', '🤗', '🥳', '🤠', '🧐', '🤓', '😇',
-    '🚀', '🎯', '🎮', '🎪', '🎨', '🎭', '🎸', '🎲',
-    '🦄', '🐶', '🐱', '🦊', '🐼', '🐨', '🦁', '🐸',
-    '⭐', '🌟', '💫', '🔥', '💎', '🏆', '👑', '🎊'
-  ];
-  
-  const avatarColors = [
-    '#667eea', '#764ba2', '#f093fb', '#f5576c',
-    '#4facfe', '#00f2fe', '#43e97b', '#38f9d7',
-    '#ffc837', '#ff8008', '#e96443', '#904e95',
-    '#29323c', '#485563', '#96deda', '#50c9c3',
-    '#a8edea', '#fed6e3', '#ffa726', '#d4fc79'
-  ];
-  
-  function selectEmoji(emoji) {
-    selectedAvatar.emoji = emoji;
-  }
-  
-  function selectColor(color) {
-    selectedAvatar.color = color;
-  }
-  
-  function joinGame() {
-    if (playerName.trim() && !isJoining) {
-      isJoining = true;
-      dispatch('join', {
-        name: playerName.trim(),
-        avatar: selectedAvatar
-      });
-      
-      // Reset joining state after a delay
-      setTimeout(() => {
-        isJoining = false;
-      }, 3000);
+  function handleJoin() {
+    if (!playerName.trim()) {
+      alert('Please enter your name!');
+      return;
     }
+    
+    if (connectionStatus !== 'connected') {
+      alert('Not connected to server. Please wait...');
+      return;
+    }
+    
+    isJoining = true;
+    onJoin(playerName.trim());
   }
   
   function handleKeyPress(event) {
-    if (event.key === 'Enter' && playerName.trim()) {
-      joinGame();
+    if (event.key === 'Enter') {
+      handleJoin();
     }
   }
   
-  // Validate name input
-  $: isValidName = playerName.trim().length >= 2 && playerName.trim().length <= 20;
-  $: canJoin = isValidName && connectionStatus === 'connected' && !isJoining && !isReconnecting;
+  // Generate a random fun name as placeholder
+  function generateRandomName() {
+    const adjectives = ['Cool', 'Smart', 'Quick', 'Brave', 'Witty', 'Sharp', 'Clever', 'Bold', 'Sneaky', 'Crafty'];
+    const nouns = ['Player', 'Gamer', 'Liar', 'Detective', 'Trickster', 'Genius', 'Master', 'Pro'];
+    const adj = adjectives[Math.floor(Math.random() * adjectives.length)];
+    const noun = nouns[Math.floor(Math.random() * nouns.length)];
+    return `${adj} ${noun}`;
+  }
+  
+  let placeholder = generateRandomName();
 </script>
 
 <div class="join-container">
-  <div class="join-content">
-    <!-- Header -->
-    <div class="join-header fade-in">
-      <h1 class="game-title">
-        <span class="title-emoji">🎯</span>
-        Lie-Ability
-      </h1>
-      <p class="join-subtitle">
-        Ready to fool your friends and find the truth?
-      </p>
+  <div class="join-card">
+    <div class="game-logo">
+      <div class="logo-icon">🎯</div>
+      <h1 class="logo-text">Lie-Ability</h1>
     </div>
     
-    <!-- Connection Status -->
-    {#if connectionStatus !== 'connected'}
-      <div class="connection-status slide-up">
-        <div class="status-card">
-          {#if connectionStatus === 'connecting'}
-            <div class="status-icon loading">🔄</div>
-            <h3>Connecting to game...</h3>
-            <p>Please wait while we connect you to the server.</p>
-          {:else if connectionStatus === 'error'}
-            <div class="status-icon error">⚠️</div>
-            <h3>Connection Failed</h3>
-            <p>Unable to connect to the game server. Please check your internet connection and refresh the page.</p>
-          {:else if connectionStatus === 'disconnected'}
-            <div class="status-icon error">🔴</div>
-            <h3>Disconnected</h3>
-            <p>Connection to the game server was lost. Please refresh the page to reconnect.</p>
-          {/if}
-        </div>
-      </div>
-    {:else if isReconnecting}
-      <div class="connection-status slide-up">
-        <div class="status-card">
-          <div class="status-icon loading">🔄</div>
-          <h3>Reconnecting...</h3>
-          <p>Attempting to rejoin your previous game session.</p>
-        </div>
-      </div>
-    {:else}
-      <!-- Join Form -->
-      <div class="join-form slide-up">
-        <div class="form-card glass">
-          <!-- Name Input -->
-          <div class="form-section">
-            <label for="playerName" class="form-label">
-              <span class="label-emoji">👤</span>
-              Your Name
-            </label>
-            <input
-              id="playerName"
-              type="text"
-              class="input name-input"
-              bind:value={playerName}
-              on:keypress={handleKeyPress}
-              placeholder="Enter your name..."
-              maxlength="20"
-              autocomplete="off"
-              disabled={isJoining}
-            />
-            <div class="name-validation">
-              {#if playerName.trim().length > 0}
-                {#if isValidName}
-                  <span class="validation-message valid">✓ Looks good!</span>
-                {:else if playerName.trim().length < 2}
-                  <span class="validation-message invalid">Name must be at least 2 characters</span>
-                {:else}
-                  <span class="validation-message invalid">Name must be 20 characters or less</span>
-                {/if}
-              {/if}
-            </div>
+    <div class="join-content">
+      <h2 class="join-title">Join the Game!</h2>
+      <p class="join-subtitle">
+        Ready to test your deception skills? Enter your name and let's see how well you can lie! 😏
+      </p>
+      
+      <div class="name-input-section">
+        <label for="playerName" class="input-label">Your Name</label>
+        <input
+          id="playerName"
+          type="text"
+          bind:value={playerName}
+          placeholder={placeholder}
+          maxlength="20"
+          disabled={connectionStatus !== 'connected' || isJoining}
+          on:keypress={handleKeyPress}
+          class="name-input"
+          class:connecting={connectionStatus !== 'connected'}
+          autofocus
+        />
+        
+        {#if connectionStatus !== 'connected'}
+          <div class="connection-warning">
+            <span class="warning-icon">⚠️</span>
+            Connecting to server...
           </div>
-          
-          <!-- Avatar Selection -->
-          <div class="form-section">
-            <div class="form-label">
-              <span class="label-emoji">🎭</span>
-              Choose Your Avatar
-            </div>
-            
-            <!-- Avatar Preview -->
-            <div class="avatar-preview">
-              <div 
-                class="preview-avatar"
-                style="background: {selectedAvatar.color}"
-              >
-                {selectedAvatar.emoji}
-              </div>
-            </div>
-            
-            <!-- Emoji Selection -->
-            <div class="selection-section">
-              <h4 class="selection-title">Pick an Emoji</h4>
-              <div class="emoji-grid">
-                {#each avatarEmojis as emoji}
-                  <button
-                    class="emoji-option"
-                    class:selected={selectedAvatar.emoji === emoji}
-                    on:click={() => selectEmoji(emoji)}
-                    disabled={isJoining}
-                  >
-                    {emoji}
-                  </button>
-                {/each}
-              </div>
-            </div>
-            
-            <!-- Color Selection -->
-            <div class="selection-section">
-              <h4 class="selection-title">Pick a Color</h4>
-              <div class="color-grid">
-                {#each avatarColors as color}
-                  <button
-                    class="color-option"
-                    class:selected={selectedAvatar.color === color}
-                    style="background: {color}"
-                    on:click={() => selectColor(color)}
-                    disabled={isJoining}
-                    aria-label="Select color {color}"
-                  >
-                    {#if selectedAvatar.color === color}
-                      <span class="color-check">✓</span>
-                    {/if}
-                  </button>
-                {/each}
-              </div>
-            </div>
-          </div>
-          
-          <!-- Join Button -->
-          <div class="form-section">
-            <button
-              class="btn btn-primary btn-lg join-button"
-              class:loading={isJoining}
-              disabled={!canJoin}
-              on:click={joinGame}
-            >
-              {#if isJoining}
-                <span class="button-spinner">🔄</span>
-                Joining Game...
-              {:else}
-                <span class="button-emoji">🚀</span>
-                Join Game
-              {/if}
-            </button>
-            
-            {#if !isValidName && playerName.trim().length > 0}
-              <p class="join-help error">Please enter a valid name (2-20 characters)</p>
-            {:else if connectionStatus !== 'connected'}
-              <p class="join-help error">Waiting for connection...</p>
-            {:else}
-              <p class="join-help">
-                Click "Join Game" when you're ready to play!
-              </p>
-            {/if}
-          </div>
-        </div>
+        {/if}
       </div>
-    {/if}
-    
-    <!-- Game Info -->
-    <div class="game-info fade-in">
-      <div class="info-items">
-        <div class="info-item">
-          <span class="info-emoji">🎯</span>
-          <span>Create lies to fool others</span>
-        </div>
-        <div class="info-item">
-          <span class="info-emoji">🕵️</span>
-          <span>Find the real answer</span>
-        </div>
-        <div class="info-item">
-          <span class="info-emoji">🏆</span>
-          <span>Score points to win</span>
+      
+      <button
+        class="join-button"
+        class:disabled={connectionStatus !== 'connected' || isJoining || !playerName.trim()}
+        disabled={connectionStatus !== 'connected' || isJoining || !playerName.trim()}
+        on:click={handleJoin}
+      >
+        {#if isJoining}
+          <div class="button-spinner"></div>
+          Joining...
+        {:else if connectionStatus !== 'connected'}
+          <span class="button-icon">📡</span>
+          Connecting...
+        {:else}
+          <span class="button-icon">🚀</span>
+          Join Game
+        {/if}
+      </button>
+      
+      <div class="game-preview">
+        <h3 class="preview-title">How to Play</h3>
+        <div class="preview-steps">
+          <div class="preview-step">
+            <span class="step-icon">❓</span>
+            <span class="step-text">Read the question</span>
+          </div>
+          <div class="preview-step">
+            <span class="step-icon">🤥</span>
+            <span class="step-text">Create a convincing lie</span>
+          </div>
+          <div class="preview-step">
+            <span class="step-icon">🗳️</span>
+            <span class="step-text">Vote for the real answer</span>
+          </div>
+          <div class="preview-step">
+            <span class="step-icon">🏆</span>
+            <span class="step-text">Score points for fooling others!</span>
+          </div>
         </div>
       </div>
     </div>
@@ -246,300 +119,163 @@
 
 <style>
   .join-container {
-    min-height: 100vh;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: var(--space-4);
-  }
-  
-  .join-content {
     width: 100%;
     max-width: 500px;
-    margin: 0 auto;
+    padding: 1rem;
+    animation: fadeInUp 0.8s ease;
   }
   
-  .join-header {
+  .join-card {
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(20px);
+    border-radius: 24px;
+    padding: 2.5rem;
+    box-shadow: 0 12px 40px rgba(0,0,0,0.15);
+    border: 2px solid rgba(255, 255, 255, 0.2);
     text-align: center;
-    margin-bottom: var(--space-8);
   }
   
-  .game-title {
-    font-size: var(--font-size-5xl);
-    font-weight: 900;
-    color: var(--white);
-    margin-bottom: var(--space-3);
-    text-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: var(--space-3);
+  .game-logo {
+    margin-bottom: 2rem;
   }
   
-  .title-emoji {
-    font-size: var(--font-size-4xl);
-    animation: bounce-in 0.8s ease-out;
+  .logo-icon {
+    font-size: 3rem;
+    margin-bottom: 0.5rem;
+    animation: bounce 2s infinite;
+  }
+  
+  .logo-text {
+    font-size: 2.5rem;
+    font-weight: 700;
+    color: #333;
+    margin: 0;
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  
+  .join-title {
+    font-size: 2rem;
+    font-weight: 700;
+    color: #333;
+    margin: 0 0 1rem 0;
   }
   
   .join-subtitle {
-    font-size: var(--font-size-xl);
-    color: rgba(255, 255, 255, 0.9);
-    line-height: 1.4;
-  }
-  
-  .connection-status {
-    margin-bottom: var(--space-6);
-  }
-  
-  .status-card {
-    background: rgba(255, 255, 255, 0.1);
-    backdrop-filter: blur(10px);
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    border-radius: var(--radius-xl);
-    padding: var(--space-6);
-    text-align: center;
-    color: var(--white);
-  }
-  
-  .status-icon {
-    font-size: var(--font-size-4xl);
-    margin-bottom: var(--space-3);
-  }
-  
-  .status-icon.loading {
-    animation: spin 1s linear infinite;
-  }
-  
-  .status-icon.error {
-    color: var(--error);
-  }
-  
-  .status-card h3 {
-    font-size: var(--font-size-2xl);
-    margin-bottom: var(--space-2);
-    font-weight: 600;
-  }
-  
-  .status-card p {
-    opacity: 0.9;
+    font-size: 1.1rem;
+    color: #666;
+    margin: 0 0 2rem 0;
     line-height: 1.5;
   }
   
-  .join-form {
-    margin-bottom: var(--space-8);
+  .name-input-section {
+    margin-bottom: 2rem;
+    text-align: left;
   }
   
-  .form-card {
-    padding: var(--space-6);
-    border-radius: var(--radius-2xl);
-  }
-  
-  .form-section {
-    margin-bottom: var(--space-6);
-  }
-  
-  .form-section:last-child {
-    margin-bottom: 0;
-  }
-  
-  .form-label {
-    display: flex;
-    align-items: center;
-    gap: var(--space-2);
-    font-size: var(--font-size-lg);
+  .input-label {
+    display: block;
+    font-size: 1rem;
     font-weight: 600;
-    color: var(--white);
-    margin-bottom: var(--space-3);
-  }
-  
-  .label-emoji {
-    font-size: var(--font-size-xl);
+    color: #333;
+    margin-bottom: 0.75rem;
   }
   
   .name-input {
-    font-size: var(--font-size-lg);
-    text-align: center;
-    background: rgba(255, 255, 255, 0.9);
-  }
-  
-  .name-validation {
-    margin-top: var(--space-2);
-    text-align: center;
-    min-height: 20px;
-  }
-  
-  .validation-message {
-    font-size: var(--font-size-sm);
-    font-weight: 600;
-  }
-  
-  .validation-message.valid {
-    color: var(--success);
-  }
-  
-  .validation-message.invalid {
-    color: var(--error);
-  }
-  
-  .avatar-preview {
-    display: flex;
-    justify-content: center;
-    margin-bottom: var(--space-4);
-  }
-  
-  .preview-avatar {
-    width: 80px;
-    height: 80px;
-    border-radius: var(--radius-full);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: var(--font-size-4xl);
-    border: 4px solid rgba(255, 255, 255, 0.3);
-    box-shadow: var(--shadow-lg);
-    transition: all var(--transition);
-  }
-  
-  .selection-section {
-    margin-bottom: var(--space-5);
-  }
-  
-  .selection-section:last-child {
-    margin-bottom: 0;
-  }
-  
-  .selection-title {
-    color: var(--white);
-    font-size: var(--font-size-base);
-    font-weight: 600;
-    margin-bottom: var(--space-3);
-    text-align: center;
-  }
-  
-  .emoji-grid {
-    display: grid;
-    grid-template-columns: repeat(8, 1fr);
-    gap: var(--space-2);
-    margin-bottom: var(--space-4);
-  }
-  
-  .emoji-option {
-    background: rgba(255, 255, 255, 0.1);
-    border: 2px solid rgba(255, 255, 255, 0.2);
-    border-radius: var(--radius-lg);
-    padding: var(--space-2);
-    font-size: var(--font-size-xl);
-    cursor: pointer;
-    transition: all var(--transition-fast);
-    min-height: 44px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  }
-  
-  .emoji-option:hover:not(:disabled) {
-    background: rgba(255, 255, 255, 0.2);
-    transform: scale(1.1);
-  }
-  
-  .emoji-option.selected {
-    background: var(--white);
-    border-color: var(--primary);
-    box-shadow: 0 0 10px rgba(102, 126, 234, 0.5);
-  }
-  
-  .color-grid {
-    display: grid;
-    grid-template-columns: repeat(5, 1fr);
-    gap: var(--space-3);
-  }
-  
-  .color-option {
     width: 100%;
-    height: 44px;
-    border: 3px solid rgba(255, 255, 255, 0.3);
-    border-radius: var(--radius-lg);
-    cursor: pointer;
-    transition: all var(--transition-fast);
-    position: relative;
+    padding: 1rem 1.25rem;
+    border: 2px solid #e2e8f0;
+    border-radius: 12px;
+    font-size: 1.1rem;
+    font-weight: 500;
+    transition: all 0.3s ease;
+    background: white;
+    box-sizing: border-box;
+  }
+  
+  .name-input:focus {
+    outline: none;
+    border-color: #667eea;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+  }
+  
+  .name-input:disabled {
+    background: #f8fafc;
+    color: #94a3b8;
+    cursor: not-allowed;
+  }
+  
+  .name-input.connecting {
+    border-color: #fbbf24;
+    background: #fffbeb;
+  }
+  
+  .connection-warning {
     display: flex;
     align-items: center;
-    justify-content: center;
+    gap: 0.5rem;
+    margin-top: 0.75rem;
+    padding: 0.75rem;
+    background: #fffbeb;
+    border: 1px solid #fbbf24;
+    border-radius: 8px;
+    color: #92400e;
+    font-size: 0.9rem;
+    font-weight: 500;
   }
   
-  .color-option:hover:not(:disabled) {
-    transform: scale(1.1);
-    border-color: rgba(255, 255, 255, 0.6);
-  }
-  
-  .color-option.selected {
-    border-color: var(--white);
-    box-shadow: 0 0 15px rgba(255, 255, 255, 0.5);
-  }
-  
-  .color-check {
-    color: var(--white);
-    font-weight: 900;
-    font-size: var(--font-size-lg);
-    text-shadow: 0 0 4px rgba(0, 0, 0, 0.5);
+  .warning-icon {
+    font-size: 1rem;
   }
   
   .join-button {
     width: 100%;
-    font-size: var(--font-size-xl);
-    padding: var(--space-4);
-    min-height: 60px;
-    position: relative;
-  }
-  
-  .join-button.loading {
-    pointer-events: none;
-  }
-  
-  .button-emoji,
-  .button-spinner {
-    font-size: var(--font-size-2xl);
-  }
-  
-  .button-spinner {
-    animation: spin 1s linear infinite;
-  }
-  
-  .join-help {
-    text-align: center;
-    margin-top: var(--space-3);
-    font-size: var(--font-size-base);
-    color: rgba(255, 255, 255, 0.9);
-    margin-bottom: 0;
-  }
-  
-  .join-help.error {
-    color: var(--error);
-    font-weight: 600;
-  }
-  
-  .game-info {
-    text-align: center;
-  }
-  
-  .info-items {
-    display: flex;
-    justify-content: center;
-    flex-wrap: wrap;
-    gap: var(--space-4);
-  }
-  
-  .info-item {
+    padding: 1.25rem;
+    background: linear-gradient(135deg, #4ade80, #22c55e);
+    color: white;
+    border: none;
+    border-radius: 12px;
+    font-size: 1.2rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 15px rgba(34, 197, 94, 0.3);
     display: flex;
     align-items: center;
-    gap: var(--space-2);
-    color: rgba(255, 255, 255, 0.8);
-    font-size: var(--font-size-base);
-    font-weight: 500;
+    justify-content: center;
+    gap: 0.75rem;
+    margin-bottom: 2rem;
   }
   
-  .info-emoji {
-    font-size: var(--font-size-lg);
+  .join-button:hover:not(.disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(34, 197, 94, 0.4);
+  }
+  
+  .join-button:active:not(.disabled) {
+    transform: translateY(0);
+  }
+  
+  .join-button.disabled {
+    background: #94a3b8;
+    cursor: not-allowed;
+    box-shadow: none;
+    transform: none;
+  }
+  
+  .button-icon {
+    font-size: 1.3rem;
+  }
+  
+  .button-spinner {
+    width: 20px;
+    height: 20px;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    border-top: 2px solid white;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
   }
   
   @keyframes spin {
@@ -547,44 +283,115 @@
     100% { transform: rotate(360deg); }
   }
   
-  @media (max-width: 768px) {
-    .join-content {
-      max-width: 100%;
+  .game-preview {
+    text-align: left;
+  }
+  
+  .preview-title {
+    font-size: 1.3rem;
+    font-weight: 700;
+    color: #333;
+    margin: 0 0 1rem 0;
+    text-align: center;
+  }
+  
+  .preview-steps {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+  
+  .preview-step {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 0.75rem;
+    background: linear-gradient(135deg, #f8fafc, #e2e8f0);
+    border-radius: 10px;
+    transition: all 0.3s ease;
+  }
+  
+  .preview-step:hover {
+    transform: translateX(5px);
+    background: linear-gradient(135deg, #e2e8f0, #cbd5e1);
+  }
+  
+  .step-icon {
+    font-size: 1.3rem;
+    flex-shrink: 0;
+  }
+  
+  .step-text {
+    font-size: 1rem;
+    font-weight: 500;
+    color: #374151;
+  }
+  
+  @keyframes bounce {
+    0%, 20%, 50%, 80%, 100% {
+      transform: translateY(0);
     }
-    
-    .game-title {
-      font-size: var(--font-size-3xl);
-      flex-direction: column;
-      gap: var(--space-2);
+    40% {
+      transform: translateY(-10px);
     }
-    
-    .title-emoji {
-      font-size: var(--font-size-2xl);
+    60% {
+      transform: translateY(-5px);
     }
-    
-    .emoji-grid {
-      grid-template-columns: repeat(6, 1fr);
+  }
+  
+  @keyframes fadeInUp {
+    from {
+      opacity: 0;
+      transform: translateY(30px);
     }
-    
-    .color-grid {
-      grid-template-columns: repeat(4, 1fr);
-    }
-    
-    .info-items {
-      flex-direction: column;
-      align-items: center;
+    to {
+      opacity: 1;
+      transform: translateY(0);
     }
   }
   
   @media (max-width: 480px) {
-    .emoji-grid {
-      grid-template-columns: repeat(4, 1fr);
+    .join-container {
+      padding: 0.5rem;
     }
     
-    .preview-avatar {
-      width: 60px;
-      height: 60px;
-      font-size: var(--font-size-2xl);
+    .join-card {
+      padding: 2rem 1.5rem;
+    }
+    
+    .logo-text {
+      font-size: 2rem;
+    }
+    
+    .join-title {
+      font-size: 1.8rem;
+    }
+    
+    .join-subtitle {
+      font-size: 1rem;
+    }
+    
+    .name-input {
+      padding: 0.875rem 1rem;
+      font-size: 1rem;
+    }
+    
+    .join-button {
+      padding: 1rem;
+      font-size: 1.1rem;
+    }
+    
+    .preview-steps {
+      gap: 0.5rem;
+    }
+    
+    .preview-step {
+      padding: 0.5rem;
+      gap: 0.75rem;
+    }
+    
+    .step-text {
+      font-size: 0.9rem;
     }
   }
 </style>

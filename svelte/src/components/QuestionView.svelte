@@ -1,733 +1,374 @@
 <script>
-  export let gameState;
+  export let currentQuestion;
+  export let state;
   
-  // Category emoji mappings
+  // Category emoji mapping
   const categoryEmojis = {
-    'History': '📚', 'Animals': '🐾', 'Food': '🍎', 'Science': '🔬',
-    'Sports': '⚽', 'Entertainment': '🎬', 'Geography': '🌍', 'Music': '🎵',
-    'Art': '🎨', 'Technology': '💻', 'Nature': '🌿', 'Space': '🚀',
-    'Movies': '🎬', 'TV': '📺', 'Games': '🎮', 'Literature': '📖',
-    'Mythology': '🏛️', 'Fashion': '👗', 'Language': '💬', 'Inventions': '💡',
-    'Comics': '💥', 'Tech': '⚙️', 'Misc': '🎲', 'Bonus': '⭐'
+    'History': '📚', 'Animals': '🐾', 'Food': '🍎', 'Sports': '⚽',
+    'Geography': '🌍', 'Music': '🎵', 'Science': '🔬', 'Literature': '📖',
+    'Inventions': '💡', 'TV': '📺', 'Art': '🎨', 'Language': '🗣️',
+    'Movies': '🎬', 'Tech': '💻', 'Fashion': '👗', 'Mythology': '⚡',
+    'Games': '🎮', 'Space': '🚀', 'Comics': '💥', 'Misc': '🎯',
+    'Bonus': '✨', 'Entertainment': '🎭', 'Nature': '🌿', 'Travel': '✈️'
   };
   
-  // Helper function to get category emoji
-  function getCategoryEmoji(category) {
+  function getEmoji(category) {
     return categoryEmojis[category] || '❓';
   }
   
-  // Get current player information
-  $: connectedPlayers = gameState.players?.filter(p => p.connected) || [];
-  $: currentSelector = gameState.currentSelector;
-  $: categoriesForSelection = gameState.categoriesForSelection || [];
-  $: currentQuestion = gameState.currentQuestion;
-  $: options = gameState.options || [];
-  $: timer = gameState.timer;
-  
-  // Helper functions for display
-  function getSubStepTitle() {
-    switch (gameState.subStep) {
-      case 'category_selection':
-        return 'Choosing Category';
+  function getStateTitle(state) {
+    switch (state) {
       case 'question_reading':
         return 'Read the Question';
       case 'lie_submission':
-        return 'Creating Lies';
+        return 'Players Are Creating Lies';
       case 'option_selection':
-        return 'Making Choices';
+        return 'Time to Vote!';
       default:
-        return 'Playing';
+        return 'Question';
     }
   }
   
-  function getSubStepDescription() {
-    switch (gameState.subStep) {
-      case 'category_selection':
-        return `${currentSelector?.name || 'A player'} is choosing the category for this question.`;
+  function getStateSubtitle(state) {
+    switch (state) {
       case 'question_reading':
-        return 'Everyone, read the question carefully and think about what the answer could be.';
+        return 'Everyone study this question carefully';
       case 'lie_submission':
-        return 'Players are submitting their most convincing lies. The goal is to fool others!';
+        return 'Players are crafting their most convincing lies...';
       case 'option_selection':
-        return 'Time to vote! Players are choosing which answer they think is the real one.';
+        return 'Which option is the real answer?';
       default:
         return '';
     }
   }
-  
-  // Format timer display
-  function formatTime(seconds) {
-    return seconds?.toString().padStart(2, '0') || '--';
-  }
-  
-  // Get progress for different sub-steps
-  function getProgress() {
-    switch (gameState.subStep) {
-      case 'lie_submission':
-        const submitted = gameState.submittedLies || 0;
-        const total = connectedPlayers.length;
-        return { current: submitted, total, label: 'lies submitted' };
-      case 'option_selection':
-        const voted = gameState.votedPlayers || 0;
-        const totalVoters = connectedPlayers.length;
-        return { current: voted, total: totalVoters, label: 'players voted' };
-      default:
-        return null;
-    }
-  }
-  
-  $: progress = getProgress();
 </script>
 
-<div class="question-view">
-  <div class="container">
-    <!-- Header with round info -->
-    <div class="round-header slide-up">
-      <div class="round-info">
-        <div class="round-badge">
-          Round {gameState.round || 1}
-        </div>
-        <div class="question-badge">
-          Question {gameState.question || 1}
-        </div>
-      </div>
-      
-      {#if timer}
-        <div class="timer-display" class:urgent={timer.remaining <= 5}>
-          <div class="timer-circle">
-            <div class="timer-number">{formatTime(timer.remaining)}</div>
-          </div>
-          <div class="timer-label">seconds</div>
-        </div>
-      {/if}
+<div class="question-container">
+  <div class="state-header">
+    <h2 class="state-title">{getStateTitle(state)}</h2>
+    <p class="state-subtitle">{getStateSubtitle(state)}</p>
+  </div>
+  
+  <div class="question-card">
+    <div class="category-badge">
+      <span class="category-emoji">{getEmoji(currentQuestion.category)}</span>
+      <span class="category-name">{currentQuestion.category}</span>
     </div>
     
-    <!-- Sub-step header -->
-    <div class="substep-header fade-in">
-      <h1 class="substep-title">
-        {getSubStepTitle()}
-      </h1>
-      <p class="substep-description">
-        {getSubStepDescription()}
-      </p>
+    <div class="question-content">
+      <h3 class="question-text">{currentQuestion.question}</h3>
     </div>
     
-    <!-- Content based on sub-step -->
-    {#if gameState.subStep === 'category_selection'}
-      <div class="category-selection scale-in">
-        <div class="selection-card glass">
-          <div class="selector-info">
-            {#if currentSelector}
-              <div class="selector-avatar" style="background: {currentSelector.avatar.color}">
-                {currentSelector.avatar.emoji}
-              </div>
-              <div class="selector-details">
-                <h3>{currentSelector.name} is choosing...</h3>
-                <p>Pick a category that sounds interesting!</p>
-              </div>
-            {:else}
-              <div class="selector-details">
-                <h3>Selecting category...</h3>
-                <p>A player is choosing the question category.</p>
-              </div>
-            {/if}
-          </div>
-          
-          {#if categoriesForSelection.length > 0}
-            <div class="categories-display">
-              <h4>Available Categories:</h4>
-              <div class="categories-grid">
-                {#each categoriesForSelection as category, index}
-                  <div class="category-option">
-                    <div class="category-emoji">
-                      {getCategoryEmoji(category)}
-                    </div>
-                    <div class="category-name">{category}</div>
-                  </div>
-                {/each}
-              </div>
-            </div>
-          {/if}
+    {#if state === 'question_reading'}
+      <div class="reading-indicator">
+        <div class="reading-dots">
+          <span></span>
+          <span></span>
+          <span></span>
         </div>
+        <p>Everyone read carefully...</p>
       </div>
-      
-    {:else if gameState.subStep === 'question_reading'}
-      <div class="question-display scale-in">
-        <div class="question-card">
-          {#if currentQuestion}
-            <div class="category-header">
-              <span class="category-emoji">{getCategoryEmoji(currentQuestion.category)}</span>
-              <span class="category-name">{currentQuestion.category}</span>
-            </div>
-            
-            <div class="question-content">
-              <h2 class="question-text">
-                {currentQuestion.question}
-              </h2>
-            </div>
-          {:else}
-            <div class="question-loading">
-              <div class="loading-spinner">🔄</div>
-              <h3>Loading question...</h3>
-            </div>
-          {/if}
-        </div>
+    {:else if state === 'lie_submission'}
+      <div class="activity-indicator">
+        <div class="activity-icon">✍️</div>
+        <p>Players are writing their lies...</p>
       </div>
-      
-    {:else if gameState.subStep === 'lie_submission'}
-      <div class="submission-status scale-in">
-        <div class="status-card glass">
-          <div class="status-icon">✍️</div>
-          <h2>Players are creating their lies...</h2>
-          <p>The more convincing, the better! Try to fool everyone else.</p>
-          
-          {#if progress}
-            <div class="progress-display">
-              <div class="progress-bar">
-                <div 
-                  class="progress-fill" 
-                  style="width: {(progress.current / progress.total) * 100}%"
-                ></div>
-              </div>
-              <div class="progress-text">
-                {progress.current} of {progress.total} {progress.label}
-              </div>
-            </div>
-          {/if}
-          
-          {#if currentQuestion}
-            <div class="question-reminder">
-              <div class="reminder-header">
-                <span class="category-emoji">{getCategoryEmoji(currentQuestion.category)}</span>
-                {currentQuestion.category}
-              </div>
-              <div class="reminder-text">
-                {currentQuestion.question}
-              </div>
-            </div>
-          {/if}
-        </div>
-      </div>
-      
-    {:else if gameState.subStep === 'option_selection'}
-      <div class="voting-display scale-in">
-        <div class="voting-card">
-          <div class="voting-header">
-            <h2>🗳️ Time to Vote!</h2>
-            <p>Which answer do you think is the real one?</p>
-            
-            {#if progress}
-              <div class="progress-display">
-                <div class="progress-bar">
-                  <div 
-                    class="progress-fill" 
-                    style="width: {(progress.current / progress.total) * 100}%"
-                  ></div>
-                </div>
-                <div class="progress-text">
-                  {progress.current} of {progress.total} {progress.label}
-                </div>
-              </div>
-            {/if}
-          </div>
-          
-          {#if currentQuestion}
-            <div class="question-context">
-              <div class="context-header">
-                <span class="category-emoji">{getCategoryEmoji(currentQuestion.category)}</span>
-                {currentQuestion.category}
-              </div>
-              <div class="context-question">
-                {currentQuestion.question}
-              </div>
-            </div>
-          {/if}
-          
-          {#if options.length > 0}
-            <div class="options-display">
-              <h3>Choose your answer:</h3>
-              <div class="options-grid">
-                {#each options as option, index}
-                  <div class="option-item">
-                    <div class="option-letter">
-                      {String.fromCharCode(65 + index)}
-                    </div>
-                    <div class="option-text">
-                      {option.text}
-                    </div>
-                  </div>
-                {/each}
-              </div>
-            </div>
-          {/if}
-        </div>
-      </div>
-    {/if}
-    
-    <!-- Players status bar -->
-    <div class="players-status slide-up">
-      <div class="status-bar glass">
-        <div class="status-header">
-          <h4>👥 Players ({connectedPlayers.length})</h4>
-        </div>
-        <div class="players-list">
-          {#each connectedPlayers as player}
-            <div class="player-status-item">
-              <div 
-                class="player-mini-avatar"
-                style="background: {player.avatar.color}"
-              >
-                {player.avatar.emoji}
-              </div>
-              <div class="player-mini-info">
-                <div class="player-mini-name">{player.name}</div>
-                <div class="player-mini-score">{player.score || 0} pts</div>
-              </div>
+    {:else if state === 'option_selection' && currentQuestion.options}
+      <div class="options-section">
+        <h4 class="options-title">Vote for the Real Answer</h4>
+        <div class="options-grid">
+          {#each currentQuestion.options as option, index}
+            <div class="option-card" style="animation-delay: {index * 0.1}s">
+              <div class="option-letter">{String.fromCharCode(65 + index)}</div>
+              <div class="option-text">{option.text}</div>
             </div>
           {/each}
         </div>
       </div>
-    </div>
+    {/if}
   </div>
 </div>
 
 <style>
-  .question-view {
-    min-height: 100vh;
-    padding: var(--space-4) 0;
-  }
-  
-  .round-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: var(--space-6);
-    flex-wrap: wrap;
-    gap: var(--space-4);
-  }
-  
-  .round-info {
-    display: flex;
-    gap: var(--space-3);
-  }
-  
-  .round-badge,
-  .question-badge {
-    background: rgba(255, 255, 255, 0.2);
-    color: var(--white);
-    padding: var(--space-2) var(--space-4);
-    border-radius: var(--radius-full);
-    font-weight: 600;
-    font-size: var(--font-size-lg);
-    backdrop-filter: blur(10px);
-    border: 1px solid rgba(255, 255, 255, 0.3);
-  }
-  
-  .timer-display {
+  .question-container {
+    width: 100%;
+    max-width: 900px;
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: var(--space-2);
+    gap: 2rem;
+    animation: fadeIn 0.6s ease;
   }
   
-  .timer-circle {
-    width: 80px;
-    height: 80px;
-    border-radius: var(--radius-full);
-    background: rgba(255, 255, 255, 0.2);
-    border: 3px solid rgba(255, 255, 255, 0.4);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    backdrop-filter: blur(10px);
-    transition: all var(--transition);
-  }
-  
-  .timer-display.urgent .timer-circle {
-    background: rgba(239, 68, 68, 0.3);
-    border-color: var(--error);
-    animation: pulse 0.5s infinite;
-  }
-  
-  .timer-number {
-    font-size: var(--font-size-2xl);
-    font-weight: 900;
-    color: var(--white);
-  }
-  
-  .timer-label {
-    color: var(--white);
-    font-size: var(--font-size-sm);
-    font-weight: 600;
-    opacity: 0.8;
-  }
-  
-  .substep-header {
-    text-align: center;
-    margin-bottom: var(--space-8);
-  }
-  
-  .substep-title {
-    font-size: var(--font-size-4xl);
-    font-weight: 900;
-    color: var(--white);
-    margin-bottom: var(--space-3);
-    text-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
-  }
-  
-  .substep-description {
-    font-size: var(--font-size-xl);
-    color: rgba(255, 255, 255, 0.9);
-    max-width: 600px;
-    margin: 0 auto;
-    line-height: 1.5;
-  }
-  
-  .category-selection,
-  .question-display,
-  .submission-status,
-  .voting-display {
-    max-width: 800px;
-    margin: 0 auto var(--space-8);
-  }
-  
-  .selection-card,
-  .status-card,
-  .question-card,
-  .voting-card {
-    padding: var(--space-6);
-    border-radius: var(--radius-2xl);
+  .state-header {
     text-align: center;
   }
   
-  .selector-info {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: var(--space-4);
-    margin-bottom: var(--space-6);
-    flex-wrap: wrap;
+  .state-title {
+    font-size: 3rem;
+    font-weight: 700;
+    color: white;
+    margin: 0 0 0.5rem 0;
+    text-shadow: 0 4px 20px rgba(0,0,0,0.3);
   }
   
-  .selector-avatar {
-    width: 60px;
-    height: 60px;
-    border-radius: var(--radius-full);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: var(--font-size-2xl);
-    border: 3px solid rgba(255, 255, 255, 0.3);
-  }
-  
-  .selector-details {
-    color: var(--white);
-    text-align: center;
-  }
-  
-  .selector-details h3 {
-    font-size: var(--font-size-2xl);
-    margin-bottom: var(--space-2);
-    font-weight: 600;
-  }
-  
-  .selector-details p {
-    font-size: var(--font-size-lg);
-    opacity: 0.9;
-  }
-  
-  .categories-display h4 {
-    color: var(--white);
-    font-size: var(--font-size-lg);
-    margin-bottom: var(--space-4);
-    font-weight: 600;
-  }
-  
-  .categories-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-    gap: var(--space-3);
-  }
-  
-  .category-option {
-    background: rgba(255, 255, 255, 0.1);
-    border: 2px solid rgba(255, 255, 255, 0.2);
-    border-radius: var(--radius-xl);
-    padding: var(--space-4);
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: var(--space-2);
-    transition: all var(--transition);
-  }
-  
-  .category-emoji {
-    font-size: var(--font-size-3xl);
-  }
-  
-  .category-name {
-    color: var(--white);
-    font-weight: 600;
-    font-size: var(--font-size-base);
+  .state-subtitle {
+    font-size: 1.3rem;
+    color: rgba(255, 255, 255, 0.8);
+    margin: 0;
   }
   
   .question-card {
-    background: var(--white);
-    color: var(--gray-800);
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(20px);
+    border-radius: 24px;
+    padding: 3rem;
+    box-shadow: 0 12px 40px rgba(0,0,0,0.15);
+    border: 2px solid rgba(255, 255, 255, 0.2);
+    width: 100%;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
   }
   
-  .category-header {
-    display: flex;
+  .question-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: linear-gradient(90deg, #667eea, #764ba2);
+  }
+  
+  .category-badge {
+    display: inline-flex;
     align-items: center;
-    justify-content: center;
-    gap: var(--space-3);
-    margin-bottom: var(--space-6);
-    padding: var(--space-3) var(--space-6);
-    background: var(--gray-100);
-    border-radius: var(--radius-xl);
-    font-size: var(--font-size-lg);
+    gap: 0.75rem;
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    color: white;
+    padding: 0.75rem 1.5rem;
+    border-radius: 50px;
     font-weight: 600;
+    font-size: 1.1rem;
+    margin-bottom: 2rem;
+    box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
   }
   
-  .category-header .category-emoji {
-    font-size: var(--font-size-2xl);
+  .category-emoji {
+    font-size: 1.4rem;
+  }
+  
+  .question-content {
+    margin: 2rem 0;
   }
   
   .question-text {
-    font-size: var(--font-size-3xl);
-    font-weight: 700;
+    font-size: 2.5rem;
+    font-weight: 600;
+    color: #333;
     line-height: 1.3;
-    color: var(--gray-800);
+    margin: 0;
   }
   
-  .question-loading {
-    color: var(--white);
-    padding: var(--space-8);
-  }
-  
-  .loading-spinner {
-    font-size: var(--font-size-4xl);
-    margin-bottom: var(--space-4);
-    animation: spin 1s linear infinite;
-  }
-  
-  .status-icon {
-    font-size: var(--font-size-5xl);
-    margin-bottom: var(--space-4);
-  }
-  
-  .status-card h2,
-  .voting-card h2 {
-    color: var(--white);
-    font-size: var(--font-size-3xl);
-    margin-bottom: var(--space-3);
-    font-weight: 700;
-  }
-  
-  .status-card p,
-  .voting-card p {
-    color: rgba(255, 255, 255, 0.9);
-    font-size: var(--font-size-lg);
-    margin-bottom: var(--space-6);
-  }
-  
-  .progress-display {
-    margin: var(--space-6) 0;
-  }
-  
-  .progress-bar {
-    width: 100%;
-    height: 12px;
-    background: rgba(255, 255, 255, 0.2);
-    border-radius: var(--radius-full);
-    overflow: hidden;
-    margin-bottom: var(--space-2);
-  }
-  
-  .progress-fill {
-    height: 100%;
-    background: linear-gradient(90deg, var(--success) 0%, var(--info) 100%);
-    border-radius: var(--radius-full);
-    transition: width var(--transition);
-  }
-  
-  .progress-text {
-    color: var(--white);
-    font-size: var(--font-size-base);
-    font-weight: 600;
-  }
-  
-  .question-reminder,
-  .question-context {
-    background: rgba(255, 255, 255, 0.1);
-    border-radius: var(--radius-xl);
-    padding: var(--space-4);
-    margin-top: var(--space-6);
-  }
-  
-  .reminder-header,
-  .context-header {
+  .reading-indicator, .activity-indicator {
     display: flex;
+    flex-direction: column;
     align-items: center;
-    justify-content: center;
-    gap: var(--space-2);
-    color: var(--white);
-    font-weight: 600;
-    font-size: var(--font-size-lg);
-    margin-bottom: var(--space-2);
+    gap: 1rem;
+    margin-top: 2rem;
+    color: #666;
   }
   
-  .reminder-text,
-  .context-question {
-    color: rgba(255, 255, 255, 0.9);
-    font-size: var(--font-size-base);
-    line-height: 1.4;
+  .reading-dots {
+    display: flex;
+    gap: 0.5rem;
   }
   
-  .voting-header {
-    margin-bottom: var(--space-6);
+  .reading-dots span {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: #667eea;
+    animation: dot-bounce 1.4s infinite ease-in-out both;
   }
   
-  .options-display h3 {
-    color: var(--white);
-    font-size: var(--font-size-xl);
-    margin-bottom: var(--space-4);
-    font-weight: 600;
+  .reading-dots span:nth-child(1) { animation-delay: -0.32s; }
+  .reading-dots span:nth-child(2) { animation-delay: -0.16s; }
+  
+  @keyframes dot-bounce {
+    0%, 80%, 100% {
+      transform: scale(0.8);
+      opacity: 0.5;
+    }
+    40% {
+      transform: scale(1.2);
+      opacity: 1;
+    }
+  }
+  
+  .activity-icon {
+    font-size: 2rem;
+    animation: bounce 2s infinite;
+  }
+  
+  @keyframes bounce {
+    0%, 20%, 50%, 80%, 100% {
+      transform: translateY(0);
+    }
+    40% {
+      transform: translateY(-10px);
+    }
+    60% {
+      transform: translateY(-5px);
+    }
+  }
+  
+  .reading-indicator p, .activity-indicator p {
+    font-size: 1.2rem;
+    font-style: italic;
+    margin: 0;
+  }
+  
+  .options-section {
+    margin-top: 3rem;
+    width: 100%;
+  }
+  
+  .options-title {
+    font-size: 1.8rem;
+    font-weight: 700;
+    color: #333;
+    margin: 0 0 2rem 0;
   }
   
   .options-grid {
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-3);
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 1.5rem;
   }
   
-  .option-item {
+  .option-card {
+    background: linear-gradient(135deg, #f8fafc, #e2e8f0);
+    border: 2px solid #e2e8f0;
+    border-radius: 16px;
+    padding: 1.5rem;
     display: flex;
     align-items: center;
-    gap: var(--space-4);
-    background: rgba(255, 255, 255, 0.1);
-    border: 2px solid rgba(255, 255, 255, 0.2);
-    border-radius: var(--radius-xl);
-    padding: var(--space-4);
-    transition: all var(--transition);
+    gap: 1rem;
+    transition: all 0.3s ease;
+    animation: slideInUp 0.5s ease both;
+  }
+  
+  .option-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+    border-color: #667eea;
   }
   
   .option-letter {
     width: 40px;
     height: 40px;
-    background: var(--white);
-    color: var(--gray-800);
-    border-radius: var(--radius-full);
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    color: white;
+    border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-weight: 900;
-    font-size: var(--font-size-lg);
+    font-weight: 700;
+    font-size: 1.2rem;
     flex-shrink: 0;
   }
   
   .option-text {
-    color: var(--white);
-    font-size: var(--font-size-lg);
+    font-size: 1.1rem;
     font-weight: 500;
-    flex: 1;
+    color: #333;
+    text-align: left;
   }
   
-  .players-status {
-    margin-top: var(--space-8);
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+      transform: scale(0.95);
+    }
+    to {
+      opacity: 1;
+      transform: scale(1);
+    }
   }
   
-  .status-bar {
-    padding: var(--space-4);
-    border-radius: var(--radius-xl);
-  }
-  
-  .status-header h4 {
-    color: var(--white);
-    font-size: var(--font-size-lg);
-    margin-bottom: var(--space-3);
-    font-weight: 600;
-    text-align: center;
-  }
-  
-  .players-list {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
-    gap: var(--space-3);
-  }
-  
-  .player-status-item {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: var(--space-2);
-  }
-  
-  .player-mini-avatar {
-    width: 36px;
-    height: 36px;
-    border-radius: var(--radius-full);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: var(--font-size-lg);
-    border: 2px solid rgba(255, 255, 255, 0.3);
-  }
-  
-  .player-mini-info {
-    text-align: center;
-  }
-  
-  .player-mini-name {
-    color: var(--white);
-    font-size: var(--font-size-sm);
-    font-weight: 600;
-    line-height: 1.2;
-  }
-  
-  .player-mini-score {
-    color: rgba(255, 255, 255, 0.8);
-    font-size: var(--font-size-xs);
-  }
-  
-  @keyframes spin {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
+  @keyframes slideInUp {
+    from {
+      opacity: 0;
+      transform: translateY(20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
   }
   
   @media (max-width: 768px) {
-    .round-header {
-      flex-direction: column;
-      text-align: center;
+    .question-container {
+      gap: 1.5rem;
     }
     
-    .substep-title {
-      font-size: var(--font-size-2xl);
+    .state-title {
+      font-size: 2.5rem;
+    }
+    
+    .state-subtitle {
+      font-size: 1.1rem;
+    }
+    
+    .question-card {
+      padding: 2rem 1.5rem;
     }
     
     .question-text {
-      font-size: var(--font-size-xl);
+      font-size: 2rem;
     }
     
-    .selector-info {
-      flex-direction: column;
+    .category-badge {
+      padding: 0.6rem 1.2rem;
+      font-size: 1rem;
     }
     
-    .categories-grid {
-      grid-template-columns: repeat(2, 1fr);
+    .options-grid {
+      grid-template-columns: 1fr;
+      gap: 1rem;
     }
     
-    .players-list {
-      grid-template-columns: repeat(2, 1fr);
+    .option-card {
+      padding: 1.25rem;
     }
     
-    .timer-circle {
-      width: 60px;
-      height: 60px;
+    .options-title {
+      font-size: 1.5rem;
+    }
+  }
+  
+  @media (max-width: 480px) {
+    .question-card {
+      padding: 1.5rem 1rem;
     }
     
-    .timer-number {
-      font-size: var(--font-size-xl);
+    .question-text {
+      font-size: 1.8rem;
+    }
+    
+    .state-title {
+      font-size: 2rem;
+    }
+    
+    .category-badge {
+      font-size: 0.9rem;
+      padding: 0.5rem 1rem;
+    }
+    
+    .category-emoji {
+      font-size: 1.2rem;
     }
   }
 </style>

@@ -1,633 +1,528 @@
 <script>
-  import { createEventDispatcher } from 'svelte';
-  
-  export let gameState;
+  export let currentQuestion;
   export let subStepInfo;
+  export let onSelect;
   
-  const dispatch = createEventDispatcher();
+  let selectedOptionId = null;
   
-  let selectedOption = null;
-  let likedOptions = new Set();
+  $: hasSelected = subStepInfo?.hasSelectedOption || selectedOptionId !== null;
+  $: options = currentQuestion?.options || [];
   
-  // Category emoji mappings
+  function handleOptionSelect(optionId) {
+    if (hasSelected) return;
+    
+    selectedOptionId = optionId;
+    onSelect(optionId);
+  }
+  
+  // Category emoji mapping
   const categoryEmojis = {
-    'History': '📚', 'Animals': '🐾', 'Food': '🍎', 'Science': '🔬',
-    'Sports': '⚽', 'Entertainment': '🎬', 'Geography': '🌍', 'Music': '🎵',
-    'Art': '🎨', 'Technology': '💻', 'Nature': '🌿', 'Space': '🚀',
-    'Movies': '🎬', 'TV': '📺', 'Games': '🎮', 'Literature': '📖',
-    'Mythology': '🏛️', 'Fashion': '👗', 'Language': '💬', 'Inventions': '💡',
-    'Comics': '💥', 'Tech': '⚙️', 'Misc': '🎲', 'Bonus': '⭐'
+    'History': '📚', 'Animals': '🐾', 'Food': '🍎', 'Sports': '⚽',
+    'Geography': '🌍', 'Music': '🎵', 'Science': '🔬', 'Literature': '📖',
+    'Inventions': '💡', 'TV': '📺', 'Art': '🎨', 'Language': '🗣️',
+    'Movies': '🎬', 'Tech': '💻', 'Fashion': '👗', 'Mythology': '⚡',
+    'Games': '🎮', 'Space': '🚀', 'Comics': '💥', 'Misc': '🎯',
+    'Bonus': '✨', 'Entertainment': '🎭', 'Nature': '🌿', 'Travel': '✈️'
   };
   
-  function getCategoryEmoji(category) {
+  function getEmoji(category) {
     return categoryEmojis[category] || '❓';
-  }
-  
-  function selectOption(index) {
-    if (!subStepInfo.hasSelected && subStepInfo.canAct) {
-      selectedOption = index;
-      dispatch('selectOption', { index });
-    }
-  }
-  
-  function toggleLike(index) {
-    if (subStepInfo.hasSelected && index !== selectedOption) {
-      if (likedOptions.has(index)) {
-        likedOptions.delete(index);
-      } else {
-        likedOptions.add(index);
-      }
-      likedOptions = new Set(likedOptions); // Trigger reactivity
-      dispatch('likeLie', { index });
-    }
-  }
-  
-  // Format timer display
-  function formatTime(seconds) {
-    return seconds?.toString().padStart(2, '0') || '--';
-  }
-  
-  // Computed values
-  $: currentQuestion = gameState.currentQuestion;
-  $: options = gameState.options || [];
-  $: timer = gameState.timer;
-  $: canSelect = !subStepInfo.hasSelected && subStepInfo.canAct;
-  $: canLike = subStepInfo.hasSelected;
-  
-  // Get option letter (A, B, C, etc.)
-  function getOptionLetter(index) {
-    return String.fromCharCode(65 + index);
   }
 </script>
 
-<div class="option-select-container">
-  {#if subStepInfo.hasSelected}
-    <!-- Already selected - show selected option and allow liking -->
-    <div class="selected-state fade-in">
-      <div class="selection-header">
-        <h1>✅ Choice Made!</h1>
-        <p>You selected option <strong>{getOptionLetter(selectedOption)}</strong>. Now you can like other creative lies!</p>
-        
-        {#if timer}
-          <div class="timer-display">
-            <div class="timer-circle">
-              <div class="timer-number">{formatTime(timer.remaining)}</div>
-            </div>
-            <div class="timer-label">seconds remaining</div>
-          </div>
-        {/if}
+<div class="voting-container">
+  <div class="voting-card">
+    {#if !hasSelected}
+      <div class="voting-header">
+        <div class="voting-icon">🗳️</div>
+        <h2 class="voting-title">Vote for the Truth!</h2>
+        <p class="voting-subtitle">Which option is the real answer? Choose wisely!</p>
       </div>
       
-      <!-- Show question for context -->
-      {#if currentQuestion}
-        <div class="question-context glass">
-          <div class="context-header">
-            <span class="category-emoji">{getCategoryEmoji(currentQuestion.category)}</span>
-            <span class="category-name">{currentQuestion.category}</span>
-          </div>
-          <div class="context-question">
-            {currentQuestion.question}
-          </div>
+      <div class="question-reminder">
+        <div class="reminder-badge">
+          <span class="reminder-emoji">{getEmoji(currentQuestion.category)}</span>
+          <span class="reminder-category">{currentQuestion.category}</span>
         </div>
-      {/if}
-      
-      <!-- Options with like functionality -->
-      <div class="options-list">
-        <h3>👍 Like creative lies from other players:</h3>
-        <div class="options-grid">
-          {#each options as option, index}
-            <div 
-              class="option-item"
-              class:selected={index === selectedOption}
-              class:liked={likedOptions.has(index)}
-              class:can-like={canLike && index !== selectedOption}
-            >
-              <div class="option-header">
-                <div class="option-letter" class:selected={index === selectedOption}>
-                  {getOptionLetter(index)}
-                </div>
-                
-                {#if index === selectedOption}
-                  <div class="selection-badge">Your choice</div>
-                {:else if canLike}
-                  <button
-                    class="like-button"
-                    class:liked={likedOptions.has(index)}
-                    on:click={() => toggleLike(index)}
-                  >
-                    {likedOptions.has(index) ? '❤️' : '🤍'}
-                  </button>
-                {/if}
-              </div>
-              
-              <div class="option-text">
-                {option.text}
-              </div>
-            </div>
-          {/each}
-        </div>
+        <div class="reminder-question">{currentQuestion.question}</div>
       </div>
       
-      <div class="waiting-message">
-        <div class="spinner">⏳</div>
-        <span>Waiting for other players to finish voting...</span>
-      </div>
-    </div>
-    
-  {:else}
-    <!-- Selection interface -->
-    <div class="selection-interface slide-up">
-      <!-- Header -->
-      <div class="selection-header">
-        <h1>🗳️ Vote for the Truth</h1>
-        <p>Which answer do you think is the real one?</p>
-        
-        {#if timer}
-          <div class="timer-display" class:urgent={timer.remaining <= 10}>
-            <div class="timer-circle">
-              <div class="timer-number">{formatTime(timer.remaining)}</div>
-            </div>
-            <div class="timer-label">seconds to vote</div>
-          </div>
-        {/if}
-      </div>
-      
-      <!-- Question context -->
-      {#if currentQuestion}
-        <div class="question-context glass">
-          <div class="context-header">
-            <span class="category-emoji">{getCategoryEmoji(currentQuestion.category)}</span>
-            <span class="category-name">{currentQuestion.category}</span>
-          </div>
-          <div class="context-question">
-            {currentQuestion.question}
-          </div>
-        </div>
-      {/if}
-      
-      <!-- Options for selection -->
-      <div class="options-selection">
-        <h2>Choose your answer:</h2>
-        <div class="options-grid">
+      <div class="options-section">
+        <h3 class="options-title">Select the Real Answer</h3>
+        <div class="options-list">
           {#each options as option, index}
             <button
-              class="option-button scale-in"
-              style="animation-delay: {index * 100}ms"
-              disabled={!canSelect}
-              on:click={() => selectOption(index)}
+              class="option-button"
+              style="animation-delay: {index * 0.1}s"
+              on:click={() => handleOptionSelect(option.id)}
+              disabled={hasSelected}
             >
-              <div class="option-letter">
-                {getOptionLetter(index)}
-              </div>
-              <div class="option-text">
-                {option.text}
-              </div>
-              <div class="option-hint">
-                Tap to select
-              </div>
+              <div class="option-letter">{String.fromCharCode(65 + index)}</div>
+              <div class="option-text">{option.text}</div>
+              <div class="option-arrow">→</div>
             </button>
           {/each}
         </div>
       </div>
       
-      <!-- Help text -->
-      <div class="selection-help">
-        {#if !canSelect}
-          <p class="help-text warning">⏳ Please wait...</p>
-        {:else}
-          <p class="help-text">Think carefully - which one sounds like the real answer?</p>
+      <div class="voting-tips">
+        <h4 class="tips-title">Voting Strategy</h4>
+        <div class="tips-grid">
+          <div class="tip">
+            <span class="tip-icon">🎯</span>
+            <span class="tip-text">Trust your gut feeling</span>
+          </div>
+          <div class="tip">
+            <span class="tip-icon">🧐</span>
+            <span class="tip-text">Look for the most believable option</span>
+          </div>
+          <div class="tip">
+            <span class="tip-icon">🤔</span>
+            <span class="tip-text">Avoid options that seem too clever</span>
+          </div>
+        </div>
+      </div>
+    {:else}
+      <div class="voted-state">
+        <div class="voted-icon">✅</div>
+        <h2 class="voted-title">Vote Cast!</h2>
+        <p class="voted-subtitle">
+          Your vote is locked in. Let's see if you picked the truth!
+        </p>
+        
+        {#if selectedOptionId}
+          <div class="vote-preview">
+            <div class="preview-label">You voted for:</div>
+            <div class="preview-option">
+              {#each options as option, index}
+                {#if option.id === selectedOptionId}
+                  <div class="selected-option">
+                    <span class="selected-letter">{String.fromCharCode(65 + index)}</span>
+                    <span class="selected-text">"{option.text}"</span>
+                  </div>
+                {/if}
+              {/each}
+            </div>
+          </div>
         {/if}
+        
+        <div class="waiting-indicator">
+          <div class="waiting-dots">
+            <span></span>
+            <span></span>
+            <span></span>
+          </div>
+          <p class="waiting-text">Waiting for other players to vote...</p>
+        </div>
       </div>
-    </div>
-  {/if}
-  
-  <!-- Game context -->
-  <div class="game-context">
-    <div class="context-items">
-      <div class="context-item">
-        <span class="context-emoji">🎯</span>
-        <span>Round {gameState.round || 1} • Question {gameState.question || 1}</span>
-      </div>
-      <div class="context-item">
-        <span class="context-emoji">🏆</span>
-        <span>
-          {gameState.round === 1 ? '1,000' : gameState.round === 2 ? '2,000' : '3,000'} points for finding truth
-        </span>
-      </div>
-    </div>
+    {/if}
   </div>
 </div>
 
 <style>
-  .option-select-container {
-    height: 100%;
-    display: flex;
-    flex-direction: column;
-    padding: var(--space-4);
-    gap: var(--space-6);
+  .voting-container {
+    width: 100%;
+    max-width: 500px;
+    padding: 1rem;
+    animation: fadeIn 0.6s ease;
   }
   
-  .selection-header {
+  .voting-card {
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(20px);
+    border-radius: 24px;
+    padding: 2rem;
+    box-shadow: 0 12px 40px rgba(0,0,0,0.15);
+    border: 2px solid rgba(255, 255, 255, 0.2);
     text-align: center;
   }
   
-  .selection-header h1 {
-    color: var(--white);
-    font-size: var(--font-size-4xl);
-    margin-bottom: var(--space-3);
-    font-weight: 900;
-    text-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+  .voting-header {
+    margin-bottom: 2rem;
   }
   
-  .selection-header p {
-    color: rgba(255, 255, 255, 0.9);
-    font-size: var(--font-size-xl);
-    margin-bottom: var(--space-4);
+  .voting-icon {
+    font-size: 3rem;
+    margin-bottom: 1rem;
+    animation: sway 2s ease-in-out infinite alternate;
   }
   
-  .selection-header strong {
-    color: var(--white);
+  @keyframes sway {
+    0% { transform: rotate(-10deg); }
+    100% { transform: rotate(10deg); }
+  }
+  
+  .voting-title {
+    font-size: 1.8rem;
     font-weight: 700;
+    color: #333;
+    margin: 0 0 1rem 0;
   }
   
-  .timer-display {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: var(--space-2);
-    margin-top: var(--space-4);
+  .voting-subtitle {
+    font-size: 1rem;
+    color: #666;
+    margin: 0;
   }
   
-  .timer-circle {
-    width: 70px;
-    height: 70px;
-    border-radius: var(--radius-full);
-    background: rgba(255, 255, 255, 0.2);
-    border: 3px solid rgba(255, 255, 255, 0.4);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    backdrop-filter: blur(10px);
-    transition: all var(--transition);
-  }
-  
-  .timer-display.urgent .timer-circle {
-    background: rgba(239, 68, 68, 0.3);
-    border-color: var(--error);
-    animation: pulse 0.5s infinite;
-  }
-  
-  .timer-number {
-    font-size: var(--font-size-xl);
-    font-weight: 900;
-    color: var(--white);
-  }
-  
-  .timer-label {
-    color: var(--white);
-    font-size: var(--font-size-sm);
-    font-weight: 600;
-    opacity: 0.8;
-  }
-  
-  .question-context {
-    padding: var(--space-4);
-    border-radius: var(--radius-xl);
+  .question-reminder {
+    background: linear-gradient(135deg, #667eea20, #764ba220);
+    border: 1px solid rgba(102, 126, 234, 0.2);
+    border-radius: 16px;
+    padding: 1.5rem;
+    margin-bottom: 2rem;
     text-align: center;
   }
   
-  .context-header {
-    display: flex;
+  .reminder-badge {
+    display: inline-flex;
     align-items: center;
-    justify-content: center;
-    gap: var(--space-2);
-    margin-bottom: var(--space-3);
-  }
-  
-  .category-emoji {
-    font-size: var(--font-size-xl);
-  }
-  
-  .category-name {
-    color: var(--white);
-    font-weight: 700;
-    font-size: var(--font-size-lg);
-  }
-  
-  .context-question {
-    color: var(--white);
-    font-size: var(--font-size-lg);
+    gap: 0.5rem;
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    color: white;
+    padding: 0.5rem 1rem;
+    border-radius: 20px;
     font-weight: 600;
-    line-height: 1.4;
+    font-size: 0.9rem;
+    margin-bottom: 1rem;
   }
   
-  .options-selection,
+  .reminder-emoji {
+    font-size: 1.1rem;
+  }
+  
+  .reminder-question {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: #333;
+    line-height: 1.3;
+  }
+  
+  .options-section {
+    margin-bottom: 2rem;
+  }
+  
+  .options-title {
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: #333;
+    margin: 0 0 1.5rem 0;
+  }
+  
   .options-list {
-    flex: 1;
     display: flex;
     flex-direction: column;
-    gap: var(--space-4);
-  }
-  
-  .options-selection h2,
-  .options-list h3 {
-    color: var(--white);
-    font-size: var(--font-size-2xl);
-    font-weight: 700;
-    text-align: center;
-  }
-  
-  .options-grid {
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-3);
+    gap: 1rem;
   }
   
   .option-button {
-    background: rgba(255, 255, 255, 0.1);
-    backdrop-filter: blur(10px);
-    border: 2px solid rgba(255, 255, 255, 0.2);
-    border-radius: var(--radius-xl);
-    padding: var(--space-4);
     display: flex;
     align-items: center;
-    gap: var(--space-4);
+    gap: 1rem;
+    padding: 1.25rem;
+    background: linear-gradient(135deg, #f8fafc, #e2e8f0);
+    border: 2px solid #e2e8f0;
+    border-radius: 16px;
     cursor: pointer;
-    transition: all var(--transition);
-    min-height: 80px;
-    position: relative;
-    overflow: hidden;
+    transition: all 0.3s ease;
+    animation: slideInUp 0.5s ease both;
+    text-align: left;
   }
   
   .option-button:hover:not(:disabled) {
-    background: rgba(255, 255, 255, 0.2);
-    border-color: rgba(255, 255, 255, 0.4);
-    transform: translateY(-2px);
-    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
+    transform: translateY(-3px);
+    border-color: #667eea;
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    color: white;
+    box-shadow: 0 8px 25px rgba(102, 126, 234, 0.3);
   }
   
-  .option-button:active {
-    transform: translateY(0);
-  }
-  
-  .option-button:disabled {
-    opacity: 0.6;
-    cursor: not-allowed;
-  }
-  
-  .option-item {
-    background: rgba(255, 255, 255, 0.1);
-    backdrop-filter: blur(10px);
-    border: 2px solid rgba(255, 255, 255, 0.2);
-    border-radius: var(--radius-xl);
-    padding: var(--space-4);
-    transition: all var(--transition);
-  }
-  
-  .option-item.selected {
-    background: rgba(16, 185, 129, 0.2);
-    border-color: var(--success);
-    box-shadow: 0 0 20px rgba(16, 185, 129, 0.3);
-  }
-  
-  .option-item.liked {
-    background: rgba(244, 63, 94, 0.2);
-    border-color: #f43f5e;
-  }
-  
-  .option-item.can-like:hover {
-    background: rgba(255, 255, 255, 0.15);
+  .option-button:active:not(:disabled) {
     transform: translateY(-1px);
   }
   
-  .option-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-bottom: var(--space-2);
+  .option-button:disabled {
+    cursor: not-allowed;
+    opacity: 0.6;
   }
   
   .option-letter {
     width: 40px;
     height: 40px;
-    background: rgba(255, 255, 255, 0.9);
-    color: var(--gray-800);
-    border-radius: var(--radius-full);
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    color: white;
+    border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-weight: 900;
-    font-size: var(--font-size-lg);
-    flex-shrink: 0;
-    transition: all var(--transition);
-  }
-  
-  .option-letter.selected {
-    background: var(--success);
-    color: var(--white);
-    box-shadow: 0 0 10px rgba(16, 185, 129, 0.5);
-  }
-  
-  .selection-badge {
-    background: var(--success);
-    color: var(--white);
-    padding: var(--space-1) var(--space-2);
-    border-radius: var(--radius);
-    font-size: var(--font-size-xs);
     font-weight: 700;
+    font-size: 1.1rem;
+    flex-shrink: 0;
+    transition: all 0.3s ease;
   }
   
-  .like-button {
-    background: none;
-    border: none;
-    font-size: var(--font-size-xl);
-    cursor: pointer;
-    transition: all var(--transition-fast);
-    padding: var(--space-1);
-    border-radius: var(--radius);
-  }
-  
-  .like-button:hover {
-    transform: scale(1.2);
-  }
-  
-  .like-button.liked {
-    animation: heart-beat 0.3s ease-out;
+  .option-button:hover:not(:disabled) .option-letter {
+    background: rgba(255, 255, 255, 0.2);
+    transform: scale(1.1);
   }
   
   .option-text {
-    color: var(--white);
-    font-size: var(--font-size-lg);
-    font-weight: 500;
-    line-height: 1.4;
     flex: 1;
-  }
-  
-  .option-hint {
-    color: rgba(255, 255, 255, 0.7);
-    font-size: var(--font-size-sm);
+    font-size: 1rem;
     font-weight: 500;
+    color: #333;
+    line-height: 1.4;
+    transition: color 0.3s ease;
+  }
+  
+  .option-button:hover:not(:disabled) .option-text {
+    color: white;
+  }
+  
+  .option-arrow {
+    font-size: 1.2rem;
+    color: #667eea;
     opacity: 0;
-    transition: all var(--transition);
+    transform: translateX(-10px);
+    transition: all 0.3s ease;
+    flex-shrink: 0;
   }
   
-  .option-button:hover:not(:disabled) .option-hint {
+  .option-button:hover:not(:disabled) .option-arrow {
     opacity: 1;
+    transform: translateX(0);
+    color: white;
   }
   
-  .selection-help {
+  .voting-tips {
+    text-align: left;
+  }
+  
+  .tips-title {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: #333;
+    margin: 0 0 1rem 0;
     text-align: center;
   }
   
-  .help-text {
-    font-size: var(--font-size-lg);
+  .tips-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  
+  .tip {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.75rem;
+    background: linear-gradient(135deg, #f8fafc, #e2e8f0);
+    border-radius: 10px;
+    transition: all 0.3s ease;
+  }
+  
+  .tip:hover {
+    transform: translateX(5px);
+    background: linear-gradient(135deg, #e2e8f0, #cbd5e1);
+  }
+  
+  .tip-icon {
+    font-size: 1rem;
+    flex-shrink: 0;
+  }
+  
+  .tip-text {
+    font-size: 0.85rem;
+    color: #374151;
     font-weight: 500;
-    color: rgba(255, 255, 255, 0.9);
   }
   
-  .help-text.warning {
-    color: var(--warning);
+  .voted-state {
+    text-align: center;
   }
   
-  .waiting-message {
+  .voted-icon {
+    font-size: 4rem;
+    margin-bottom: 1rem;
+    animation: checkmark 0.8s ease;
+  }
+  
+  @keyframes checkmark {
+    0% {
+      transform: scale(0);
+      opacity: 0;
+    }
+    50% {
+      transform: scale(1.2);
+      opacity: 1;
+    }
+    100% {
+      transform: scale(1);
+      opacity: 1;
+    }
+  }
+  
+  .voted-title {
+    font-size: 2rem;
+    font-weight: 700;
+    color: #667eea;
+    margin: 0 0 1rem 0;
+  }
+  
+  .voted-subtitle {
+    font-size: 1.1rem;
+    color: #666;
+    margin: 0 0 2rem 0;
+  }
+  
+  .vote-preview {
+    background: linear-gradient(135deg, #667eea20, #764ba220);
+    border: 1px solid rgba(102, 126, 234, 0.2);
+    border-radius: 16px;
+    padding: 1.5rem;
+    margin-bottom: 2rem;
+  }
+  
+  .preview-label {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: #666;
+    margin-bottom: 1rem;
+  }
+  
+  .selected-option {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    justify-content: center;
+  }
+  
+  .selected-letter {
+    width: 32px;
+    height: 32px;
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    color: white;
+    border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: var(--space-2);
-    color: rgba(255, 255, 255, 0.8);
-    font-size: var(--font-size-base);
-    font-weight: 500;
-    background: rgba(255, 255, 255, 0.1);
-    padding: var(--space-3);
-    border-radius: var(--radius-lg);
-    backdrop-filter: blur(10px);
+    font-weight: 700;
+    font-size: 1rem;
   }
   
-  .spinner {
-    animation: spin 2s linear infinite;
+  .selected-text {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: #333;
+    font-style: italic;
   }
   
-  .game-context {
-    margin-top: auto;
-  }
-  
-  .context-items {
+  .waiting-indicator {
     display: flex;
-    justify-content: center;
-    gap: var(--space-4);
-    flex-wrap: wrap;
-  }
-  
-  .context-item {
-    display: flex;
+    flex-direction: column;
     align-items: center;
-    gap: var(--space-2);
-    color: rgba(255, 255, 255, 0.8);
-    font-size: var(--font-size-sm);
-    font-weight: 500;
-    background: rgba(255, 255, 255, 0.1);
-    padding: var(--space-2) var(--space-3);
-    border-radius: var(--radius-lg);
-    backdrop-filter: blur(10px);
+    gap: 1rem;
   }
   
-  .context-emoji {
-    font-size: var(--font-size-base);
+  .waiting-dots {
+    display: flex;
+    gap: 0.5rem;
   }
   
-  @keyframes spin {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
+  .waiting-dots span {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: #667eea;
+    animation: dot-bounce 1.4s infinite ease-in-out both;
   }
   
-  @keyframes pulse {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.5; }
+  .waiting-dots span:nth-child(1) { animation-delay: -0.32s; }
+  .waiting-dots span:nth-child(2) { animation-delay: -0.16s; }
+  
+  @keyframes dot-bounce {
+    0%, 80%, 100% {
+      transform: scale(0.8);
+      opacity: 0.5;
+    }
+    40% {
+      transform: scale(1.2);
+      opacity: 1;
+    }
   }
   
-  @keyframes heart-beat {
-    0% { transform: scale(1); }
-    50% { transform: scale(1.3); }
-    100% { transform: scale(1); }
+  .waiting-text {
+    font-size: 1rem;
+    color: #666;
+    margin: 0;
   }
   
-  @media (max-width: 768px) {
-    .option-select-container {
-      padding: var(--space-3);
-      gap: var(--space-4);
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+      transform: scale(0.95);
     }
-    
-    .selection-header h1 {
-      font-size: var(--font-size-2xl);
+    to {
+      opacity: 1;
+      transform: scale(1);
     }
-    
-    .selection-header p {
-      font-size: var(--font-size-lg);
+  }
+  
+  @keyframes slideInUp {
+    from {
+      opacity: 0;
+      transform: translateY(20px);
     }
-    
-    .context-question {
-      font-size: var(--font-size-base);
-    }
-    
-    .option-button,
-    .option-item {
-      padding: var(--space-3);
-      min-height: 70px;
-    }
-    
-    .option-text {
-      font-size: var(--font-size-base);
-    }
-    
-    .timer-circle {
-      width: 60px;
-      height: 60px;
-    }
-    
-    .timer-number {
-      font-size: var(--font-size-lg);
-    }
-    
-    .context-items {
-      flex-direction: column;
-      align-items: center;
+    to {
+      opacity: 1;
+      transform: translateY(0);
     }
   }
   
   @media (max-width: 480px) {
-    .option-header {
-      flex-direction: column;
-      gap: var(--space-2);
-      align-items: flex-start;
+    .voting-container {
+      padding: 0.5rem;
+    }
+    
+    .voting-card {
+      padding: 1.5rem;
+    }
+    
+    .voting-title, .voted-title {
+      font-size: 1.6rem;
+    }
+    
+    .option-button {
+      padding: 1rem;
+      gap: 0.75rem;
     }
     
     .option-letter {
-      width: 32px;
-      height: 32px;
-      font-size: var(--font-size-base);
+      width: 36px;
+      height: 36px;
+      font-size: 1rem;
     }
     
     .option-text {
-      font-size: var(--font-size-sm);
+      font-size: 0.9rem;
     }
-  }
-  
-  /* Ripple effect for option buttons */
-  .option-button::before {
-    content: '';
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    width: 0;
-    height: 0;
-    border-radius: var(--radius-full);
-    background: rgba(255, 255, 255, 0.3);
-    transform: translate(-50%, -50%);
-    transition: width 0.3s, height 0.3s;
-  }
-  
-  .option-button:active::before {
-    width: 100%;
-    height: 100%;
+    
+    .tips-grid {
+      gap: 0.4rem;
+    }
+    
+    .tip {
+      padding: 0.5rem;
+      gap: 0.5rem;
+    }
+    
+    .tip-text {
+      font-size: 0.8rem;
+    }
+    
+    .selected-text {
+      font-size: 1rem;
+    }
   }
 </style>

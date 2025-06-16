@@ -1,442 +1,369 @@
 <script>
-  export let gameState;
-  export let myPlayerData;
-  export let isGameOver = false;
+  export let scoreboardData;
+  export let currentPlayer;
   
-  // Sort players by score (descending)
-  $: sortedPlayers = (gameState.players || [])
-    .filter(p => p.connected || p.score > 0)
-    .sort((a, b) => (b.score || 0) - (a.score || 0));
+  $: data = scoreboardData;
+  $: sortedPlayers = [...data.players].sort((a, b) => b.points - a.points);
+  $: myRank = sortedPlayers.findIndex(p => p.id === currentPlayer?.id) + 1;
+  $: myPosition = getRankDisplay(myRank);
   
-  // Find my position in the rankings
-  $: myPosition = sortedPlayers.findIndex(p => p.id === myPlayerData.id) + 1;
-  $: myStats = sortedPlayers.find(p => p.id === myPlayerData.id) || myPlayerData;
-  
-  // Get ranking positions with ties handled
-  function getRankingPositions(players) {
-    const rankings = [];
-    let currentRank = 1;
-    
-    for (let i = 0; i < players.length; i++) {
-      if (i > 0 && players[i].score !== players[i - 1].score) {
-        currentRank = i + 1;
-      }
-      rankings.push({
-        ...players[i],
-        rank: currentRank,
-        position: i + 1
-      });
-    }
-    
-    return rankings;
-  }
-  
-  $: rankedPlayers = getRankingPositions(sortedPlayers);
-  
-  // Get medal/trophy for ranking
-  function getRankIcon(rank) {
+  function getRankDisplay(rank) {
     switch (rank) {
-      case 1: return '🏆';
-      case 2: return '🥈';
-      case 3: return '🥉';
-      default: return `${rank}`;
+      case 1: return '🥇 1st';
+      case 2: return '🥈 2nd';
+      case 3: return '🥉 3rd';
+      default: return `#${rank}`;
     }
   }
   
-  // Get rank color
-  function getRankColor(rank) {
+  function getRankClass(rank) {
     switch (rank) {
-      case 1: return '#FFD700'; // Gold
-      case 2: return '#C0C0C0'; // Silver
-      case 3: return '#CD7F32'; // Bronze
-      default: return 'rgba(255, 255, 255, 0.8)';
+      case 1: return 'rank-first';
+      case 2: return 'rank-second';
+      case 3: return 'rank-third';
+      default: return 'rank-other';
     }
   }
   
-  // Get status message
-  function getStatusMessage() {
-    if (isGameOver) {
-      if (myPosition === 1) {
-        return { icon: '🎉', text: "You won the game!", color: 'success' };
-      } else if (myPosition <= 3) {
-        return { icon: '🎊', text: `${myPosition === 2 ? '2nd' : '3rd'} place finish!`, color: 'warning' };
-      } else {
-        return { icon: '👏', text: "Great effort!", color: 'neutral' };
-      }
-    } else {
-      if (myPosition === 1) {
-        return { icon: '👑', text: "You're in the lead!", color: 'success' };
-      } else if (myPosition <= 3) {
-        return { icon: '⭐', text: "You're in the top 3!", color: 'warning' };
-      } else {
-        return { icon: '💪', text: "Keep going strong!", color: 'neutral' };
-      }
-    }
+  function isMyPlayer(player) {
+    return player.id === currentPlayer?.id;
   }
-  
-  $: statusMessage = getStatusMessage();
-  
-  // Calculate next round multiplier
-  $: nextRoundMultiplier = gameState.round < 3 ? gameState.round + 1 : 3;
-  $: nextLiePoints = 500 * nextRoundMultiplier;
-  $: nextTruthPoints = 1000 * nextRoundMultiplier;
 </script>
 
 <div class="scoreboard-container">
-  <!-- Header -->
-  <div class="scoreboard-header fade-in">
-    <h1>
-      {#if isGameOver}
-        🏁 Final Results
-      {:else}
-        📊 Scoreboard
-      {/if}
-    </h1>
-    <p>
-      {#if isGameOver}
-        Thanks for playing! Here's how everyone finished.
-      {:else}
-        Round {gameState.round || 1} complete • {gameState.round < 3 ? 'Next round coming up' : 'Final round next'}
-      {/if}
-    </p>
-  </div>
-  
-  <!-- My Status -->
-  <div class="my-status slide-up">
-    <div class="status-card glass" class:winner={myPosition === 1 && isGameOver} 
-         class:podium={myPosition <= 3}>
-      <div class="status-icon" style="color: {statusMessage.color === 'success' ? 'var(--success)' : statusMessage.color === 'warning' ? 'var(--warning)' : 'var(--white)'}">
-        {statusMessage.icon}
-      </div>
-      <h2>{statusMessage.text}</h2>
-      <div class="my-ranking">
-        <div class="rank-display">
-          <span class="rank-icon" style="color: {getRankColor(myPosition)}">
-            {getRankIcon(myPosition)}
-          </span>
-          <span class="rank-text">
-            {myPosition === 1 ? '1st' : myPosition === 2 ? '2nd' : myPosition === 3 ? '3rd' : `${myPosition}th`} Place
-          </span>
+  <div class="scoreboard-card">
+    <div class="round-header">
+      <div class="round-icon">🏆</div>
+      <h2 class="round-title">Round {data.round} Complete!</h2>
+      <p class="round-progress">
+        {#if data.round < data.totalRounds}
+          Next: Round {data.round + 1}
+        {:else}
+          Final results coming up!
+        {/if}
+      </p>
+    </div>
+    
+    <div class="my-performance">
+      <div class="performance-card" class:highlight={myRank <= 3}>
+        <div class="performance-rank">
+          <span class="rank-display">{myPosition}</span>
         </div>
-        <div class="score-display">
-          <span class="score-number">{myStats.score || 0}</span>
-          <span class="score-label">points</span>
+        <div class="performance-info">
+          <div class="my-avatar" style="background-color: {currentPlayer?.avatar?.color}">
+            <span class="my-emoji">{currentPlayer?.avatar?.emoji}</span>
+          </div>
+          <div class="performance-details">
+            <div class="my-name">You</div>
+            <div class="my-points">{currentPlayer?.points || 0} points</div>
+            {#if currentPlayer?.pointsThisRound}
+              <div class="points-gained">+{currentPlayer.pointsThisRound} this round</div>
+            {/if}
+          </div>
         </div>
       </div>
     </div>
-  </div>
-  
-  <!-- Full Rankings -->
-  <div class="rankings-section scale-in">
-    <div class="rankings-card glass">
-      <h3>🏆 Final Rankings</h3>
-      <div class="rankings-list">
-        {#each rankedPlayers as player, index}
+    
+    <div class="leaderboard-section">
+      <h3 class="leaderboard-title">Full Leaderboard</h3>
+      <div class="players-list">
+        {#each sortedPlayers as player, index}
           <div 
-            class="ranking-item"
-            class:me={player.id === myPlayerData.id}
-            class:winner={player.rank === 1}
-            class:podium={player.rank <= 3}
-            style="animation-delay: {index * 100}ms"
+            class="player-row {getRankClass(index + 1)}"
+            class:is-me={isMyPlayer(player)}
+            style="animation-delay: {index * 0.1}s"
           >
-            <div class="rank-info">
-              <span class="rank-position" style="color: {getRankColor(player.rank)}">
-                {getRankIcon(player.rank)}
-              </span>
+            <div class="player-rank">
+              <span class="rank-number">{getRankDisplay(index + 1)}</span>
             </div>
             
             <div class="player-info">
-              <div 
-                class="player-avatar"
-                style="background: {player.avatar.color}"
-              >
-                {player.avatar.emoji}
+              <div class="player-avatar" style="background-color: {player.avatar.color}">
+                <span class="player-emoji">{player.avatar.emoji}</span>
               </div>
               <div class="player-details">
                 <div class="player-name">
-                  {player.id === myPlayerData.id ? 'You' : player.name}
-                  {#if player.id === myPlayerData.id}
-                    <span class="me-badge">👤</span>
+                  {player.name}
+                  {#if isMyPlayer(player)}
+                    <span class="you-badge">You</span>
                   {/if}
                 </div>
-                <div class="player-stats">
-                  <span class="stat-item">
-                    {player.score || 0} points
-                  </span>
-                  {#if player.lastLie}
-                    <span class="stat-item">
-                      Last lie: "{player.lastLie}"
-                    </span>
-                  {/if}
-                </div>
+                {#if player.lastLie}
+                  <div class="last-lie">"{player.lastLie}"</div>
+                {/if}
               </div>
             </div>
             
-            <div class="score-info">
-              <div class="score-value">{player.score || 0}</div>
-              {#if player.rank === 1 && !isGameOver}
-                <div class="leader-crown">👑</div>
+            <div class="player-stats">
+              <div class="points-total">{player.points}</div>
+              <div class="points-label">pts</div>
+              {#if player.pointsThisRound}
+                <div class="points-round">+{player.pointsThisRound}</div>
               {/if}
             </div>
           </div>
         {/each}
       </div>
     </div>
-  </div>
-  
-  <!-- Next Round Info (if not game over) -->
-  {#if !isGameOver && gameState.round < 3}
-    <div class="next-round-info slide-up">
-      <div class="info-card glass">
-        <h3>⚡ Next Round</h3>
-        <div class="round-details">
-          <div class="round-number">
-            <span class="round-label">Round</span>
-            <span class="round-value">{gameState.round + 1}</span>
-          </div>
-          <div class="multiplier-info">
-            <div class="multiplier-item">
-              <span class="multiplier-label">Fooling others:</span>
-              <span class="multiplier-value">{nextLiePoints} pts each</span>
-            </div>
-            <div class="multiplier-item">
-              <span class="multiplier-label">Finding truth:</span>
-              <span class="multiplier-value">{nextTruthPoints} pts</span>
-            </div>
-          </div>
+    
+    <div class="round-summary">
+      <h4 class="summary-title">Round {data.round} Summary</h4>
+      <div class="summary-stats">
+        <div class="stat-item">
+          <span class="stat-icon">❓</span>
+          <span class="stat-value">{data.question || 8}</span>
+          <span class="stat-label">Questions</span>
         </div>
-        <p class="round-encouragement">
-          {myPosition === 1 ? 'Defend your lead!' : myPosition <= 3 ? 'Climb higher!' : 'Make your move!'}
-        </p>
+        <div class="stat-item">
+          <span class="stat-icon">🤥</span>
+          <span class="stat-value">{data.totalLies || 0}</span>
+          <span class="stat-label">Lies Created</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-icon">🎯</span>
+          <span class="stat-value">{data.truthsFound || 0}</span>
+          <span class="stat-label">Truths Found</span>
+        </div>
       </div>
     </div>
-  {/if}
-  
-  <!-- Game Summary (if game over) -->
-  {#if isGameOver}
-    <div class="game-summary slide-up">
-      <div class="summary-card glass">
-        <h3>🎮 Game Summary</h3>
-        <div class="summary-stats">
-          <div class="summary-item">
-            <span class="summary-emoji">🏆</span>
-            <span class="summary-text">
-              Winner: {rankedPlayers[0]?.id === myPlayerData.id ? 'You' : rankedPlayers[0]?.name}
-            </span>
-          </div>
-          <div class="summary-item">
-            <span class="summary-emoji">👥</span>
-            <span class="summary-text">{rankedPlayers.length} players competed</span>
-          </div>
-          <div class="summary-item">
-            <span class="summary-emoji">🎯</span>
-            <span class="summary-text">3 rounds completed</span>
-          </div>
-        </div>
-        <p class="thank-you">Thanks for playing Lie-Ability! 🎉</p>
+    
+    <div class="continue-indicator">
+      <div class="continue-dots">
+        <span></span>
+        <span></span>
+        <span></span>
       </div>
-    </div>
-  {/if}
-  
-  <!-- Game Context -->
-  <div class="game-context">
-    <div class="context-items">
-      {#if !isGameOver}
-        <div class="context-item">
-          <span class="context-emoji">📈</span>
-          <span>Points multiply each round</span>
-        </div>
-        <div class="context-item">
-          <span class="context-emoji">🎲</span>
-          <span>Get ready for round {gameState.round + 1}</span>
-        </div>
-      {:else}
-        <div class="context-item">
-          <span class="context-emoji">🎊</span>
-          <span>Game completed</span>
-        </div>
-      {/if}
+      <p class="continue-text">
+        {#if data.round < data.totalRounds}
+          Get ready for Round {data.round + 1}...
+        {:else}
+          Calculating final results...
+        {/if}
+      </p>
     </div>
   </div>
 </div>
 
 <style>
   .scoreboard-container {
-    height: 100%;
-    overflow-y: auto;
-    padding: var(--space-4);
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-6);
+    width: 100%;
+    max-width: 500px;
+    padding: 1rem;
+    animation: fadeIn 0.8s ease;
   }
   
-  .scoreboard-header {
+  .scoreboard-card {
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(20px);
+    border-radius: 24px;
+    padding: 2rem;
+    box-shadow: 0 12px 40px rgba(0,0,0,0.15);
+    border: 2px solid rgba(255, 255, 255, 0.2);
     text-align: center;
   }
   
-  .scoreboard-header h1 {
-    color: var(--white);
-    font-size: var(--font-size-4xl);
-    margin-bottom: var(--space-3);
-    font-weight: 900;
-    text-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+  .round-header {
+    margin-bottom: 2rem;
   }
   
-  .scoreboard-header p {
-    color: rgba(255, 255, 255, 0.9);
-    font-size: var(--font-size-lg);
-    font-weight: 500;
+  .round-icon {
+    font-size: 3rem;
+    margin-bottom: 1rem;
+    animation: bounce 2s infinite;
   }
   
-  .status-card {
-    padding: var(--space-6);
-    border-radius: var(--radius-2xl);
-    text-align: center;
-    position: relative;
-    transition: all var(--transition);
+  .round-title {
+    font-size: 1.8rem;
+    font-weight: 700;
+    color: #333;
+    margin: 0 0 0.5rem 0;
   }
   
-  .status-card.winner {
-    background: rgba(255, 215, 0, 0.15);
-    border: 2px solid rgba(255, 215, 0, 0.3);
-    box-shadow: 0 0 30px rgba(255, 215, 0, 0.2);
+  .round-progress {
+    font-size: 1rem;
+    color: #666;
+    margin: 0;
   }
   
-  .status-card.podium {
-    background: rgba(255, 255, 255, 0.15);
-    border: 2px solid rgba(255, 255, 255, 0.3);
+  .my-performance {
+    margin-bottom: 2rem;
   }
   
-  .status-icon {
-    font-size: var(--font-size-5xl);
-    margin-bottom: var(--space-3);
-    display: block;
-    animation: bounce-in 0.8s ease-out;
+  .performance-card {
+    background: linear-gradient(135deg, #f8fafc, #e2e8f0);
+    border: 2px solid #e2e8f0;
+    border-radius: 16px;
+    padding: 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    transition: all 0.3s ease;
   }
   
-  .status-card h2 {
-    color: var(--white);
-    font-size: var(--font-size-2xl);
-    margin-bottom: var(--space-4);
+  .performance-card.highlight {
+    background: linear-gradient(135deg, #fbbf24, #f59e0b);
+    border-color: #f59e0b;
+    color: white;
+    animation: glow 2s ease-in-out infinite alternate;
+  }
+  
+  @keyframes glow {
+    0% {
+      box-shadow: 0 4px 20px rgba(251, 191, 36, 0.3);
+    }
+    100% {
+      box-shadow: 0 8px 30px rgba(251, 191, 36, 0.6);
+    }
+  }
+  
+  .performance-rank {
+    flex-shrink: 0;
+  }
+  
+  .rank-display {
+    font-size: 1.5rem;
     font-weight: 700;
   }
   
-  .my-ranking {
+  .performance-info {
     display: flex;
-    justify-content: space-around;
     align-items: center;
-    gap: var(--space-4);
-    flex-wrap: wrap;
+    gap: 1rem;
+    flex: 1;
   }
   
-  .rank-display,
-  .score-display {
+  .my-avatar {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
     display: flex;
-    flex-direction: column;
     align-items: center;
-    gap: var(--space-1);
+    justify-content: center;
+    border: 3px solid rgba(255, 255, 255, 0.3);
+    flex-shrink: 0;
   }
   
-  .rank-icon {
-    font-size: var(--font-size-3xl);
-    font-weight: 900;
+  .my-emoji {
+    font-size: 1.5rem;
   }
   
-  .rank-text {
-    color: var(--white);
+  .performance-details {
+    text-align: left;
+    flex: 1;
+  }
+  
+  .my-name {
+    font-size: 1.2rem;
     font-weight: 700;
-    font-size: var(--font-size-lg);
+    margin-bottom: 0.25rem;
   }
   
-  .score-number {
-    color: var(--white);
-    font-size: var(--font-size-3xl);
-    font-weight: 900;
-    line-height: 1;
+  .my-points {
+    font-size: 1.4rem;
+    font-weight: 700;
+    color: #667eea;
   }
   
-  .score-label {
-    color: rgba(255, 255, 255, 0.8);
-    font-size: var(--font-size-base);
+  .performance-card.highlight .my-points {
+    color: white;
+  }
+  
+  .points-gained {
+    font-size: 0.9rem;
+    opacity: 0.8;
     font-weight: 600;
   }
   
-  .rankings-card {
-    padding: var(--space-5);
-    border-radius: var(--radius-xl);
+  .leaderboard-section {
+    margin-bottom: 2rem;
+    text-align: left;
   }
   
-  .rankings-card h3 {
-    color: var(--white);
-    font-size: var(--font-size-xl);
-    margin-bottom: var(--space-4);
+  .leaderboard-title {
+    font-size: 1.3rem;
     font-weight: 700;
+    color: #333;
+    margin: 0 0 1.5rem 0;
     text-align: center;
   }
   
-  .rankings-list {
+  .players-list {
     display: flex;
     flex-direction: column;
-    gap: var(--space-3);
+    gap: 0.75rem;
+    max-height: 300px;
+    overflow-y: auto;
   }
   
-  .ranking-item {
+  .player-row {
     display: flex;
     align-items: center;
-    gap: var(--space-3);
-    padding: var(--space-3);
-    background: rgba(255, 255, 255, 0.1);
-    border: 2px solid rgba(255, 255, 255, 0.2);
-    border-radius: var(--radius-lg);
-    transition: all var(--transition);
-    animation: slide-up 0.3s ease-out;
+    gap: 1rem;
+    padding: 1rem;
+    border-radius: 12px;
+    transition: all 0.3s ease;
+    animation: slideInUp 0.5s ease both;
+    position: relative;
   }
   
-  .ranking-item.me {
-    background: rgba(102, 126, 234, 0.2);
-    border-color: var(--primary);
-    box-shadow: 0 0 15px rgba(102, 126, 234, 0.3);
+  .player-row.rank-first {
+    background: linear-gradient(135deg, #fbbf2420, #f59e0b20);
+    border: 1px solid rgba(251, 191, 36, 0.3);
   }
   
-  .ranking-item.winner {
-    background: rgba(255, 215, 0, 0.15);
-    border-color: rgba(255, 215, 0, 0.4);
+  .player-row.rank-second {
+    background: linear-gradient(135deg, #e5e7eb20, #d1d5db20);
+    border: 1px solid rgba(209, 213, 219, 0.3);
   }
   
-  .ranking-item.podium:not(.me) {
-    background: rgba(255, 255, 255, 0.15);
-    border-color: rgba(255, 255, 255, 0.3);
+  .player-row.rank-third {
+    background: linear-gradient(135deg, #f9731620, #ea580c20);
+    border: 1px solid rgba(249, 115, 22, 0.3);
   }
   
-  .rank-info {
+  .player-row.rank-other {
+    background: rgba(248, 250, 252, 0.7);
+    border: 1px solid #e2e8f0;
+  }
+  
+  .player-row.is-me {
+    border: 2px solid #667eea;
+    background: linear-gradient(135deg, #667eea20, #764ba220);
+    transform: scale(1.02);
+  }
+  
+  .player-rank {
     flex-shrink: 0;
     width: 40px;
-    text-align: center;
   }
   
-  .rank-position {
-    font-size: var(--font-size-xl);
-    font-weight: 900;
+  .rank-number {
+    font-size: 1rem;
+    font-weight: 700;
+    color: #666;
   }
   
   .player-info {
     display: flex;
     align-items: center;
-    gap: var(--space-3);
+    gap: 0.75rem;
     flex: 1;
     min-width: 0;
   }
   
   .player-avatar {
-    width: 44px;
-    height: 44px;
-    border-radius: var(--radius-full);
+    width: 35px;
+    height: 35px;
+    border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: var(--font-size-xl);
     border: 2px solid rgba(255, 255, 255, 0.3);
     flex-shrink: 0;
+  }
+  
+  .player-emoji {
+    font-size: 1rem;
   }
   
   .player-details {
@@ -445,199 +372,144 @@
   }
   
   .player-name {
-    color: var(--white);
-    font-weight: 700;
-    font-size: var(--font-size-base);
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: #333;
+    margin-bottom: 0.25rem;
     display: flex;
     align-items: center;
-    gap: var(--space-2);
-    margin-bottom: var(--space-1);
+    gap: 0.5rem;
   }
   
-  .me-badge {
-    font-size: var(--font-size-sm);
+  .you-badge {
+    background: #667eea;
+    color: white;
+    padding: 0.125rem 0.5rem;
+    border-radius: 8px;
+    font-size: 0.7rem;
+    font-weight: 700;
+  }
+  
+  .last-lie {
+    font-size: 0.8rem;
+    color: #666;
+    font-style: italic;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
   
   .player-stats {
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-1);
-  }
-  
-  .stat-item {
-    color: rgba(255, 255, 255, 0.8);
-    font-size: var(--font-size-xs);
-    line-height: 1.2;
-  }
-  
-  .score-info {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: var(--space-1);
+    text-align: right;
     flex-shrink: 0;
   }
   
-  .score-value {
-    color: var(--white);
-    font-size: var(--font-size-xl);
-    font-weight: 900;
-  }
-  
-  .leader-crown {
-    font-size: var(--font-size-base);
-    animation: bounce 2s infinite;
-  }
-  
-  .info-card,
-  .summary-card {
-    padding: var(--space-5);
-    border-radius: var(--radius-xl);
-    text-align: center;
-  }
-  
-  .info-card h3,
-  .summary-card h3 {
-    color: var(--white);
-    font-size: var(--font-size-xl);
-    margin-bottom: var(--space-4);
+  .points-total {
+    font-size: 1.2rem;
     font-weight: 700;
+    color: #333;
   }
   
-  .round-details {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: var(--space-4);
-    margin-bottom: var(--space-4);
+  .points-label {
+    font-size: 0.7rem;
+    color: #666;
   }
   
-  .round-number {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: var(--space-1);
-  }
-  
-  .round-label {
-    color: rgba(255, 255, 255, 0.8);
-    font-size: var(--font-size-base);
+  .points-round {
+    font-size: 0.8rem;
+    color: #22c55e;
     font-weight: 600;
   }
   
-  .round-value {
-    color: var(--white);
-    font-size: var(--font-size-4xl);
-    font-weight: 900;
+  .round-summary {
+    margin-bottom: 2rem;
   }
   
-  .multiplier-info {
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-2);
-  }
-  
-  .multiplier-item {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: var(--space-2);
-    background: rgba(255, 255, 255, 0.1);
-    border-radius: var(--radius);
-  }
-  
-  .multiplier-label {
-    color: rgba(255, 255, 255, 0.8);
-    font-size: var(--font-size-sm);
-    font-weight: 500;
-  }
-  
-  .multiplier-value {
-    color: var(--white);
-    font-size: var(--font-size-sm);
+  .summary-title {
+    font-size: 1.1rem;
     font-weight: 700;
-  }
-  
-  .round-encouragement {
-    color: rgba(255, 255, 255, 0.9);
-    font-size: var(--font-size-lg);
-    font-weight: 600;
-    font-style: italic;
-    margin: 0;
+    color: #333;
+    margin: 0 0 1rem 0;
   }
   
   .summary-stats {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1rem;
+  }
+  
+  .stat-item {
     display: flex;
     flex-direction: column;
-    gap: var(--space-3);
-    margin-bottom: var(--space-4);
-  }
-  
-  .summary-item {
-    display: flex;
     align-items: center;
-    justify-content: center;
-    gap: var(--space-2);
+    gap: 0.25rem;
+    padding: 1rem;
+    background: linear-gradient(135deg, #f8fafc, #e2e8f0);
+    border-radius: 12px;
   }
   
-  .summary-emoji {
-    font-size: var(--font-size-lg);
+  .stat-icon {
+    font-size: 1.2rem;
   }
   
-  .summary-text {
-    color: var(--white);
-    font-size: var(--font-size-base);
-    font-weight: 500;
+  .stat-value {
+    font-size: 1.4rem;
+    font-weight: 700;
+    color: #333;
   }
   
-  .thank-you {
-    color: var(--white);
-    font-size: var(--font-size-lg);
-    font-weight: 600;
+  .stat-label {
+    font-size: 0.8rem;
+    color: #666;
+    text-align: center;
+  }
+  
+  .continue-indicator {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1rem;
+  }
+  
+  .continue-dots {
+    display: flex;
+    gap: 0.5rem;
+  }
+  
+  .continue-dots span {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: #667eea;
+    animation: dot-bounce 1.4s infinite ease-in-out both;
+  }
+  
+  .continue-dots span:nth-child(1) { animation-delay: -0.32s; }
+  .continue-dots span:nth-child(2) { animation-delay: -0.16s; }
+  
+  @keyframes dot-bounce {
+    0%, 80%, 100% {
+      transform: scale(0.8);
+      opacity: 0.5;
+    }
+    40% {
+      transform: scale(1.2);
+      opacity: 1;
+    }
+  }
+  
+  .continue-text {
+    font-size: 1rem;
+    color: #666;
     margin: 0;
   }
   
-  .game-context {
-    margin-top: auto;
-  }
-  
-  .context-items {
-    display: flex;
-    justify-content: center;
-    gap: var(--space-4);
-    flex-wrap: wrap;
-  }
-  
-  .context-item {
-    display: flex;
-    align-items: center;
-    gap: var(--space-2);
-    color: rgba(255, 255, 255, 0.8);
-    font-size: var(--font-size-sm);
-    font-weight: 500;
-    background: rgba(255, 255, 255, 0.1);
-    padding: var(--space-2) var(--space-3);
-    border-radius: var(--radius-lg);
-    backdrop-filter: blur(10px);
-  }
-  
-  .context-emoji {
-    font-size: var(--font-size-base);
-  }
-  
-  @keyframes bounce-in {
-    0% {
+  @keyframes fadeIn {
+    from {
       opacity: 0;
-      transform: scale(0.3);
+      transform: scale(0.95);
     }
-    50% {
-      opacity: 1;
-      transform: scale(1.05);
-    }
-    70% {
-      transform: scale(0.9);
-    }
-    100% {
+    to {
       opacity: 1;
       transform: scale(1);
     }
@@ -648,71 +520,72 @@
       transform: translateY(0);
     }
     40% {
-      transform: translateY(-5px);
+      transform: translateY(-10px);
     }
     60% {
-      transform: translateY(-3px);
+      transform: translateY(-5px);
     }
   }
   
-  @media (max-width: 768px) {
-    .scoreboard-container {
-      padding: var(--space-3);
-      gap: var(--space-4);
+  @keyframes slideInUp {
+    from {
+      opacity: 0;
+      transform: translateY(20px);
     }
-    
-    .scoreboard-header h1 {
-      font-size: var(--font-size-2xl);
-    }
-    
-    .my-ranking {
-      flex-direction: column;
-      gap: var(--space-3);
-    }
-    
-    .ranking-item {
-      flex-wrap: wrap;
-      justify-content: space-between;
-    }
-    
-    .player-info {
-      flex: none;
-      min-width: 200px;
-    }
-    
-    .round-details {
-      gap: var(--space-3);
-    }
-    
-    .round-value {
-      font-size: var(--font-size-3xl);
-    }
-    
-    .context-items {
-      flex-direction: column;
-      align-items: center;
+    to {
+      opacity: 1;
+      transform: translateY(0);
     }
   }
   
   @media (max-width: 480px) {
-    .ranking-item {
+    .scoreboard-container {
+      padding: 0.5rem;
+    }
+    
+    .scoreboard-card {
+      padding: 1.5rem;
+    }
+    
+    .round-title {
+      font-size: 1.6rem;
+    }
+    
+    .performance-card {
       flex-direction: column;
       text-align: center;
-      gap: var(--space-2);
+      gap: 1rem;
     }
     
-    .player-info {
-      min-width: auto;
-      width: 100%;
+    .performance-info {
+      flex-direction: column;
+      gap: 0.75rem;
     }
     
-    .score-info {
-      flex-direction: row;
-      gap: var(--space-2);
+    .performance-details {
+      text-align: center;
+    }
+    
+    .player-row {
+      gap: 0.75rem;
+      padding: 0.75rem;
+    }
+    
+    .last-lie {
+      white-space: normal;
+      overflow: visible;
+      text-overflow: initial;
     }
     
     .summary-stats {
-      gap: var(--space-2);
+      grid-template-columns: 1fr;
+      gap: 0.75rem;
+    }
+    
+    .stat-item {
+      flex-direction: row;
+      justify-content: center;
+      gap: 0.5rem;
     }
   }
 </style>

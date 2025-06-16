@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Lie-Ability Game - Host</title>
+    <title>Lie-Ability Game - Player</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@300;400;500;600;700&display=swap" rel="stylesheet">
@@ -19,19 +19,34 @@
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             min-height: 100vh;
             overflow-x: hidden;
+            -webkit-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
+            user-select: none;
+        }
+        
+        input, textarea {
+            -webkit-user-select: text;
+            -moz-user-select: text;
+            -ms-user-select: text;
+            user-select: text;
         }
         
         #app {
             width: 100vw;
-            height: 100vh;
+            min-height: 100vh;
             display: flex;
             align-items: center;
             justify-content: center;
+            padding: 1rem;
         }
     </style>
+  <script type="module" crossorigin src="/assets/player-87f37599.js"></script>
+  <link rel="modulepreload" crossorigin href="/assets/index-1f04db52.js">
+  <link rel="stylesheet" href="/assets/player-d00a95a3.css">
 </head>
 <body>
     <div id="app"></div>
-    <script type="module" src="/src/host-main.js"></script>
+    
 </body>
 </html>

@@ -963,12 +963,16 @@ class Game {
         subStep = 'waiting';
     }
 
+    const playersArray = Array.from(this.players.values()).map(p => p.getPublicData());
+    console.log('🎮 [GAME STATE] Building game state with players:', playersArray.length);
+    console.log('🎮 [GAME STATE] Players data:', playersArray);
+    
     return {
       gameId: this.id,
       state: this.state, // Keep for backend compatibility
       phase: phase, // Frontend expects this
       subStep: subStep, // Frontend expects this
-      players: Array.from(this.players.values()).map(p => p.getPublicData()),
+      players: playersArray,
       currentRound: this.currentRound,
       currentQuestion: this.currentQuestion,
       totalRounds: GAME_CONFIG.TOTAL_ROUNDS,
@@ -1043,6 +1047,11 @@ class Game {
   broadcastToAll(event, data) {
     // Emit to every connected socket so that observer clients like the host
     // screen receive updates without needing to join as a player.
+    console.log(`📡 [SOCKET] Broadcasting event "${event}" to all clients`);
+    if (event === 'game_state_update') {
+      console.log('📡 [SOCKET] Game state data being sent:', JSON.stringify(data, null, 2));
+      console.log('📡 [SOCKET] Players array length:', data.players ? data.players.length : 'no players');
+    }
     this.io.emit(event, data);
   }
 
@@ -1057,7 +1066,14 @@ class Game {
   }
 
   broadcastGameStateAndSubStep() {
-    this.broadcastToAll(SOCKET_EVENTS.GAME_STATE_UPDATE, this.getGameState());
+    const gameState = this.getGameState();
+    console.log('📡 [BROADCAST] Broadcasting game state update:', {
+      players: gameState.players.length,
+      phase: gameState.phase,
+      playersList: gameState.players.map(p => p.name)
+    });
+    console.log('📡 [BROADCAST] Full gameState object:', gameState);
+    this.broadcastToAll(SOCKET_EVENTS.GAME_STATE_UPDATE, gameState);
     this.broadcastSubStepInfo();
   }
 
