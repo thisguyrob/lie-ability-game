@@ -67,6 +67,9 @@
     
     socket.on('sub_step_info', (data) => {
       subStepInfo = data;
+      if (data.options) {
+        currentQuestion = { ...currentQuestion, options: data.options };
+      }
     });
     
     socket.on('category_selection_start', (data) => {
@@ -87,9 +90,8 @@
       gameState = { ...gameState, state: 'lie_submission' };
     });
     
-    socket.on('option_selection_start', (data) => {
+    socket.on('option_selection_start', () => {
       gameState = { ...gameState, state: 'option_selection' };
-      currentQuestion = { ...currentQuestion, options: data.options };
     });
     
     socket.on('truth_reveal_start', (data) => {

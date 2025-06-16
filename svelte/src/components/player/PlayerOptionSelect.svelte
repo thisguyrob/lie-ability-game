@@ -33,11 +33,6 @@
 <div class="voting-container">
   <div class="voting-card">
     {#if !hasSelected}
-      <div class="voting-header">
-        <div class="voting-icon">🗳️</div>
-        <h2 class="voting-title">Vote for the Truth!</h2>
-        <p class="voting-subtitle">Which option is the real answer? Choose wisely!</p>
-      </div>
       
       <div class="question-reminder">
         <div class="reminder-badge">
@@ -48,7 +43,6 @@
       </div>
       
       <div class="options-section">
-        <h3 class="options-title">Select the Real Answer</h3>
         <div class="options-list">
           {#each options as option, index}
             <button
@@ -65,23 +59,6 @@
         </div>
       </div>
       
-      <div class="voting-tips">
-        <h4 class="tips-title">Voting Strategy</h4>
-        <div class="tips-grid">
-          <div class="tip">
-            <span class="tip-icon">🎯</span>
-            <span class="tip-text">Trust your gut feeling</span>
-          </div>
-          <div class="tip">
-            <span class="tip-icon">🧐</span>
-            <span class="tip-text">Look for the most believable option</span>
-          </div>
-          <div class="tip">
-            <span class="tip-icon">🤔</span>
-            <span class="tip-text">Avoid options that seem too clever</span>
-          </div>
-        </div>
-      </div>
     {:else}
       <div class="voted-state">
         <div class="voted-icon">✅</div>
@@ -137,33 +114,6 @@
     text-align: center;
   }
   
-  .voting-header {
-    margin-bottom: 2rem;
-  }
-  
-  .voting-icon {
-    font-size: 3rem;
-    margin-bottom: 1rem;
-    animation: sway 2s ease-in-out infinite alternate;
-  }
-  
-  @keyframes sway {
-    0% { transform: rotate(-10deg); }
-    100% { transform: rotate(10deg); }
-  }
-  
-  .voting-title {
-    font-size: 1.8rem;
-    font-weight: 700;
-    color: #333;
-    margin: 0 0 1rem 0;
-  }
-  
-  .voting-subtitle {
-    font-size: 1rem;
-    color: #666;
-    margin: 0;
-  }
   
   .question-reminder {
     background: linear-gradient(135deg, #667eea20, #764ba220);
@@ -202,12 +152,6 @@
     margin-bottom: 2rem;
   }
   
-  .options-title {
-    font-size: 1.2rem;
-    font-weight: 700;
-    color: #333;
-    margin: 0 0 1.5rem 0;
-  }
   
   .options-list {
     display: flex;
@@ -294,49 +238,6 @@
     color: white;
   }
   
-  .voting-tips {
-    text-align: left;
-  }
-  
-  .tips-title {
-    font-size: 1.1rem;
-    font-weight: 700;
-    color: #333;
-    margin: 0 0 1rem 0;
-    text-align: center;
-  }
-  
-  .tips-grid {
-    display: flex;
-    flex-direction: column;
-    gap: 0.5rem;
-  }
-  
-  .tip {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-    padding: 0.75rem;
-    background: linear-gradient(135deg, #f8fafc, #e2e8f0);
-    border-radius: 10px;
-    transition: all 0.3s ease;
-  }
-  
-  .tip:hover {
-    transform: translateX(5px);
-    background: linear-gradient(135deg, #e2e8f0, #cbd5e1);
-  }
-  
-  .tip-icon {
-    font-size: 1rem;
-    flex-shrink: 0;
-  }
-  
-  .tip-text {
-    font-size: 0.85rem;
-    color: #374151;
-    font-weight: 500;
-  }
   
   .voted-state {
     text-align: center;
@@ -489,7 +390,7 @@
       padding: 1.5rem;
     }
     
-    .voting-title, .voted-title {
+    .voted-title {
       font-size: 1.6rem;
     }
     
@@ -508,18 +409,6 @@
       font-size: 0.9rem;
     }
     
-    .tips-grid {
-      gap: 0.4rem;
-    }
-    
-    .tip {
-      padding: 0.5rem;
-      gap: 0.5rem;
-    }
-    
-    .tip-text {
-      font-size: 0.8rem;
-    }
     
     .selected-text {
       font-size: 1rem;
