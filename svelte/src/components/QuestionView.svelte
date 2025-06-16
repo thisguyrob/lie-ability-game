@@ -214,11 +214,6 @@
     animation: slideInUp 0.5s ease both;
   }
   
-  .option-card:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 8px 25px rgba(0,0,0,0.1);
-    border-color: #667eea;
-  }
   
   .option-letter {
     width: 40px;

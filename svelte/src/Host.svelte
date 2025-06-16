@@ -77,6 +77,12 @@
       gameState = { ...gameState, state: 'option_selection' };
       currentQuestion = { ...currentQuestion, options: data.options };
     });
+
+    socket.on('host_sub_step_info', (info) => {
+      if (info.state === 'option_selection') {
+        currentQuestion = { ...currentQuestion, options: info.options };
+      }
+    });
     
     socket.on('truth_reveal_start', (data) => {
       gameState = { ...gameState, state: 'truth_reveal' };
