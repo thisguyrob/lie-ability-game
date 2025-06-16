@@ -90,8 +90,8 @@
     });
     
     socket.on('scoreboard_update', (data) => {
-      gameState = { ...gameState, state: 'scoreboard' };
       scoreboardData = data;
+      gameState = { ...gameState, state: 'scoreboard' };
     });
     
     socket.on('game_ended', (data) => {

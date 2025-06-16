@@ -1,8 +1,8 @@
 <script>
   export let data;
   
-  // Sort players by points (descending)
-  $: sortedPlayers = [...data.players].sort((a, b) => b.points - a.points);
+  // Sort players by points (descending) once data is available
+  $: sortedPlayers = [...(data?.players || [])].sort((a, b) => b.points - a.points);
   
   function getRankDisplay(rank) {
     switch (rank) {

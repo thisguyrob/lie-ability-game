@@ -3,7 +3,7 @@
   export let currentPlayer;
   
   $: data = scoreboardData;
-  $: sortedPlayers = [...data.players].sort((a, b) => b.points - a.points);
+  $: sortedPlayers = [...(data?.players || [])].sort((a, b) => b.points - a.points);
   $: myRank = sortedPlayers.findIndex(p => p.id === currentPlayer?.id) + 1;
   $: myPosition = getRankDisplay(myRank);
   
