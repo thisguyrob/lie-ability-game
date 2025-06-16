@@ -163,21 +163,6 @@
     {/if}
   </div>
   
-  <div class="players-bar">
-    <div class="players-count">
-      <span class="players-icon">👥</span>
-      {gameState.players.length} Player{gameState.players.length !== 1 ? 's' : ''}
-    </div>
-    <div class="players-list">
-      {#each gameState.players as player}
-        <div class="player-chip" style="background-color: {player.avatar.color}22; border-color: {player.avatar.color}">
-          <span class="player-emoji">{player.avatar.emoji}</span>
-          <span class="player-name">{player.name}</span>
-          <span class="player-points">{player.points}pts</span>
-        </div>
-      {/each}
-    </div>
-  </div>
 </main>
 
 <style>
@@ -282,72 +267,6 @@
     min-height: 0;
   }
   
-  .players-bar {
-    background: rgba(255, 255, 255, 0.15);
-    backdrop-filter: blur(20px);
-    border-top: 1px solid rgba(255, 255, 255, 0.2);
-    padding: 1.5rem 2rem;
-    display: flex;
-    align-items: center;
-    gap: 2rem;
-    overflow-x: auto;
-    flex-shrink: 0;
-  }
-  
-  .players-count {
-    font-size: 1.2rem;
-    font-weight: 600;
-    color: white;
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    flex-shrink: 0;
-  }
-  
-  .players-icon {
-    font-size: 1.4rem;
-  }
-  
-  .players-list {
-    display: flex;
-    gap: 1rem;
-    overflow-x: auto;
-    padding-bottom: 0.5rem;
-    flex: 1;
-  }
-  
-  .player-chip {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-    padding: 0.75rem 1.25rem;
-    background: rgba(255, 255, 255, 0.1);
-    border: 2px solid;
-    border-radius: 50px;
-    color: white;
-    font-weight: 500;
-    white-space: nowrap;
-    transition: all 0.3s ease;
-    backdrop-filter: blur(10px);
-  }
-  
-  .player-chip:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 15px rgba(0,0,0,0.2);
-  }
-  
-  .player-emoji {
-    font-size: 1.2rem;
-  }
-  
-  .player-name {
-    font-size: 1rem;
-  }
-  
-  .player-points {
-    font-size: 0.9rem;
-    opacity: 0.8;
-  }
   
   @media (max-width: 768px) {
     .game-title {
@@ -371,18 +290,5 @@
       padding: 1rem;
     }
     
-    .players-bar {
-      padding: 1rem;
-      gap: 1rem;
-    }
-    
-    .players-count {
-      font-size: 1rem;
-    }
-    
-    .player-chip {
-      padding: 0.5rem 1rem;
-      gap: 0.5rem;
-    }
   }
 </style>
