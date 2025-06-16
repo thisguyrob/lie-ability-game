@@ -50,7 +50,6 @@
         <div class="options-grid">
           {#each currentQuestion.options as option, index}
             <div class="option-card" style="animation-delay: {index * 0.1}s">
-              <div class="option-letter">{String.fromCharCode(65 + index)}</div>
               <div class="option-text">{option.text}</div>
             </div>
           {/each}
@@ -215,19 +214,6 @@
   }
   
   
-  .option-letter {
-    width: 40px;
-    height: 40px;
-    background: linear-gradient(135deg, #667eea, #764ba2);
-    color: white;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-weight: 700;
-    font-size: 1.2rem;
-    flex-shrink: 0;
-  }
   
   .option-text {
     font-size: 1.1rem;
