@@ -93,39 +93,6 @@
     </div>
   {/if}
   
-  <!-- Game info (collapsible) -->
-  <div class="game-info slide-up">
-    <div class="info-card glass">
-      <details>
-        <summary>🎯 How to Play</summary>
-        <div class="game-rules">
-          <div class="rule-item">
-            <span class="rule-emoji">1️⃣</span>
-            <div class="rule-content">
-              <strong>Create Lies</strong>
-              <p>Submit fake answers to fool other players</p>
-            </div>
-          </div>
-          
-          <div class="rule-item">
-            <span class="rule-emoji">2️⃣</span>
-            <div class="rule-content">
-              <strong>Find Truth</strong>
-              <p>Guess which answer is the real one</p>
-            </div>
-          </div>
-          
-          <div class="rule-item">
-            <span class="rule-emoji">3️⃣</span>
-            <div class="rule-content">
-              <strong>Score Points</strong>
-              <p>Earn points for fooling others and finding truth</p>
-            </div>
-          </div>
-        </div>
-      </details>
-    </div>
-  </div>
 </div>
 
 <style>
@@ -367,68 +334,6 @@
     opacity: 0.8;
   }
   
-  .info-card {
-    padding: var(--space-5);
-    border-radius: var(--radius-xl);
-  }
-  
-  .info-card summary {
-    color: var(--white);
-    font-size: var(--font-size-xl);
-    margin-bottom: var(--space-4);
-    font-weight: 700;
-    text-align: center;
-    cursor: pointer;
-    list-style: none;
-    padding: var(--space-2);
-    border-radius: var(--radius);
-    transition: all var(--transition);
-  }
-
-  .info-card summary:hover {
-    background: rgba(255, 255, 255, 0.1);
-  }
-
-  .info-card summary::-webkit-details-marker {
-    display: none;
-  }
-  
-  .game-rules {
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-3);
-    margin-bottom: var(--space-5);
-  }
-  
-  .rule-item {
-    display: flex;
-    align-items: flex-start;
-    gap: var(--space-3);
-  }
-  
-  .rule-emoji {
-    font-size: var(--font-size-xl);
-    flex-shrink: 0;
-  }
-  
-  .rule-content {
-    flex: 1;
-  }
-  
-  .rule-content strong {
-    color: var(--white);
-    font-size: var(--font-size-base);
-    font-weight: 700;
-    display: block;
-    margin-bottom: var(--space-1);
-  }
-  
-  .rule-content p {
-    color: rgba(255, 255, 255, 0.8);
-    font-size: var(--font-size-sm);
-    margin: 0;
-    line-height: 1.4;
-  }
   
   
   @keyframes bounce-in {
@@ -486,8 +391,5 @@
     }
     
     
-    .game-rules {
-      gap: var(--space-4);
-    }
   }
 </style>
