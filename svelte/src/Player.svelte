@@ -219,18 +219,7 @@
   </div>
   
   {#if isCurrentPlayer && gameState.state !== 'lobby'}
-    <div class="game-info">
-      <div class="round-badge">
-        Round {gameState.currentRound}/{gameState.totalRounds}
-      </div>
-      {#if currentPlayer}
-        <div class="player-info">
-          <span class="player-emoji">{currentPlayer.avatar.emoji}</span>
-          <span class="player-name">{currentPlayer.name}</span>
-          <span class="player-points">{currentPlayer.points} pts</span>
-        </div>
-      {/if}
-    </div>
+    <!-- Removed game-info footer for a cleaner interface -->
   {/if}
 </main>
 
@@ -335,49 +324,6 @@
     padding: 2rem 0;
   }
   
-  .game-info {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    background: rgba(255, 255, 255, 0.15);
-    backdrop-filter: blur(20px);
-    border-radius: 20px;
-    padding: 1rem 1.5rem;
-    margin-top: auto;
-  }
-  
-  .round-badge {
-    background: rgba(255, 255, 255, 0.2);
-    padding: 0.5rem 1rem;
-    border-radius: 15px;
-    font-weight: 600;
-    font-size: 0.9rem;
-    color: white;
-  }
-  
-  .player-info {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-    color: white;
-    font-weight: 500;
-  }
-  
-  .player-emoji {
-    font-size: 1.2rem;
-  }
-  
-  .player-name {
-    font-size: 1rem;
-  }
-  
-  .player-points {
-    font-size: 0.9rem;
-    opacity: 0.8;
-    background: rgba(255, 255, 255, 0.2);
-    padding: 0.25rem 0.75rem;
-    border-radius: 12px;
-  }
   
   @media (max-width: 480px) {
     .player-container {
@@ -391,14 +337,6 @@
       padding: 0.4rem 0.8rem;
     }
     
-    .game-info {
-      padding: 0.75rem 1rem;
-      flex-direction: column;
-      gap: 1rem;
-    }
-    
-    .player-info {
-      gap: 0.5rem;
-    }
+    /* Removed game-info styles */
   }
 </style>

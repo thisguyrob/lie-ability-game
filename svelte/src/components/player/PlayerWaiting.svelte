@@ -49,23 +49,7 @@
       </div>
     </div>
     
-    <div class="game-info">
-      <h3 class="info-title">Game Setup</h3>
-      <div class="info-grid">
-        <div class="info-item">
-          <span class="info-icon">🎯</span>
-          <span class="info-label">3 Rounds</span>
-        </div>
-        <div class="info-item">
-          <span class="info-icon">❓</span>
-          <span class="info-label">17 Questions</span>
-        </div>
-        <div class="info-item">
-          <span class="info-icon">⏱️</span>
-          <span class="info-label">~15 Minutes</span>
-        </div>
-      </div>
-    </div>
+    <!-- Removed game-info section -->
     
     <div class="waiting-indicator">
       <div class="waiting-dots">
@@ -268,44 +252,6 @@
     font-weight: 500;
   }
   
-  .game-info {
-    margin-bottom: 2rem;
-  }
-  
-  .info-title {
-    font-size: 1.3rem;
-    font-weight: 700;
-    color: #333;
-    margin: 0 0 1rem 0;
-  }
-  
-  .info-grid {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 1rem;
-  }
-  
-  .info-item {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 0.5rem;
-    padding: 1rem;
-    background: linear-gradient(135deg, #667eea20, #764ba220);
-    border-radius: 12px;
-    border: 1px solid rgba(102, 126, 234, 0.2);
-  }
-  
-  .info-icon {
-    font-size: 1.5rem;
-  }
-  
-  .info-label {
-    font-size: 0.9rem;
-    font-weight: 600;
-    color: #374151;
-    text-align: center;
-  }
   
   .waiting-indicator {
     display: flex;
@@ -389,19 +335,6 @@
       text-align: center;
     }
     
-    .info-grid {
-      grid-template-columns: 1fr;
-      gap: 0.75rem;
-    }
-    
-    .info-item {
-      flex-direction: row;
-      justify-content: center;
-      padding: 0.75rem;
-    }
-    
-    .info-label {
-      font-size: 0.8rem;
-    }
+    /* Removed game-info responsive styles */
   }
 </style>
