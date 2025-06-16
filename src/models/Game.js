@@ -628,6 +628,9 @@ class Game {
       }
     }
 
+    // Broadcast updated state so auto-voted players can see the likes interface
+    this.broadcastGameStateAndSubStep();
+
     this.startTruthReveal();
   }
 
@@ -730,7 +733,11 @@ class Game {
         const votedOption = this.shuffledOptions[optionIndex];
         if (votedOption.text === lie) {
           votes++;
-          voters.push(this.players.get(voterId).name);
+          const voter = this.players.get(voterId);
+          voters.push({
+            name: voter.name,
+            avatar: voter.avatar
+          });
         }
       }
       
@@ -738,12 +745,18 @@ class Game {
         liesByVotes.set(votes, []);
       }
       
+      const author = this.players.get(playerId);
       liesByVotes.get(votes).push({
-        lie,
-        submittedBy: this.players.get(playerId).name,
-        submittedById: playerId,
+        id: playerId, // Use playerId as the lie id for liking functionality
+        text: lie,
+        authors: [{
+          name: author.name,
+          avatar: author.avatar
+        }],
         voters,
-        voteCount: votes
+        votes: votes,
+        points: votes * GAME_CONFIG.POINTS[`ROUND_${this.currentRound}`].FOOL_PLAYER,
+        likesReceived: author.roundStats.likesReceived || 0
       });
     }
 
@@ -762,18 +775,23 @@ class Game {
     const truthVoters = [];
     for (const [playerId, optionIndex] of this.playerGuesses.entries()) {
       if (optionIndex === this.truthIndex) {
-        truthVoters.push(this.players.get(playerId).name);
+        const voter = this.players.get(playerId);
+        truthVoters.push({
+          name: voter.name,
+          avatar: voter.avatar
+        });
       }
     }
 
     return {
       lies: sortedLies,
       truth: {
-        answer: this.currentQuestionData.answer,
-        voters: truthVoters,
-        voteCount: truthVoters.length
+        answer: this.currentQuestionData.answer
       },
-      question: this.currentQuestionData.question
+      truthVoters: truthVoters,
+      category: this.currentQuestionData.category,
+      question: this.currentQuestionData.question,
+      truthPoints: GAME_CONFIG.POINTS[`ROUND_${this.currentRound}`].FIND_TRUTH
     };
   }
 
@@ -1022,7 +1040,7 @@ class Game {
         }
         return {
           ...baseInfo,
-          options: options.map(o => ({ id: o.id, text: o.text })),
+          options: options.map(o => ({ id: o.id, text: o.text, submittedBy: o.submittedBy })),
           timeRemaining: Math.ceil(this.timerService.getRemainingTime('option_selection') / 1000)
         };
       default:
