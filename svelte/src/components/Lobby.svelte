@@ -1,364 +1,582 @@
 <script>
-  import { onMount } from 'svelte'
-  import QRCode from 'qrcode'
-  import PlayerList from './PlayerList.svelte'
+  import { createEventDispatcher } from 'svelte';
   
-  export let players = []
-  export let onStart = () => {}
+  export let gameState;
+  export let serverInfo;
+  export let canStartGame;
   
-  let qrCodeUrl = ''
-  let gameUrl = ''
+  const dispatch = createEventDispatcher();
   
-  onMount(async () => {
-    // Get the server URL with local IP
-    try {
-      const response = await fetch('/api/server-info')
-      const data = await response.json()
-      gameUrl = data.publicUrl ? `${data.publicUrl}/player` : `${window.location.origin}/player`
-    } catch (error) {
-      // Fallback to current origin
-      gameUrl = `${window.location.origin}/player`
-    }
-    
-    // Generate QR code
-    try {
-      qrCodeUrl = await QRCode.toDataURL(gameUrl, {
-        width: 300,
-        margin: 2,
-        color: {
-          dark: '#2d3748',
-          light: '#ffffff'
-        }
-      })
-    } catch (error) {
-      console.error('Failed to generate QR code:', error)
-    }
-  })
+  $: connectedPlayers = gameState.players?.filter(p => p.connected) || [];
+  $: totalPlayers = gameState.players?.length || 0;
+  
+  function startGame() {
+    dispatch('startGame');
+  }
+  
+  function resetGame() {
+    dispatch('resetGame');
+  }
+  
+  // Group players into rows for better display
+  $: playerRows = connectedPlayers.reduce((rows, player, index) => {
+    const rowIndex = Math.floor(index / 4);
+    if (!rows[rowIndex]) rows[rowIndex] = [];
+    rows[rowIndex].push(player);
+    return rows;
+  }, []);
 </script>
 
-<section class="lobby">
-  <h2 class="game-title">🎮 Lie-Ability Game</h2>
-  <div class="lobby-content">
-    <!-- Left side: QR Code and Start Button -->
-    <div class="qr-section">
-      <div class="qr-container">
-        <h3 class="join-title">Join the Game!</h3>
-        <p class="join-subtitle">Scan the QR code with your phone</p>
-        
-        {#if qrCodeUrl}
-          <div class="qr-code">
-            <img src={qrCodeUrl} alt="QR Code to join game" />
+<div class="lobby-container">
+  <div class="container">
+    <!-- Header Section -->
+    <div class="lobby-header fade-in">
+      <h1 class="game-title">
+        <span class="title-emoji">🎯</span>
+        Lie-Ability
+      </h1>
+      <p class="game-subtitle">
+        Create convincing lies, find the truth, and fool your friends!
+      </p>
+    </div>
+    
+    <!-- Join Instructions -->
+    <div class="join-section slide-up">
+      <div class="join-card glass">
+        <div class="join-content">
+          <div class="qr-section">
+            {#if serverInfo.qrCodeDataUrl}
+              <div class="qr-code">
+                <img src={serverInfo.qrCodeDataUrl} alt="QR Code to join game" />
+              </div>
+            {/if}
+            <div class="join-instructions">
+              <h3>📱 Join the Game</h3>
+              <p>Scan the QR code or visit:</p>
+              <div class="url-display">
+                {serverInfo.playerUrl || 'Loading...'}
+              </div>
+            </div>
           </div>
-        {:else}
-          <div class="qr-placeholder">
-            <div class="loading-spinner"></div>
-            <p>Generating QR code...</p>
-          </div>
-        {/if}
-        
+        </div>
       </div>
     </div>
     
-    <!-- Right side: Player List -->
-    <div class="players-section">
-      <h3 class="players-title">
-        Players ({players.length})
-      </h3>
-      <div class="players-container">
-        {#if players.length > 0}
-          <PlayerList {players}/>
-        {:else}
-          <div class="no-players">
-            <p>Waiting for players...</p>
-            <div class="waiting-dots">
-              <span></span>
-              <span></span>
-              <span></span>
+    <!-- Players Section -->
+    <div class="players-section slide-up">
+      <div class="players-header">
+        <h2>
+          <span class="players-emoji">👥</span>
+          Players ({connectedPlayers.length})
+        </h2>
+        <div class="player-count-indicator">
+          <span class="count-badge" class:ready={canStartGame}>
+            {connectedPlayers.length}/16
+          </span>
+          {#if connectedPlayers.length < 2}
+            <span class="min-players-text">Need at least 2 players to start</span>
+          {/if}
+        </div>
+      </div>
+      
+      {#if connectedPlayers.length > 0}
+        <div class="players-grid">
+          {#each playerRows as row, rowIndex}
+            <div class="player-row" style="animation-delay: {rowIndex * 100}ms">
+              {#each row as player}
+                <div class="player-card bounce-in">
+                  <div 
+                    class="player-avatar"
+                    style="background: {player.avatar.color}"
+                  >
+                    {player.avatar.emoji}
+                  </div>
+                  <div class="player-info">
+                    <div class="player-name">{player.name}</div>
+                    <div class="player-status">
+                      <span class="status-dot connected"></span>
+                      Ready
+                    </div>
+                  </div>
+                </div>
+              {/each}
             </div>
+          {/each}
+        </div>
+      {:else}
+        <div class="no-players">
+          <div class="no-players-content">
+            <div class="waiting-animation">🕐</div>
+            <h3>Waiting for players to join...</h3>
+            <p>Share the URL or QR code above with your friends!</p>
           </div>
-        {/if}
+        </div>
+      {/if}
+    </div>
+    
+    <!-- Game Controls -->
+    <div class="controls-section slide-up">
+      <div class="controls-card">
+        <div class="controls-content">
+          {#if canStartGame}
+            <button 
+              class="btn btn-primary btn-lg start-button"
+              on:click={startGame}
+            >
+              <span class="button-emoji">🚀</span>
+              Start Game
+            </button>
+            <p class="start-help">
+              All players are ready! Click to begin the first round.
+            </p>
+          {:else}
+            <button 
+              class="btn btn-secondary btn-lg"
+              disabled
+            >
+              <span class="button-emoji">⏳</span>
+              Waiting for Players
+            </button>
+            <p class="start-help">
+              {#if connectedPlayers.length === 0}
+                Share the join link with your friends to get started.
+              {:else if connectedPlayers.length === 1}
+                Need at least one more player to start the game.
+              {:else}
+                Something went wrong. Please refresh and try again.
+              {/if}
+            </p>
+          {/if}
+          
+          {#if totalPlayers > 0}
+            <button 
+              class="btn btn-ghost btn-sm reset-button"
+              on:click={resetGame}
+            >
+              🔄 Reset Game
+            </button>
+          {/if}
+        </div>
       </div>
     </div>
+    
+    <!-- Game Info (only show when few players) -->
+    {#if connectedPlayers.length < 4}
+      <div class="info-section">
+        <div class="info-cards">
+          <div class="info-card">
+            <div class="info-icon">🎯</div>
+            <div class="info-content">
+              <h4>How to Play</h4>
+              <p>Create lies, guess the truth, score points</p>
+            </div>
+          </div>
+          
+          <div class="info-card">
+            <div class="info-icon">🏆</div>
+            <div class="info-content">
+              <h4>3 Rounds</h4>
+              <p>Points multiply each round</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    {/if}
   </div>
-  
-  <button class="start-button" on:click={onStart} disabled={players.length < 2}>
-    {players.length < 2 ? `Need ${2 - players.length} more player${2 - players.length === 1 ? '' : 's'}` : '🚀 Start Game'}
-  </button>
-</section>
+</div>
 
 <style>
-  .lobby {
+  .lobby-container {
     min-height: 100vh;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    padding: 0;
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    padding: var(--space-6) 0;
+  }
+  
+  .lobby-header {
+    text-align: center;
+    margin-bottom: var(--space-8);
+  }
+  
+  .game-title {
+    font-size: var(--font-size-6xl);
+    font-weight: 900;
+    color: var(--white);
+    margin-bottom: var(--space-4);
+    text-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
     display: flex;
-    flex-direction: column;
-  }
-
-  .lobby-content {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 24rem;
-    max-width: 1200px;
-    margin: 0 auto;
-    flex: 1;
     align-items: center;
-    padding: 0 2rem 2rem 2rem;
+    justify-content: center;
+    gap: var(--space-4);
   }
-
-  /* Left Side - QR Code Section */
+  
+  .title-emoji {
+    font-size: var(--font-size-5xl);
+    animation: bounce-in 0.8s ease-out;
+  }
+  
+  .game-subtitle {
+    font-size: var(--font-size-xl);
+    color: rgba(255, 255, 255, 0.9);
+    max-width: 600px;
+    margin: 0 auto;
+    line-height: 1.4;
+  }
+  
+  .join-section {
+    margin-bottom: var(--space-8);
+  }
+  
+  .join-card {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: var(--space-6);
+    border-radius: var(--radius-2xl);
+  }
+  
+  .join-content {
+    display: flex;
+    align-items: center;
+    gap: var(--space-6);
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  
   .qr-section {
     display: flex;
-    flex-direction: column;
     align-items: center;
-    gap: 2rem;
+    gap: var(--space-6);
+    flex-wrap: wrap;
+    justify-content: center;
+    width: 100%;
   }
-
-  .game-title {
-    font-size: 3rem;
-    font-weight: 800;
-    color: white;
-    text-align: center;
-    margin: 0;
-    padding: 2rem 0 0 0;
-    text-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
-    letter-spacing: -1px;
-  }
-
-  .qr-container {
-    background: rgba(255, 255, 255, 0.95);
-    border-radius: 30px;
-    padding: 3rem;
-    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
-    text-align: center;
-    backdrop-filter: blur(10px);
-    border: 2px solid rgba(255, 255, 255, 0.2);
-  }
-
-  .join-title {
-    font-size: 2rem;
-    font-weight: 700;
-    color: #2d3748;
-    margin: 0 0 0.5rem 0;
-  }
-
-  .join-subtitle {
-    font-size: 1.1rem;
-    color: #718096;
-    margin: 0 0 2rem 0;
-  }
-
+  
   .qr-code {
-    margin: 1rem 0;
+    background: var(--white);
+    padding: var(--space-4);
+    border-radius: var(--radius-xl);
+    box-shadow: var(--shadow-lg);
   }
-
+  
   .qr-code img {
-    border-radius: 20px;
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
-    max-width: 100%;
-    height: auto;
+    display: block;
+    width: 160px;
+    height: 160px;
   }
-
-  .qr-placeholder {
-    width: 300px;
-    height: 300px;
+  
+  .join-instructions {
+    text-align: center;
+    color: var(--white);
+  }
+  
+  .join-instructions h3 {
+    font-size: var(--font-size-2xl);
+    margin-bottom: var(--space-3);
+    font-weight: 700;
+  }
+  
+  .join-instructions p {
+    font-size: var(--font-size-lg);
+    margin-bottom: var(--space-3);
+    opacity: 0.9;
+  }
+  
+  .url-display {
+    background: rgba(255, 255, 255, 0.1);
+    padding: var(--space-3) var(--space-4);
+    border-radius: var(--radius-lg);
+    font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+    font-size: var(--font-size-lg);
+    font-weight: 600;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    word-break: break-all;
+  }
+  
+  .players-section {
+    margin-bottom: var(--space-8);
+  }
+  
+  .players-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: var(--space-6);
+    flex-wrap: wrap;
+    gap: var(--space-4);
+  }
+  
+  .players-header h2 {
+    font-size: var(--font-size-3xl);
+    color: var(--white);
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+  }
+  
+  .players-emoji {
+    font-size: var(--font-size-2xl);
+  }
+  
+  .player-count-indicator {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    flex-wrap: wrap;
+  }
+  
+  .count-badge {
+    background: rgba(255, 255, 255, 0.2);
+    color: var(--white);
+    padding: var(--space-2) var(--space-4);
+    border-radius: var(--radius-full);
+    font-weight: 600;
+    font-size: var(--font-size-lg);
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    transition: all var(--transition);
+  }
+  
+  .count-badge.ready {
+    background: var(--success);
+    border-color: var(--success);
+    box-shadow: 0 0 20px rgba(16, 185, 129, 0.3);
+  }
+  
+  .min-players-text {
+    color: rgba(255, 255, 255, 0.8);
+    font-size: var(--font-size-sm);
+  }
+  
+  .players-grid {
     display: flex;
     flex-direction: column;
+    gap: var(--space-4);
+    max-width: 1000px;
+    margin: 0 auto;
+  }
+  
+  .player-row {
+    display: flex;
+    gap: var(--space-4);
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+  
+  .player-card {
+    background: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: var(--radius-xl);
+    padding: var(--space-4);
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    min-width: 200px;
+    transition: all var(--transition);
+  }
+  
+  .player-card:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-xl);
+    background: rgba(255, 255, 255, 0.15);
+  }
+  
+  .player-avatar {
+    width: 48px;
+    height: 48px;
+    border-radius: var(--radius-full);
+    display: flex;
     align-items: center;
     justify-content: center;
-    background: #f7fafc;
-    border-radius: 20px;
-    margin: 1rem auto;
-    color: #718096;
+    font-size: var(--font-size-xl);
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    flex-shrink: 0;
   }
-
-  .loading-spinner {
-    width: 40px;
-    height: 40px;
-    border: 4px solid #e2e8f0;
-    border-top: 4px solid #667eea;
-    border-radius: 50%;
-    animation: spin 1s linear infinite;
-    margin-bottom: 1rem;
+  
+  .player-info {
+    flex: 1;
+    min-width: 0;
   }
-
-  @keyframes spin {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
-  }
-
-  .game-url {
-    margin-top: 1.5rem;
-    padding-top: 1.5rem;
-    border-top: 2px solid rgba(113, 128, 150, 0.2);
-  }
-
-  .url-label {
-    font-size: 0.9rem;
-    color: #718096;
-    margin: 0 0 0.5rem 0;
-  }
-
-  .url-text {
-    font-size: 1.1rem;
+  
+  .player-name {
+    color: var(--white);
     font-weight: 600;
-    color: #667eea;
-    word-break: break-all;
-    margin: 0;
-    background: rgba(102, 126, 234, 0.1);
-    padding: 0.8rem 1rem;
-    border-radius: 12px;
-    border: 2px solid rgba(102, 126, 234, 0.2);
+    font-size: var(--font-size-lg);
+    line-height: 1.2;
+    word-break: break-word;
   }
-
-  .start-button {
-    background: linear-gradient(135deg, #48bb78 0%, #38a169 100%);
-    color: white;
-    border: none;
-    border-radius: 50px;
-    padding: 1.2rem 3rem;
-    font-size: 1.4rem;
-    font-weight: 700;
-    cursor: pointer;
-    box-shadow: 0 10px 40px rgba(72, 187, 120, 0.4);
-    transition: all 0.3s ease;
-    text-transform: uppercase;
-    letter-spacing: 1px;
-    min-width: 250px;
-    margin: 0 auto 2rem auto;
-    display: block;
+  
+  .player-status {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    margin-top: var(--space-1);
   }
-
-  .start-button:hover:not(:disabled) {
-    transform: translateY(-3px);
-    box-shadow: 0 15px 50px rgba(72, 187, 120, 0.5);
+  
+  .status-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: var(--radius-full);
+    background: var(--error);
   }
-
-  .start-button:disabled {
-    background: linear-gradient(135deg, #a0aec0 0%, #718096 100%);
-    cursor: not-allowed;
-    opacity: 0.8;
-    box-shadow: 0 5px 20px rgba(160, 174, 192, 0.3);
+  
+  .status-dot.connected {
+    background: var(--success);
+    animation: pulse 2s infinite;
   }
-
-  /* Right Side - Players Section */
-  .players-section {
-    background: rgba(255, 255, 255, 0.1);
-    backdrop-filter: blur(20px);
-    border-radius: 30px;
-    padding: 2rem;
-    border: 2px solid rgba(255, 255, 255, 0.2);
-    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
-    height: fit-content;
-    max-height: 70vh;
-    overflow: hidden;
-  }
-
-  .players-title {
-    font-size: 1.8rem;
-    font-weight: 700;
-    color: white;
-    margin: 0 0 1.5rem 0;
-    text-align: center;
-    text-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
-  }
-
-  .players-container {
-    max-height: calc(70vh - 6rem);
-    overflow-y: auto;
-    padding-right: 0.5rem;
-  }
-
-  .players-container::-webkit-scrollbar {
-    width: 6px;
-  }
-
-  .players-container::-webkit-scrollbar-track {
-    background: rgba(255, 255, 255, 0.1);
-    border-radius: 3px;
-  }
-
-  .players-container::-webkit-scrollbar-thumb {
-    background: rgba(255, 255, 255, 0.3);
-    border-radius: 3px;
-  }
-
-  .players-container::-webkit-scrollbar-thumb:hover {
-    background: rgba(255, 255, 255, 0.5);
-  }
-
+  
   .no-players {
     text-align: center;
-    color: rgba(255, 255, 255, 0.8);
-    padding: 3rem 1rem;
+    padding: var(--space-12) var(--space-6);
   }
-
+  
+  .no-players-content {
+    color: var(--white);
+  }
+  
+  .waiting-animation {
+    font-size: var(--font-size-5xl);
+    margin-bottom: var(--space-4);
+    animation: spin 2s linear infinite;
+  }
+  
+  .no-players h3 {
+    font-size: var(--font-size-2xl);
+    margin-bottom: var(--space-3);
+    font-weight: 600;
+  }
+  
   .no-players p {
-    font-size: 1.2rem;
-    margin: 0 0 1rem 0;
+    font-size: var(--font-size-lg);
+    opacity: 0.8;
   }
-
-  .waiting-dots {
+  
+  .controls-section {
+    margin-bottom: var(--space-8);
+  }
+  
+  .controls-card {
+    max-width: 600px;
+    margin: 0 auto;
+    text-align: center;
+  }
+  
+  .controls-content {
     display: flex;
-    justify-content: center;
-    gap: 0.5rem;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-4);
   }
-
-  .waiting-dots span {
-    width: 12px;
-    height: 12px;
-    background: rgba(255, 255, 255, 0.6);
-    border-radius: 50%;
-    animation: bounce 1.4s infinite ease-in-out both;
+  
+  .start-button {
+    font-size: var(--font-size-xl);
+    padding: var(--space-4) var(--space-8);
+    min-height: 60px;
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
   }
-
-  .waiting-dots span:nth-child(1) { animation-delay: -0.32s; }
-  .waiting-dots span:nth-child(2) { animation-delay: -0.16s; }
-  .waiting-dots span:nth-child(3) { animation-delay: 0s; }
-
-  @keyframes bounce {
-    0%, 80%, 100% {
-      transform: scale(0);
-      opacity: 0.5;
-    }
-    40% {
-      transform: scale(1);
-      opacity: 1;
-    }
+  
+  .start-button:hover:not(:disabled) {
+    transform: translateY(-3px);
+    box-shadow: 0 12px 35px rgba(0, 0, 0, 0.4);
   }
-
-  /* Responsive Design */
+  
+  .button-emoji {
+    font-size: var(--font-size-2xl);
+  }
+  
+  .start-help {
+    color: rgba(255, 255, 255, 0.9);
+    font-size: var(--font-size-lg);
+    margin: 0;
+    max-width: 400px;
+  }
+  
+  .reset-button {
+    margin-top: var(--space-2);
+  }
+  
+  .info-section {
+    margin-top: var(--space-12);
+  }
+  
+  .info-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: var(--space-4);
+    max-width: 800px;
+    margin: 0 auto;
+  }
+  
+  .info-card {
+    background: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: var(--radius-xl);
+    padding: var(--space-5);
+    text-align: center;
+    color: var(--white);
+    transition: all var(--transition);
+  }
+  
+  .info-card:hover {
+    transform: translateY(-2px);
+    background: rgba(255, 255, 255, 0.15);
+  }
+  
+  .info-icon {
+    font-size: var(--font-size-3xl);
+    margin-bottom: var(--space-3);
+  }
+  
+  .info-card h4 {
+    font-size: var(--font-size-lg);
+    font-weight: 600;
+    margin-bottom: var(--space-2);
+  }
+  
+  .info-card p {
+    opacity: 0.9;
+    line-height: 1.4;
+  }
+  
   @media (max-width: 768px) {
-    .lobby {
-      padding: 1rem;
-    }
-
-    .lobby-content {
-      grid-template-columns: 1fr;
-      gap: 2rem;
-    }
-
     .game-title {
-      font-size: 2rem;
+      font-size: var(--font-size-4xl);
+      flex-direction: column;
+      gap: var(--space-2);
     }
-
-    .qr-container {
-      padding: 2rem;
+    
+    .title-emoji {
+      font-size: var(--font-size-3xl);
     }
-
-    .join-title {
-      font-size: 1.5rem;
+    
+    .join-content,
+    .qr-section {
+      flex-direction: column;
+      text-align: center;
     }
-
-    .start-button {
-      padding: 1rem 2rem;
-      font-size: 1.2rem;
-      min-width: 200px;
+    
+    .qr-code img {
+      width: 120px;
+      height: 120px;
     }
-
-    .players-section {
-      max-height: 50vh;
+    
+    .players-header {
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+    }
+    
+    .player-count-indicator {
+      justify-content: center;
+    }
+    
+    .player-card {
+      min-width: auto;
+      width: 100%;
+      max-width: 300px;
+    }
+    
+    .info-cards {
+      grid-template-columns: 1fr;
     }
   }
 </style>

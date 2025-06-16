@@ -387,6 +387,21 @@ io.on('connection', (socket) => {
       console.error('Error in LEAVE_GAME:', error);
     }
   });
+
+  // Handle game reset
+  socket.on('reset_game', () => {
+    try {
+      console.log(`🔄 [GAME ACTION] Game reset requested`);
+      if (game) {
+        // Reset the game to initial state
+        game.resetToLobby();
+        console.log(`✅ [GAME STATE] Game reset to lobby state`);
+      }
+    } catch (error) {
+      console.error('Error in RESET_GAME:', error);
+      socket.emit(SOCKET_EVENTS.ERROR, { message: 'Failed to reset game' });
+    }
+  });
 });
 
 // Helper function to find player ID by socket ID
@@ -412,7 +427,10 @@ app.get('/api/health', (req, res) => {
 });
 
 app.get('/api/server-info', (req, res) => {
-  res.json({ publicUrl: SERVER_URL })
+  res.json({ 
+    publicUrl: SERVER_URL,
+    playerUrl: `${SERVER_URL}/player`
+  })
 })
 
 app.get('/api/game-info', (req, res) => {

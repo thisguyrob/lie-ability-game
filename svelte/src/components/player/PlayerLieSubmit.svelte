@@ -1,252 +1,441 @@
 <script>
-  import { createEventDispatcher } from 'svelte'
+  import { createEventDispatcher } from 'svelte';
   
-  export let socket
-  export let question = {}
-  export let timer = 0
+  export let gameState;
+  export let subStepInfo;
   
-  const dispatch = createEventDispatcher()
+  const dispatch = createEventDispatcher();
   
-  let lie = ''
-  let isSubmitting = false
-  let hasSubmitted = false
-  let error = ''
+  let lieText = '';
+  let isSubmitting = false;
+  let showTip = false;
   
-  const MAX_LENGTH = 100
+  // Category emoji mappings
+  const categoryEmojis = {
+    'History': '📚', 'Animals': '🐾', 'Food': '🍎', 'Science': '🔬',
+    'Sports': '⚽', 'Entertainment': '🎬', 'Geography': '🌍', 'Music': '🎵',
+    'Art': '🎨', 'Technology': '💻', 'Nature': '🌿', 'Space': '🚀',
+    'Movies': '🎬', 'TV': '📺', 'Games': '🎮', 'Literature': '📖',
+    'Mythology': '🏛️', 'Fashion': '👗', 'Language': '💬', 'Inventions': '💡',
+    'Comics': '💥', 'Tech': '⚙️', 'Misc': '🎲', 'Bonus': '⭐'
+  };
   
-  const handleSubmit = () => {
-    if (!lie.trim()) {
-      error = 'Please enter your lie'
-      return
-    }
-    
-    if (lie.trim().length > MAX_LENGTH) {
-      error = `Lie must be ${MAX_LENGTH} characters or less`
-      return
-    }
-    
-    isSubmitting = true
-    error = ''
-    
-    socket.emit('submit_lie', { lie: lie.trim() })
-    
-    // Listen for server response
-    socket.once('lie_submitted', (response) => {
-      isSubmitting = false
-      if (response.success) {
-        hasSubmitted = true
-        dispatch('submitted', { lie: lie.trim() })
-      } else {
-        error = response.error || 'Failed to submit lie'
-      }
-    })
-    
-    // Timeout fallback
-    setTimeout(() => {
-      if (isSubmitting) {
-        isSubmitting = false
-        error = 'Submission timeout. Please try again.'
-      }
-    }, 5000)
+  function getCategoryEmoji(category) {
+    return categoryEmojis[category] || '❓';
   }
   
-  const handleKeyPress = (e) => {
-    if (e.key === 'Enter' && !e.shiftKey && !isSubmitting && !hasSubmitted) {
-      e.preventDefault()
-      handleSubmit()
+  function submitLie() {
+    if (lieText.trim() && !isSubmitting && !subStepInfo.hasSubmitted) {
+      isSubmitting = true;
+      dispatch('submitLie', { lie: lieText.trim() });
+      
+      // Reset state after submission
+      setTimeout(() => {
+        isSubmitting = false;
+      }, 1500);
     }
   }
   
-  $: charactersLeft = MAX_LENGTH - lie.length
-  $: isOverLimit = lie.length > MAX_LENGTH
+  function handleKeyPress(event) {
+    if (event.key === 'Enter' && event.ctrlKey) {
+      submitLie();
+    }
+  }
+  
+  function toggleTip() {
+    showTip = !showTip;
+  }
+  
+  // Computed values
+  $: currentQuestion = gameState.currentQuestion;
+  $: timer = gameState.timer;
+  $: canSubmit = lieText.trim().length > 0 && !isSubmitting && !subStepInfo.hasSubmitted && subStepInfo.canAct;
+  
+  // Example lies for inspiration (based on question category)
+  const lieExamples = {
+    'History': ['Sword', 'Crown', 'Medal', 'Map'],
+    'Animals': ['Pack', 'Herd', 'School', 'Pride'],
+    'Food': ['Apple', 'Banana', 'Orange', 'Grape'],
+    'Science': ['Mercury', 'Venus', 'Mars', 'Saturn'],
+    'Sports': ['Soccer', 'Tennis', 'Golf', 'Hockey'],
+    'Geography': ['Russia', 'Canada', 'China', 'Brazil'],
+    'Music': ['Elvis', 'Beatles', 'Prince', 'Madonna'],
+    'Movies': ['Star Wars', 'Jaws', 'E.T.', 'Titanic'],
+    'default': ['Answer', 'Option', 'Choice', 'Response']
+  };
+  
+  function getExampleLies(category) {
+    return lieExamples[category] || lieExamples.default;
+  }
+  
+  $: exampleLies = currentQuestion ? getExampleLies(currentQuestion.category) : lieExamples.default;
+  
+  // Format timer display
+  function formatTime(seconds) {
+    return seconds?.toString().padStart(2, '0') || '--';
+  }
 </script>
 
-<div class="submit-container">
-  <div class="submit-card">
-    <div class="header">
-      <h2 class="title">Time to Lie! 🤥</h2>
-      {#if timer > 0}
-        <div class="timer" class:urgent={timer <= 10}>
-          ⏱ {timer}s
+<div class="lie-submit-container">
+  {#if subStepInfo.hasSubmitted}
+    <!-- Already submitted state -->
+    <div class="submitted-state fade-in">
+      <div class="submitted-card glass">
+        <div class="submitted-icon">✅</div>
+        <h2>Lie Submitted!</h2>
+        <p>Great job! Your lie has been submitted successfully.</p>
+        <div class="waiting-message">
+          <div class="spinner">⏳</div>
+          <span>Waiting for other players to finish...</span>
+        </div>
+        
+        {#if timer}
+          <div class="timer-remaining">
+            <span class="timer-number">{formatTime(timer.remaining)}</span>
+            <span class="timer-label">seconds left</span>
+          </div>
+        {/if}
+      </div>
+    </div>
+    
+  {:else}
+    <!-- Submission form -->
+    <div class="submit-form slide-up">
+      <!-- Header with question -->
+      {#if currentQuestion}
+        <div class="question-header glass">
+          <div class="category-badge">
+            <span class="category-emoji">{getCategoryEmoji(currentQuestion.category)}</span>
+            <span class="category-name">{currentQuestion.category}</span>
+          </div>
+          <div class="question-text">
+            {currentQuestion.question}
+          </div>
         </div>
       {/if}
-    </div>
-    
-    <div class="question-box">
-      <p class="question-label">The Question:</p>
-      <p class="question-text">{question.question || 'Loading question...'}</p>
-    </div>
-    
-    {#if !hasSubmitted}
-      <div class="form">
-        <label for="lie-input">Write a believable fake answer:</label>
-        <textarea
-          id="lie-input"
-          bind:value={lie}
-          on:keypress={handleKeyPress}
-          placeholder="Make it sound real..."
-          maxlength={MAX_LENGTH * 2}
-          disabled={isSubmitting}
-          class:error={error || isOverLimit}
-          rows="3"
-        />
-        
-        <div class="input-footer">
-          <span class="character-count" class:over={isOverLimit}>
-            {charactersLeft} characters left
-          </span>
-          {#if error}
-            <span class="error-message">{error}</span>
-          {/if}
+      
+      <!-- Timer -->
+      {#if timer}
+        <div class="timer-display" class:urgent={timer.remaining <= 10}>
+          <div class="timer-circle">
+            <div class="timer-number">{formatTime(timer.remaining)}</div>
+          </div>
+          <div class="timer-label">seconds to submit</div>
+        </div>
+      {/if}
+      
+      <!-- Instructions -->
+      <div class="instructions">
+        <h2>🎭 Create Your Lie</h2>
+        <p>Write a convincing fake answer that others might believe is real!</p>
+      </div>
+      
+      <!-- Input area -->
+      <div class="input-section">
+        <div class="input-container">
+          <label for="lieInput" class="sr-only">Enter your lie</label>
+          <textarea
+            id="lieInput"
+            class="lie-input"
+            bind:value={lieText}
+            on:keydown={handleKeyPress}
+            placeholder="Type your most convincing lie here..."
+            maxlength="100"
+            rows="3"
+            disabled={isSubmitting || subStepInfo.hasSubmitted || !subStepInfo.canAct}
+          ></textarea>
+          
+          <div class="input-footer">
+            <div class="character-count" class:warning={lieText.length > 80}>
+              {lieText.length}/100
+            </div>
+            
+            <button
+              class="tip-button"
+              on:click={toggleTip}
+              aria-label="Show tips"
+            >
+              💡 Tips
+            </button>
+          </div>
         </div>
         
+        <!-- Tips panel -->
+        {#if showTip}
+          <div class="tips-panel slide-up">
+            <div class="tips-content">
+              <h4>💡 How to Create Great Lies</h4>
+              <ul>
+                <li><strong>Be believable:</strong> Make it sound realistic</li>
+                <li><strong>Match the style:</strong> Keep the same tone as the question</li>
+                <li><strong>Use knowledge:</strong> Mix in real facts</li>
+                <li><strong>Be specific:</strong> Details make lies more convincing</li>
+              </ul>
+              
+              <div class="example-section">
+                <h5>Example lies for {currentQuestion?.category || 'this category'}:</h5>
+                <div class="example-lies">
+                  {#each exampleLies.slice(0, 3) as example}
+                    <span class="example-lie">{example}</span>
+                  {/each}
+                </div>
+              </div>
+            </div>
+          </div>
+        {/if}
+        
+        <!-- Submit button -->
         <button
-          class="submit-button"
-          on:click={handleSubmit}
-          disabled={isSubmitting || !lie.trim() || isOverLimit}
+          class="btn btn-primary btn-lg submit-button"
+          class:loading={isSubmitting}
+          disabled={!canSubmit}
+          on:click={submitLie}
         >
-          {isSubmitting ? 'Submitting...' : 'Submit Lie'}
+          {#if isSubmitting}
+            <span class="button-spinner">🔄</span>
+            Submitting...
+          {:else}
+            <span class="button-emoji">🚀</span>
+            Submit Lie
+          {/if}
         </button>
         
-        <p class="hint">💡 Tip: Make it sound like it could be the real answer!</p>
-      </div>
-    {:else}
-      <div class="success-message">
-        <div class="success-icon">✅</div>
-        <h3>Lie Submitted!</h3>
-        <p>Your lie:</p>
-        <div class="submitted-lie">
-          "{lie}"
-        </div>
-        <p class="waiting-text">Waiting for other players...</p>
-        <div class="waiting-dots">
-          <span></span>
-          <span></span>
-          <span></span>
+        <!-- Help text -->
+        <div class="submit-help">
+          {#if !subStepInfo.canAct}
+            <span class="help-text warning">⏳ Please wait for your turn</span>
+          {:else if lieText.trim().length === 0}
+            <span class="help-text">Enter a lie above, then click submit</span>
+          {:else if lieText.trim().length < 2}
+            <span class="help-text warning">Your lie should be at least 2 characters</span>
+          {:else}
+            <span class="help-text success">✓ Ready to submit! Press Ctrl+Enter or click the button</span>
+          {/if}
         </div>
       </div>
-    {/if}
-  </div>
+      
+      <!-- Game context -->
+      <div class="game-context">
+        <div class="context-item">
+          <span class="context-emoji">🎯</span>
+          <span>Round {gameState.round || 1} • Question {gameState.question || 1}</span>
+        </div>
+        <div class="context-item">
+          <span class="context-emoji">🏆</span>
+          <span>Points: {gameState.round === 1 ? '500' : gameState.round === 2 ? '1000' : '1500'} per player fooled</span>
+        </div>
+      </div>
+    </div>
+  {/if}
 </div>
 
 <style>
-  .submit-container {
-    min-height: 100vh;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    padding: 1rem;
+  .lie-submit-container {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    padding: var(--space-4);
+  }
+  
+  .submitted-state {
+    flex: 1;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   }
   
-  .submit-card {
-    background: rgba(255, 255, 255, 0.95);
-    backdrop-filter: blur(10px);
-    border-radius: 20px;
-    padding: 2rem;
-    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  .submitted-card {
+    text-align: center;
+    padding: var(--space-8) var(--space-6);
+    border-radius: var(--radius-2xl);
+    max-width: 400px;
     width: 100%;
-    max-width: 500px;
   }
   
-  .header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 1.5rem;
+  .submitted-icon {
+    font-size: var(--font-size-6xl);
+    margin-bottom: var(--space-4);
+    animation: bounce-in 0.6s ease-out;
   }
   
-  .title {
-    font-size: 1.75rem;
-    font-weight: 800;
-    color: #2d3748;
-    margin: 0;
+  .submitted-card h2 {
+    color: var(--white);
+    font-size: var(--font-size-3xl);
+    margin-bottom: var(--space-3);
+    font-weight: 700;
   }
   
-  .timer {
-    font-size: 1.25rem;
-    font-weight: 600;
-    color: #4a5568;
-    background: #f7fafc;
-    padding: 0.5rem 1rem;
-    border-radius: 10px;
-    transition: all 0.3s;
-  }
-  
-  .timer.urgent {
-    background: #feb2b2;
-    color: #c53030;
-    animation: pulse 1s infinite;
-  }
-  
-  @keyframes pulse {
-    0%, 100% { transform: scale(1); }
-    50% { transform: scale(1.05); }
-  }
-  
-  .question-box {
-    background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
-    padding: 1.5rem;
-    border-radius: 15px;
-    margin-bottom: 1.5rem;
-    box-shadow: 0 5px 20px rgba(240, 147, 251, 0.3);
-  }
-  
-  .question-label {
+  .submitted-card p {
     color: rgba(255, 255, 255, 0.9);
-    font-size: 0.875rem;
+    font-size: var(--font-size-lg);
+    margin-bottom: var(--space-6);
+  }
+  
+  .waiting-message {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-2);
+    color: rgba(255, 255, 255, 0.8);
+    font-size: var(--font-size-base);
+    margin-bottom: var(--space-4);
+  }
+  
+  .spinner {
+    animation: spin 2s linear infinite;
+  }
+  
+  .timer-remaining {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-1);
+  }
+  
+  .timer-remaining .timer-number {
+    font-size: var(--font-size-2xl);
+    font-weight: 900;
+    color: var(--white);
+  }
+  
+  .timer-remaining .timer-label {
+    font-size: var(--font-size-sm);
+    color: rgba(255, 255, 255, 0.8);
+  }
+  
+  .submit-form {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-6);
+  }
+  
+  .question-header {
+    padding: var(--space-4);
+    border-radius: var(--radius-xl);
+    text-align: center;
+  }
+  
+  .category-badge {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-2);
+    margin-bottom: var(--space-3);
+  }
+  
+  .category-emoji {
+    font-size: var(--font-size-xl);
+  }
+  
+  .category-name {
+    color: var(--white);
     font-weight: 600;
-    margin: 0 0 0.5rem 0;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
+    font-size: var(--font-size-lg);
   }
   
   .question-text {
-    color: white;
-    font-size: 1.1rem;
+    color: var(--white);
+    font-size: var(--font-size-xl);
     font-weight: 600;
-    margin: 0;
     line-height: 1.4;
   }
   
-  .form {
-    margin-top: 1.5rem;
+  .timer-display {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-2);
   }
   
-  label {
-    display: block;
+  .timer-circle {
+    width: 60px;
+    height: 60px;
+    border-radius: var(--radius-full);
+    background: rgba(255, 255, 255, 0.2);
+    border: 3px solid rgba(255, 255, 255, 0.4);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    backdrop-filter: blur(10px);
+    transition: all var(--transition);
+  }
+  
+  .timer-display.urgent .timer-circle {
+    background: rgba(239, 68, 68, 0.3);
+    border-color: var(--error);
+    animation: pulse 0.5s infinite;
+  }
+  
+  .timer-number {
+    font-size: var(--font-size-xl);
+    font-weight: 900;
+    color: var(--white);
+  }
+  
+  .timer-label {
+    color: var(--white);
+    font-size: var(--font-size-sm);
     font-weight: 600;
-    color: #4a5568;
-    margin-bottom: 0.5rem;
-    font-size: 0.9rem;
+    opacity: 0.8;
+    text-align: center;
   }
   
-  textarea {
+  .instructions {
+    text-align: center;
+  }
+  
+  .instructions h2 {
+    color: var(--white);
+    font-size: var(--font-size-2xl);
+    margin-bottom: var(--space-2);
+    font-weight: 700;
+  }
+  
+  .instructions p {
+    color: rgba(255, 255, 255, 0.9);
+    font-size: var(--font-size-lg);
+  }
+  
+  .input-section {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-4);
+  }
+  
+  .input-container {
+    position: relative;
+  }
+  
+  .lie-input {
     width: 100%;
-    padding: 0.75rem 1rem;
-    font-size: 1rem;
-    border: 2px solid #e2e8f0;
-    border-radius: 10px;
-    transition: all 0.2s;
-    box-sizing: border-box;
-    resize: vertical;
-    min-height: 80px;
-    font-family: inherit;
+    padding: var(--space-4);
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    border-radius: var(--radius-xl);
+    background: rgba(255, 255, 255, 0.9);
+    color: var(--gray-800);
+    font-size: var(--font-size-lg);
+    font-weight: 500;
+    line-height: 1.4;
+    resize: none;
+    transition: all var(--transition);
   }
   
-  textarea:focus {
+  .lie-input:focus {
     outline: none;
-    border-color: #667eea;
-    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+    border-color: var(--white);
+    box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.2);
+    background: var(--white);
   }
   
-  textarea.error {
-    border-color: #f56565;
+  .lie-input::placeholder {
+    color: var(--gray-400);
+    font-style: italic;
   }
   
-  textarea:disabled {
-    background: #f7fafc;
+  .lie-input:disabled {
+    opacity: 0.6;
     cursor: not-allowed;
   }
   
@@ -254,143 +443,214 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-top: 0.25rem;
-    margin-bottom: 1rem;
+    margin-top: var(--space-2);
   }
   
   .character-count {
-    font-size: 0.875rem;
-    color: #718096;
-  }
-  
-  .character-count.over {
-    color: #f56565;
+    color: rgba(255, 255, 255, 0.7);
+    font-size: var(--font-size-sm);
     font-weight: 600;
   }
   
-  .error-message {
-    color: #f56565;
-    font-size: 0.875rem;
+  .character-count.warning {
+    color: var(--warning);
+  }
+  
+  .tip-button {
+    background: none;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    color: var(--white);
+    padding: var(--space-1) var(--space-3);
+    border-radius: var(--radius-lg);
+    font-size: var(--font-size-sm);
+    font-weight: 600;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+  }
+  
+  .tip-button:hover {
+    background: rgba(255, 255, 255, 0.1);
+    border-color: rgba(255, 255, 255, 0.5);
+  }
+  
+  .tips-panel {
+    background: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: var(--radius-xl);
+    padding: var(--space-4);
+  }
+  
+  .tips-content h4 {
+    color: var(--white);
+    font-size: var(--font-size-lg);
+    margin-bottom: var(--space-3);
+    font-weight: 600;
+  }
+  
+  .tips-content ul {
+    list-style: none;
+    padding: 0;
+    margin: 0 0 var(--space-4);
+  }
+  
+  .tips-content li {
+    color: rgba(255, 255, 255, 0.9);
+    font-size: var(--font-size-sm);
+    margin-bottom: var(--space-2);
+    line-height: 1.4;
+  }
+  
+  .tips-content strong {
+    color: var(--white);
+  }
+  
+  .example-section h5 {
+    color: var(--white);
+    font-size: var(--font-size-base);
+    margin-bottom: var(--space-2);
+    font-weight: 600;
+  }
+  
+  .example-lies {
+    display: flex;
+    gap: var(--space-2);
+    flex-wrap: wrap;
+  }
+  
+  .example-lie {
+    background: rgba(255, 255, 255, 0.2);
+    color: var(--white);
+    padding: var(--space-1) var(--space-2);
+    border-radius: var(--radius);
+    font-size: var(--font-size-sm);
+    font-weight: 500;
   }
   
   .submit-button {
     width: 100%;
-    background: linear-gradient(135deg, #48bb78 0%, #38a169 100%);
-    color: white;
-    border: none;
-    border-radius: 10px;
-    padding: 1rem;
-    font-size: 1.1rem;
-    font-weight: 700;
-    cursor: pointer;
-    transition: all 0.3s ease;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
+    font-size: var(--font-size-xl);
+    padding: var(--space-4);
+    min-height: 56px;
   }
   
-  .submit-button:hover:not(:disabled) {
-    transform: translateY(-2px);
-    box-shadow: 0 10px 30px rgba(72, 187, 120, 0.4);
+  .submit-button.loading {
+    pointer-events: none;
   }
   
-  .submit-button:disabled {
-    background: linear-gradient(135deg, #a0aec0 0%, #718096 100%);
-    cursor: not-allowed;
-    opacity: 0.8;
+  .button-emoji,
+  .button-spinner {
+    font-size: var(--font-size-2xl);
   }
   
-  .hint {
+  .button-spinner {
+    animation: spin 1s linear infinite;
+  }
+  
+  .submit-help {
     text-align: center;
-    color: #718096;
-    font-size: 0.875rem;
-    margin-top: 1rem;
   }
   
-  .success-message {
-    text-align: center;
-    padding: 2rem 0;
+  .help-text {
+    font-size: var(--font-size-base);
+    font-weight: 500;
   }
   
-  .success-icon {
-    font-size: 3rem;
-    margin-bottom: 1rem;
+  .help-text.success {
+    color: var(--success);
   }
   
-  .success-message h3 {
-    font-size: 1.5rem;
-    color: #38a169;
-    margin: 0 0 1rem 0;
+  .help-text.warning {
+    color: var(--warning);
   }
   
-  .success-message p {
-    color: #718096;
-    margin: 0.5rem 0;
+  .help-text:not(.success):not(.warning) {
+    color: rgba(255, 255, 255, 0.8);
   }
   
-  .submitted-lie {
-    background: #f7fafc;
-    padding: 1rem;
-    border-radius: 10px;
-    font-style: italic;
-    color: #4a5568;
-    margin: 1rem 0;
-    border-left: 4px solid #667eea;
-  }
-  
-  .waiting-text {
-    margin-top: 1.5rem;
-  }
-  
-  .waiting-dots {
+  .game-context {
     display: flex;
     justify-content: center;
-    gap: 0.5rem;
-    margin-top: 1rem;
+    gap: var(--space-4);
+    flex-wrap: wrap;
   }
   
-  .waiting-dots span {
-    width: 10px;
-    height: 10px;
-    background: #667eea;
-    border-radius: 50%;
-    animation: bounce 1.4s infinite ease-in-out both;
+  .context-item {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    color: rgba(255, 255, 255, 0.8);
+    font-size: var(--font-size-sm);
+    font-weight: 500;
   }
   
-  .waiting-dots span:nth-child(1) { animation-delay: -0.32s; }
-  .waiting-dots span:nth-child(2) { animation-delay: -0.16s; }
-  .waiting-dots span:nth-child(3) { animation-delay: 0s; }
+  .context-emoji {
+    font-size: var(--font-size-base);
+  }
   
-  @keyframes bounce {
-    0%, 80%, 100% {
-      transform: scale(0);
-      opacity: 0.5;
+  @keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+  }
+  
+  @keyframes bounce-in {
+    0% {
+      opacity: 0;
+      transform: scale(0.3);
     }
-    40% {
-      transform: scale(1);
+    50% {
       opacity: 1;
+      transform: scale(1.05);
+    }
+    70% {
+      transform: scale(0.9);
+    }
+    100% {
+      opacity: 1;
+      transform: scale(1);
     }
   }
   
-  @media (max-width: 480px) {
-    .submit-card {
-      padding: 1.5rem;
-    }
-    
-    .title {
-      font-size: 1.5rem;
-    }
-    
-    .timer {
-      font-size: 1.1rem;
-      padding: 0.4rem 0.8rem;
-    }
-    
-    .question-box {
-      padding: 1.25rem;
+  @media (max-width: 768px) {
+    .lie-submit-container {
+      padding: var(--space-3);
     }
     
     .question-text {
-      font-size: 1rem;
+      font-size: var(--font-size-lg);
+    }
+    
+    .instructions h2 {
+      font-size: var(--font-size-xl);
+    }
+    
+    .lie-input {
+      font-size: var(--font-size-base);
+      padding: var(--space-3);
+    }
+    
+    .game-context {
+      flex-direction: column;
+      align-items: center;
+    }
+    
+    .tips-content ul {
+      padding-left: var(--space-4);
+    }
+    
+    .tips-content li {
+      list-style: disc;
+    }
+  }
+  
+  /* High contrast mode support */
+  @media (prefers-contrast: high) {
+    .lie-input {
+      border-width: 3px;
+    }
+    
+    .tips-panel {
+      border-width: 2px;
     }
   }
 </style>

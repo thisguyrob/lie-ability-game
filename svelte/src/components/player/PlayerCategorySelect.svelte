@@ -1,327 +1,544 @@
 <script>
-  import { createEventDispatcher } from 'svelte'
+  import { createEventDispatcher } from 'svelte';
   
-  export let socket
-  export let categories = []
-  export let isSelector = false
-  export let timer = 0
+  export let gameState;
+  export let subStepInfo;
   
-  const dispatch = createEventDispatcher()
+  const dispatch = createEventDispatcher();
   
-  let selectedCategory = null
-  let hasSelected = false
+  // Category emoji mappings
+  const categoryEmojis = {
+    'History': '📚', 'Animals': '🐾', 'Food': '🍎', 'Science': '🔬',
+    'Sports': '⚽', 'Entertainment': '🎬', 'Geography': '🌍', 'Music': '🎵',
+    'Art': '🎨', 'Technology': '💻', 'Nature': '🌿', 'Space': '🚀',
+    'Movies': '🎬', 'TV': '📺', 'Games': '🎮', 'Literature': '📖',
+    'Mythology': '🏛️', 'Fashion': '👗', 'Language': '💬', 'Inventions': '💡',
+    'Comics': '💥', 'Tech': '⚙️', 'Misc': '🎲', 'Bonus': '⭐'
+  };
   
-  const handleSelect = (categoryId) => {
-    if (!isSelector || hasSelected) return
-    
-    selectedCategory = categoryId
-    hasSelected = true
-    
-    socket.emit('select_category', { categoryId })
-    dispatch('selected', { categoryId })
+  function getCategoryEmoji(category) {
+    return categoryEmojis[category] || '❓';
   }
+  
+  function selectCategory(index) {
+    if (subStepInfo.isMyTurn && subStepInfo.canAct) {
+      dispatch('selectCategory', { index });
+    }
+  }
+  
+  // Format timer display
+  function formatTime(seconds) {
+    return seconds?.toString().padStart(2, '0') || '--';
+  }
+  
+  // Computed values
+  $: categoriesForSelection = gameState.categoriesForSelection || [];
+  $: timer = gameState.timer;
+  $: isMyTurn = subStepInfo.isMyTurn;
+  $: canSelect = subStepInfo.canAct && isMyTurn;
 </script>
 
-<div class="category-container">
-  <div class="category-card">
-    <div class="header">
-      <h2 class="title">
-        {isSelector ? 'Choose a Category! 🎯' : 'Category Selection 📋'}
-      </h2>
-      {#if timer > 0}
-        <div class="timer" class:urgent={timer <= 10}>
-          ⏱ {timer}s
-        </div>
-      {/if}
-    </div>
-    
-    {#if isSelector}
-      {#if !hasSelected}
-        <p class="instruction">Pick a category for the next question:</p>
+<div class="category-select-container">
+  {#if isMyTurn}
+    <!-- Player's turn to select -->
+    <div class="selection-interface fade-in">
+      <!-- Header -->
+      <div class="selection-header">
+        <h1>🎯 Your Turn!</h1>
+        <p>Choose a category for the next question.</p>
         
+        {#if timer}
+          <div class="timer-display" class:urgent={timer.remaining <= 5}>
+            <div class="timer-circle">
+              <div class="timer-number">{formatTime(timer.remaining)}</div>
+            </div>
+            <div class="timer-label">seconds to choose</div>
+          </div>
+        {/if}
+      </div>
+      
+      <!-- Categories -->
+      <div class="categories-section">
+        <h2>Pick a category:</h2>
         <div class="categories-grid">
-          {#each categories as category, index}
+          {#each categoriesForSelection as category, index}
             <button
-              class="category-option"
-              class:selected={selectedCategory === category.id}
-              on:click={() => handleSelect(category.id)}
-              style="animation-delay: {index * 0.1}s"
+              class="category-button scale-in"
+              style="animation-delay: {index * 150}ms"
+              disabled={!canSelect}
+              on:click={() => selectCategory(index)}
             >
-              <span class="category-emoji">{category.emoji || '📝'}</span>
-              <span class="category-name">{category.name}</span>
+              <div class="category-emoji">
+                {getCategoryEmoji(category)}
+              </div>
+              <div class="category-name">
+                {category}
+              </div>
+              <div class="category-hint">
+                Tap to select
+              </div>
             </button>
           {/each}
         </div>
-      {:else}
-        <div class="selected-message">
-          <div class="success-icon">✅</div>
-          <h3>Category Selected!</h3>
-          <p>You chose:</p>
-          <div class="selected-category">
-            <span class="category-emoji">
-              {categories.find(c => c.id === selectedCategory)?.emoji || '📝'}
-            </span>
-            <span class="category-name">
-              {categories.find(c => c.id === selectedCategory)?.name || 'Unknown'}
-            </span>
-          </div>
-          <p class="waiting-text">Loading question...</p>
-        </div>
-      {/if}
-    {:else}
-      <div class="waiting-message">
-        <p class="waiting-title">Another player is choosing the category</p>
-        <p class="waiting-subtitle">Get ready for the next question!</p>
-        <div class="waiting-animation">
-          <div class="category-preview">
-            {#each categories as category}
-              <div class="preview-item">
-                <span>{category.emoji || '📝'}</span>
-                <span>{category.name}</span>
+      </div>
+      
+      <!-- Help text -->
+      <div class="selection-help">
+        {#if !canSelect}
+          <p class="help-text warning">⏳ Please wait...</p>
+        {:else}
+          <p class="help-text">Choose the category that sounds most interesting to you!</p>
+        {/if}
+      </div>
+    </div>
+    
+  {:else}
+    <!-- Waiting for another player -->
+    <div class="waiting-interface fade-in">
+      <div class="waiting-card glass">
+        <div class="waiting-content">
+          <div class="waiting-icon">⏳</div>
+          <h2>Another Player is Choosing</h2>
+          <p>Someone else is picking the category for this question.</p>
+          
+          {#if timer}
+            <div class="timer-remaining">
+              <span class="timer-number">{formatTime(timer.remaining)}</span>
+              <span class="timer-label">seconds remaining</span>
+            </div>
+          {/if}
+          
+          {#if categoriesForSelection.length > 0}
+            <div class="preview-categories">
+              <h3>Available categories:</h3>
+              <div class="categories-preview">
+                {#each categoriesForSelection as category}
+                  <div class="preview-category">
+                    <span class="preview-emoji">{getCategoryEmoji(category)}</span>
+                    <span class="preview-name">{category}</span>
+                  </div>
+                {/each}
               </div>
-            {/each}
-          </div>
+            </div>
+          {/if}
         </div>
       </div>
-    {/if}
+    </div>
+  {/if}
+  
+  <!-- Game context -->
+  <div class="game-context slide-up">
+    <div class="context-items">
+      <div class="context-item">
+        <span class="context-emoji">🎯</span>
+        <span>Round {gameState.round || 1} • Question {gameState.question || 1}</span>
+      </div>
+      <div class="context-item">
+        <span class="context-emoji">👥</span>
+        <span>{gameState.players?.filter(p => p.connected).length || 0} players</span>
+      </div>
+    </div>
   </div>
 </div>
 
 <style>
-  .category-container {
-    min-height: 100vh;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    padding: 1rem;
+  .category-select-container {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    padding: var(--space-4);
+    gap: var(--space-6);
+  }
+  
+  .selection-interface {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-6);
+  }
+  
+  .selection-header {
+    text-align: center;
+  }
+  
+  .selection-header h1 {
+    color: var(--white);
+    font-size: var(--font-size-4xl);
+    margin-bottom: var(--space-3);
+    font-weight: 900;
+    text-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+  }
+  
+  .selection-header p {
+    color: rgba(255, 255, 255, 0.9);
+    font-size: var(--font-size-xl);
+    margin-bottom: var(--space-4);
+  }
+  
+  .timer-display {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-2);
+    margin-top: var(--space-4);
+  }
+  
+  .timer-circle {
+    width: 80px;
+    height: 80px;
+    border-radius: var(--radius-full);
+    background: rgba(255, 255, 255, 0.2);
+    border: 3px solid rgba(255, 255, 255, 0.4);
     display: flex;
     align-items: center;
     justify-content: center;
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  }
-  
-  .category-card {
-    background: rgba(255, 255, 255, 0.95);
     backdrop-filter: blur(10px);
-    border-radius: 20px;
-    padding: 2rem;
-    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
-    width: 100%;
-    max-width: 500px;
+    transition: all var(--transition);
   }
   
-  .header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 1.5rem;
+  .timer-display.urgent .timer-circle {
+    background: rgba(239, 68, 68, 0.3);
+    border-color: var(--error);
+    animation: pulse 0.5s infinite;
   }
   
-  .title {
-    font-size: 1.75rem;
-    font-weight: 800;
-    color: #2d3748;
-    margin: 0;
+  .timer-number {
+    font-size: var(--font-size-2xl);
+    font-weight: 900;
+    color: var(--white);
   }
   
-  .timer {
-    font-size: 1.25rem;
+  .timer-label {
+    color: var(--white);
+    font-size: var(--font-size-sm);
     font-weight: 600;
-    color: #4a5568;
-    background: #f7fafc;
-    padding: 0.5rem 1rem;
-    border-radius: 10px;
-    transition: all 0.3s;
+    opacity: 0.8;
   }
   
-  .timer.urgent {
-    background: #feb2b2;
-    color: #c53030;
-    animation: pulse 1s infinite;
+  .categories-section {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-4);
   }
   
-  @keyframes pulse {
-    0%, 100% { transform: scale(1); }
-    50% { transform: scale(1.05); }
-  }
-  
-  .instruction {
-    color: #4a5568;
-    font-size: 1.1rem;
+  .categories-section h2 {
+    color: var(--white);
+    font-size: var(--font-size-2xl);
+    font-weight: 700;
     text-align: center;
-    margin: 0 0 1.5rem 0;
   }
   
   .categories-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-    gap: 1rem;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: var(--space-4);
+    flex: 1;
   }
   
-  .category-option {
-    background: white;
-    border: 3px solid #e2e8f0;
-    border-radius: 15px;
-    padding: 1.5rem 1rem;
-    cursor: pointer;
-    transition: all 0.3s ease;
+  .category-button {
+    background: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(10px);
+    border: 2px solid rgba(255, 255, 255, 0.2);
+    border-radius: var(--radius-2xl);
+    padding: var(--space-6) var(--space-4);
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 0.75rem;
-    animation: fadeInUp 0.5s ease-out forwards;
-    opacity: 0;
-    transform: translateY(20px);
+    gap: var(--space-3);
+    cursor: pointer;
+    transition: all var(--transition);
+    min-height: 140px;
+    position: relative;
+    overflow: hidden;
   }
   
-  @keyframes fadeInUp {
-    to {
-      opacity: 1;
-      transform: translateY(0);
-    }
+  .category-button:hover:not(:disabled) {
+    background: rgba(255, 255, 255, 0.2);
+    border-color: rgba(255, 255, 255, 0.4);
+    transform: translateY(-4px) scale(1.02);
+    box-shadow: 0 12px 25px rgba(0, 0, 0, 0.3);
   }
   
-  .category-option:hover {
-    border-color: #667eea;
-    background: #f7fafc;
-    transform: translateY(-3px);
-    box-shadow: 0 10px 30px rgba(102, 126, 234, 0.2);
+  .category-button:active {
+    transform: translateY(-2px) scale(1.01);
   }
   
-  .category-option.selected {
-    border-color: #48bb78;
-    background: linear-gradient(135deg, #f0fff4 0%, #e6fffa 100%);
-    box-shadow: 0 10px 30px rgba(72, 187, 120, 0.3);
-    transform: scale(1.05);
+  .category-button:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
   }
   
   .category-emoji {
-    font-size: 2.5rem;
+    font-size: var(--font-size-5xl);
+    margin-bottom: var(--space-2);
+    transition: all var(--transition);
+  }
+  
+  .category-button:hover:not(:disabled) .category-emoji {
+    transform: scale(1.1);
   }
   
   .category-name {
-    font-weight: 600;
-    color: #2d3748;
+    color: var(--white);
+    font-size: var(--font-size-xl);
+    font-weight: 700;
     text-align: center;
-    font-size: 0.95rem;
+    line-height: 1.2;
   }
   
-  .selected-message,
-  .waiting-message {
+  .category-hint {
+    color: rgba(255, 255, 255, 0.7);
+    font-size: var(--font-size-sm);
+    font-weight: 500;
+    opacity: 0;
+    transition: all var(--transition);
+  }
+  
+  .category-button:hover:not(:disabled) .category-hint {
+    opacity: 1;
+  }
+  
+  .selection-help {
     text-align: center;
-    padding: 2rem 0;
   }
   
-  .success-icon {
-    font-size: 3rem;
-    margin-bottom: 1rem;
+  .help-text {
+    font-size: var(--font-size-lg);
+    font-weight: 500;
+    color: rgba(255, 255, 255, 0.9);
   }
   
-  .selected-message h3 {
-    font-size: 1.5rem;
-    color: #38a169;
-    margin: 0 0 1rem 0;
+  .help-text.warning {
+    color: var(--warning);
   }
   
-  .selected-message p {
-    color: #718096;
-    margin: 0.5rem 0;
-  }
-  
-  .selected-category {
-    background: #f7fafc;
-    padding: 1.5rem;
-    border-radius: 15px;
-    margin: 1rem 0;
+  .waiting-interface {
+    flex: 1;
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 1rem;
-    border: 2px solid #e2e8f0;
   }
   
-  .selected-category .category-emoji {
-    font-size: 2rem;
+  .waiting-card {
+    padding: var(--space-8) var(--space-6);
+    border-radius: var(--radius-2xl);
+    text-align: center;
+    max-width: 500px;
+    width: 100%;
   }
   
-  .selected-category .category-name {
-    font-size: 1.25rem;
+  .waiting-content {
+    color: var(--white);
   }
   
-  .waiting-title {
-    font-size: 1.25rem;
-    font-weight: 600;
-    color: #2d3748;
-    margin: 0 0 0.5rem 0;
+  .waiting-icon {
+    font-size: var(--font-size-6xl);
+    margin-bottom: var(--space-4);
+    animation: spin 2s linear infinite;
   }
   
-  .waiting-subtitle {
-    color: #718096;
-    margin: 0 0 2rem 0;
+  .waiting-content h2 {
+    font-size: var(--font-size-3xl);
+    margin-bottom: var(--space-3);
+    font-weight: 700;
   }
   
-  .waiting-animation {
-    padding: 1rem;
+  .waiting-content p {
+    font-size: var(--font-size-lg);
+    opacity: 0.9;
+    margin-bottom: var(--space-6);
   }
   
-  .category-preview {
+  .timer-remaining {
     display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-1);
+    margin-bottom: var(--space-6);
+  }
+  
+  .timer-remaining .timer-number {
+    font-size: var(--font-size-3xl);
+    font-weight: 900;
+  }
+  
+  .timer-remaining .timer-label {
+    font-size: var(--font-size-sm);
+    opacity: 0.8;
+  }
+  
+  .preview-categories {
+    text-align: center;
+  }
+  
+  .preview-categories h3 {
+    font-size: var(--font-size-lg);
+    margin-bottom: var(--space-3);
+    font-weight: 600;
+    opacity: 0.9;
+  }
+  
+  .categories-preview {
+    display: flex;
+    justify-content: center;
     flex-wrap: wrap;
-    justify-content: center;
-    gap: 0.75rem;
+    gap: var(--space-3);
   }
   
-  .preview-item {
-    background: #f7fafc;
-    padding: 0.5rem 1rem;
-    border-radius: 20px;
+  .preview-category {
     display: flex;
     align-items: center;
-    gap: 0.5rem;
-    font-size: 0.9rem;
-    color: #4a5568;
-    animation: float 3s ease-in-out infinite;
+    gap: var(--space-2);
+    background: rgba(255, 255, 255, 0.1);
+    padding: var(--space-2) var(--space-3);
+    border-radius: var(--radius-lg);
+    border: 1px solid rgba(255, 255, 255, 0.2);
   }
   
-  .preview-item:nth-child(odd) {
-    animation-delay: 0.5s;
+  .preview-emoji {
+    font-size: var(--font-size-lg);
   }
   
-  @keyframes float {
-    0%, 100% { transform: translateY(0); }
-    50% { transform: translateY(-10px); }
+  .preview-name {
+    font-size: var(--font-size-sm);
+    font-weight: 600;
   }
   
-  .waiting-text {
-    margin-top: 1rem;
+  .game-context {
+    margin-top: auto;
   }
   
-  @media (max-width: 480px) {
-    .category-card {
-      padding: 1.5rem;
+  .context-items {
+    display: flex;
+    justify-content: center;
+    gap: var(--space-4);
+    flex-wrap: wrap;
+  }
+  
+  .context-item {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    color: rgba(255, 255, 255, 0.8);
+    font-size: var(--font-size-sm);
+    font-weight: 500;
+    background: rgba(255, 255, 255, 0.1);
+    padding: var(--space-2) var(--space-3);
+    border-radius: var(--radius-lg);
+    backdrop-filter: blur(10px);
+  }
+  
+  .context-emoji {
+    font-size: var(--font-size-base);
+  }
+  
+  @keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+  }
+  
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+  }
+  
+  @media (max-width: 768px) {
+    .category-select-container {
+      padding: var(--space-3);
+      gap: var(--space-4);
     }
     
-    .title {
-      font-size: 1.5rem;
+    .selection-header h1 {
+      font-size: var(--font-size-2xl);
     }
     
-    .timer {
-      font-size: 1.1rem;
-      padding: 0.4rem 0.8rem;
+    .selection-header p {
+      font-size: var(--font-size-lg);
     }
     
     .categories-grid {
-      grid-template-columns: repeat(2, 1fr);
+      grid-template-columns: 1fr;
+      gap: var(--space-3);
     }
     
-    .category-option {
-      padding: 1.25rem 0.75rem;
+    .category-button {
+      min-height: 120px;
+      padding: var(--space-4);
     }
     
     .category-emoji {
-      font-size: 2rem;
+      font-size: var(--font-size-3xl);
     }
     
     .category-name {
-      font-size: 0.85rem;
+      font-size: var(--font-size-lg);
     }
+    
+    .timer-circle {
+      width: 60px;
+      height: 60px;
+    }
+    
+    .timer-number {
+      font-size: var(--font-size-xl);
+    }
+    
+    .waiting-content h2 {
+      font-size: var(--font-size-2xl);
+    }
+    
+    .categories-preview {
+      flex-direction: column;
+      align-items: center;
+    }
+  }
+  
+  @media (max-width: 480px) {
+    .categories-grid {
+      gap: var(--space-2);
+    }
+    
+    .category-button {
+      min-height: 100px;
+      padding: var(--space-3);
+    }
+    
+    .category-emoji {
+      font-size: var(--font-size-2xl);
+    }
+    
+    .context-items {
+      flex-direction: column;
+      align-items: center;
+    }
+  }
+  
+  /* Enhanced animations for category selection */
+  .category-button {
+    animation: scale-in 0.3s ease-out;
+  }
+  
+  .category-button:hover:not(:disabled) {
+    animation: none;
+  }
+  
+  /* Ripple effect for button press */
+  .category-button::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 0;
+    height: 0;
+    border-radius: var(--radius-full);
+    background: rgba(255, 255, 255, 0.3);
+    transform: translate(-50%, -50%);
+    transition: width 0.3s, height 0.3s;
+  }
+  
+  .category-button:active::before {
+    width: 100%;
+    height: 100%;
   }
 </style>

@@ -79,6 +79,9 @@ class Game {
       totalPlayers: this.players.size
     });
 
+    // Broadcast updated game state so all clients get the new player list
+    this.broadcastGameStateAndSubStep();
+
     return { success: true, player };
   }
 
@@ -95,6 +98,9 @@ class Game {
       playerName: player.name,
       totalPlayers: this.players.size
     });
+
+    // Broadcast updated game state so all clients get the updated player list
+    this.broadcastGameStateAndSubStep();
 
     // If we're in a game and this was the category selector, auto-advance
     if (this.categorySelector === playerId && this.state === GAME_STATES.CATEGORY_SELECTION) {
@@ -119,6 +125,9 @@ class Game {
       playerName: player.name
     });
 
+    // Broadcast updated game state so all clients get the updated player connection status
+    this.broadcastGameStateAndSubStep();
+
     // Send current game state to reconnected player
     this.sendGameStateToPlayer(playerId);
     return true;
@@ -130,6 +139,10 @@ class Game {
 
     player.disconnect();
     console.log(`🔌 [GAME STATE] Player ${player.name} disconnected from game ${this.id}`);
+    
+    // Broadcast updated game state so all clients get the updated player connection status
+    this.broadcastGameStateAndSubStep();
+    
     return true;
   }
 
@@ -854,6 +867,41 @@ class Game {
     }, 10000);
   }
 
+  resetToLobby() {
+    console.log(`🔄 [GAME ACTION] Resetting game to lobby state`);
+    
+    // Cancel all active timers
+    this.timerService.cancelAllTimers();
+    
+    // Reset game state
+    this.state = GAME_STATES.LOBBY;
+    this.currentRound = 1;
+    this.currentQuestion = 1;
+    this.currentQuestionData = null;
+    this.categoryOptions = [];
+    this.selectedCategory = null;
+    this.categorySelector = null;
+    
+    // Clear question state
+    this.playerLies.clear();
+    this.playerGuesses.clear();
+    this.playerLikes.clear();
+    this.shuffledOptions = [];
+    this.truthIndex = -1;
+    this.askedQuestions.clear();
+    this.usedLiesByQuestion.clear();
+    
+    // Reset all players but keep them in the game
+    for (const player of this.players.values()) {
+      player.resetForNewGame();
+    }
+
+    console.log(`✅ [GAME STATE] Game reset complete - ready for new game`);
+    
+    // Broadcast updated state to all players
+    this.broadcastGameStateAndSubStep();
+  }
+
   returnToLobby() {
     this.state = GAME_STATES.LOBBY;
     this.currentRound = 1;
@@ -874,9 +922,52 @@ class Game {
 
   // Utility Methods
   getGameState() {
+    // Map backend states to frontend phases
+    let phase, subStep;
+    
+    switch (this.state) {
+      case GAME_STATES.LOBBY:
+        phase = 'lobby';
+        subStep = 'waiting';
+        break;
+      case GAME_STATES.CATEGORY_SELECTION:
+        phase = 'playing';
+        subStep = 'category_selection';
+        break;
+      case GAME_STATES.QUESTION_READING:
+        phase = 'playing';
+        subStep = 'question_reading';
+        break;
+      case GAME_STATES.LIE_SUBMISSION:
+        phase = 'playing';
+        subStep = 'lie_submission';
+        break;
+      case GAME_STATES.OPTION_SELECTION:
+        phase = 'playing';
+        subStep = 'option_selection';
+        break;
+      case GAME_STATES.TRUTH_REVEAL:
+        phase = 'playing';
+        subStep = 'truth_reveal';
+        break;
+      case GAME_STATES.SCOREBOARD:
+        phase = 'playing';
+        subStep = 'scoreboard';
+        break;
+      case GAME_STATES.GAME_ENDED:
+        phase = 'game_over';
+        subStep = 'final_results';
+        break;
+      default:
+        phase = 'lobby';
+        subStep = 'waiting';
+    }
+
     return {
       gameId: this.id,
-      state: this.state,
+      state: this.state, // Keep for backend compatibility
+      phase: phase, // Frontend expects this
+      subStep: subStep, // Frontend expects this
       players: Array.from(this.players.values()).map(p => p.getPublicData()),
       currentRound: this.currentRound,
       currentQuestion: this.currentQuestion,

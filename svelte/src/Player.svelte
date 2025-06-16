@@ -1,282 +1,517 @@
 <script>
-  import { onMount } from 'svelte'
-  import io from 'socket.io-client'
-  import PlayerJoin from './components/player/PlayerJoin.svelte'
-  import PlayerStatus from './components/player/PlayerStatus.svelte'
-  import PlayerCategorySelect from './components/player/PlayerCategorySelect.svelte'
-  import PlayerLieSubmit from './components/player/PlayerLieSubmit.svelte'
-  import PlayerOptionSelect from './components/player/PlayerOptionSelect.svelte'
-  import PlayerResults from './components/player/PlayerResults.svelte'
-
-  let socket
-  let gameState = null
-  let subStep = null
-  let timer = 0
-  let player = null
-  let isConnected = false
-  let revealData = null
-  let hasJoined = false
-
+  import { onMount, onDestroy } from 'svelte';
+  import { io } from 'socket.io-client';
+  
+  // Player-specific components
+  import PlayerJoin from './components/player/PlayerJoin.svelte';
+  import PlayerLobby from './components/player/PlayerLobby.svelte';
+  import PlayerCategorySelect from './components/player/PlayerCategorySelect.svelte';
+  import PlayerQuestionReading from './components/player/PlayerQuestionReading.svelte';
+  import PlayerLieSubmit from './components/player/PlayerLieSubmit.svelte';
+  import PlayerOptionSelect from './components/player/PlayerOptionSelect.svelte';
+  import PlayerTruthReveal from './components/player/PlayerTruthReveal.svelte';
+  import PlayerScoreboard from './components/player/PlayerScoreboard.svelte';
+  
+  // State
+  let socket;
+  let playerData = {
+    id: null,
+    name: '',
+    avatar: { emoji: '😊', color: '#667eea' },
+    score: 0,
+    connected: false,
+    hasJoined: false
+  };
+  
+  let gameState = {
+    phase: 'lobby',
+    round: 1,
+    question: 1,
+    subStep: 'waiting',
+    players: [],
+    currentQuestion: null,
+    options: [],
+    timer: null
+  };
+  
+  let subStepInfo = {
+    isMyTurn: false,
+    hasSubmitted: false,
+    hasSelected: false,
+    canAct: false,
+    message: ''
+  };
+  
+  let connectionStatus = 'connecting';
+  let errorMessage = '';
+  let isReconnecting = false;
+  
+  // Socket connection and event handlers
   onMount(() => {
-    socket = io()
+    // Check for existing player data in sessionStorage
+    const savedPlayerData = sessionStorage.getItem('lieability_player');
+    if (savedPlayerData) {
+      try {
+        const parsed = JSON.parse(savedPlayerData);
+        playerData = { ...playerData, ...parsed };
+        isReconnecting = true;
+      } catch (e) {
+        console.warn('Failed to parse saved player data');
+      }
+    }
+    
+    // Initialize socket connection
+    socket = io();
     
     socket.on('connect', () => {
-      isConnected = true
-      if (hasJoined) {
-        socket.emit('request_game_state')
+      connectionStatus = 'connected';
+      console.log('Player connected to server');
+      
+      // If we have existing player data, try to rejoin
+      if (isReconnecting && playerData.id && playerData.name) {
+        rejoinGame();
       }
-    })
+      
+      requestGameState();
+    });
     
     socket.on('disconnect', () => {
-      isConnected = false
-    })
+      connectionStatus = 'disconnected';
+      console.log('Player disconnected from server');
+    });
     
-    socket.on('game_state_update', d => {
-      gameState = d
-    })
+    socket.on('connect_error', (error) => {
+      connectionStatus = 'error';
+      errorMessage = 'Failed to connect to game server';
+      console.error('Connection error:', error);
+    });
     
-    socket.on('sub_step_info', d => {
-      subStep = d
-    })
-    
-    socket.on('timer_update', d => {
-      timer = d.secondsRemaining
-    })
-    
-    socket.on('truth_reveal_start', d => {
-      revealData = d
-    })
-    
-    socket.on('player_joined_response', d => {
-      if (d.success) {
-        player = d.player
-        hasJoined = true
-        socket.emit('request_game_state')
+    socket.on('player_joined_response', (response) => {
+      if (response.success) {
+        playerData = { ...playerData, ...response.player, hasJoined: true };
+        errorMessage = '';
+        
+        // Save player data for reconnection
+        sessionStorage.setItem('lieability_player', JSON.stringify({
+          id: playerData.id,
+          name: playerData.name,
+          avatar: playerData.avatar
+        }));
+      } else {
+        errorMessage = response.error || 'Failed to join game';
       }
-    })
+    });
     
-    socket.on('player_data_update', d => {
-      if (player && d.playerId === player.id) {
-        player = { ...player, ...d.updates }
+    socket.on('game_state_update', (newState) => {
+      console.log('Game state update:', newState);
+      gameState = { ...gameState, ...newState };
+    });
+    
+    socket.on('sub_step_info', (info) => {
+      console.log('Sub step info:', info);
+      subStepInfo = { ...subStepInfo, ...info };
+    });
+    
+    socket.on('player_data_update', (data) => {
+      console.log('Player data update:', data);
+      playerData = { ...playerData, ...data };
+    });
+    
+    socket.on('timer_update', (timerData) => {
+      gameState.timer = timerData;
+    });
+    
+    socket.on('error', (error) => {
+      errorMessage = error.message || 'An error occurred';
+      console.error('Socket error:', error);
+      
+      // Auto-clear non-critical errors after 10 seconds
+      if (!errorMessage.includes('Failed to connect')) {
+        setTimeout(() => {
+          if (errorMessage === (error.message || 'An error occurred')) {
+            errorMessage = '';
+          }
+        }, 10000);
       }
-    })
-  })
-
-  const handleJoined = (event) => {
-    player = event.detail
-    hasJoined = true
+    });
+    
+    socket.on('player_reconnected', (data) => {
+      if (data.success) {
+        playerData = { ...playerData, hasJoined: true };
+        gameState = { ...gameState, ...data.gameState };
+        errorMessage = '';
+        isReconnecting = false;
+      } else {
+        errorMessage = 'Failed to reconnect';
+        isReconnecting = false;
+        // Clear saved data if reconnection failed
+        sessionStorage.removeItem('lieability_player');
+        playerData.hasJoined = false;
+      }
+    });
+  });
+  
+  onDestroy(() => {
+    if (socket) {
+      socket.disconnect();
+    }
+  });
+  
+  // Helper functions
+  function requestGameState() {
+    if (socket) {
+      socket.emit('request_game_state');
+    }
   }
-
-  const handleContinue = () => {
-    revealData = null
+  
+  function joinGame(name, avatar) {
+    if (socket && name.trim()) {
+      socket.emit('join_game', {
+        name: name.trim(),
+        avatar: avatar
+      });
+    }
   }
-
-  // Reactive statements
-  $: currentState = gameState?.state
-  $: currentQuestion = subStep?.question || gameState?.currentQuestionData
-  $: categories = subStep?.categories || []
-  $: options = subStep?.options || []
-  $: isSelector = subStep?.isSelector
-  $: showStatus = hasJoined && currentState !== 'lobby'
+  
+  function rejoinGame() {
+    if (socket && playerData.id && playerData.name) {
+      socket.emit('join_game', {
+        playerId: playerData.id,
+        name: playerData.name,
+        avatar: playerData.avatar
+      });
+    }
+  }
+  
+  function selectCategory(categoryIndex) {
+    if (socket) {
+      socket.emit('select_category', { categoryId: categoryIndex });
+    }
+  }
+  
+  function submitLie(lie) {
+    if (socket && lie.trim()) {
+      socket.emit('submit_lie', { lie: lie.trim() });
+    }
+  }
+  
+  function selectOption(optionIndex) {
+    if (socket) {
+      socket.emit('select_option', { optionId: optionIndex });
+    }
+  }
+  
+  function likeLie(likedPlayerId) {
+    if (socket) {
+      socket.emit('like_lie', { likedPlayerId });
+    }
+  }
+  
+  function clearError() {
+    errorMessage = '';
+  }
+  
+  // Computed values
+  $: myPlayerData = gameState.players.find(p => p.id === playerData.id) || playerData;
+  $: gameInProgress = gameState.phase === 'playing';
 </script>
 
-{#if showStatus}
-  <PlayerStatus {player} {isConnected} gameState={currentState} />
-{/if}
-
-<main class:with-status={showStatus}>
-  {#if !hasJoined}
-    <PlayerJoin {socket} on:joined={handleJoined} />
-  {:else if currentState === 'lobby'}
-    <div class="lobby-waiting">
-      <h2>🎮 Lie-Ability Game</h2>
-      <p>Welcome, {player?.name}!</p>
-      <p>Waiting for the game to start...</p>
-      <div class="waiting-dots">
-        <span></span>
-        <span></span>
-        <span></span>
+<main class="player-container">
+  <!-- Header with player info -->
+  {#if playerData.hasJoined}
+    <header class="player-header">
+      <div class="player-info">
+        <div class="player-avatar" style="background: {myPlayerData.avatar.color}">
+          {myPlayerData.avatar.emoji}
+        </div>
+        <div class="player-details">
+          <div class="player-name">{myPlayerData.name}</div>
+          <div class="player-score">{myPlayerData.score || 0} points</div>
+        </div>
+      </div>
+      
+      <div class="connection-status" class:connected={connectionStatus === 'connected'}>
+        <div class="status-dot"></div>
+      </div>
+    </header>
+  {/if}
+  
+  <!-- Error display (auto-hide after 10 seconds for non-critical errors) -->
+  {#if errorMessage}
+    <div class="error-banner" class:critical={errorMessage.includes('Failed to connect')}>
+      <div class="error-content">
+        <span class="error-icon">⚠️</span>
+        <span class="error-text">{errorMessage}</span>
+        <button class="error-close" on:click={clearError} aria-label="Close error">×</button>
       </div>
     </div>
-  {:else if currentState === 'category_selection'}
-    <PlayerCategorySelect {socket} {categories} {isSelector} {timer} />
-  {:else if currentState === 'question_reading'}
-    <div class="question-reading">
-      <h2>📖 Question Time</h2>
-      <div class="question-display">
-        <p class="question-text">{currentQuestion?.question || 'Loading question...'}</p>
-      </div>
-      <p class="instruction">Get ready to submit your lie!</p>
-    </div>
-  {:else if currentState === 'lie_submission' && !subStep?.hasSubmittedLie}
-    <PlayerLieSubmit {socket} question={currentQuestion} {timer} />
-  {:else if currentState === 'lie_submission' && subStep?.hasSubmittedLie}
-    <div class="waiting-screen">
-      <h2>✅ Lie Submitted!</h2>
-      <p>Waiting for other players to submit their lies...</p>
-      <div class="waiting-dots">
-        <span></span>
-        <span></span>
-        <span></span>
-      </div>
-    </div>
-  {:else if currentState === 'option_selection' && !subStep?.hasSelectedOption}
-    <PlayerOptionSelect {socket} {options} {timer} />
-  {:else if currentState === 'option_selection' && subStep?.hasSelectedOption}
-    <div class="waiting-screen">
-      <h2>🗳️ Vote Submitted!</h2>
-      <p>Waiting for other players to vote...</p>
-      <div class="waiting-dots">
-        <span></span>
-        <span></span>
-        <span></span>
-      </div>
-    </div>
-  {:else if currentState === 'truth_reveal' && revealData}
-    <PlayerResults {revealData} playerData={player} onContinue={handleContinue} />
-  {:else if currentState === 'scoreboard' || currentState === 'game_ended'}
-    <div class="scoreboard-screen">
-      <h2>{currentState === 'game_ended' ? '🏆 Final Results' : '📊 Scoreboard'}</h2>
-      <p>Check the main screen for scores!</p>
-      {#if currentState !== 'game_ended'}
-        <p>Get ready for the next round...</p>
+  {/if}
+  
+  <!-- Main content area -->
+  <div class="player-content">
+    {#if !playerData.hasJoined}
+      <PlayerJoin 
+        {connectionStatus}
+        {isReconnecting}
+        on:join={(e) => joinGame(e.detail.name, e.detail.avatar)}
+      />
+    {:else if gameState.phase === 'lobby'}
+      <PlayerLobby {gameState} {myPlayerData} />
+    {:else if gameState.phase === 'playing'}
+      {#if gameState.subStep === 'category_selection'}
+        <PlayerCategorySelect 
+          {gameState} 
+          {subStepInfo}
+          on:selectCategory={(e) => selectCategory(e.detail.index)}
+        />
+      {:else if gameState.subStep === 'question_reading'}
+        <PlayerQuestionReading {gameState} />
+      {:else if gameState.subStep === 'lie_submission'}
+        <PlayerLieSubmit 
+          {gameState}
+          {subStepInfo}
+          on:submitLie={(e) => submitLie(e.detail.lie)}
+        />
+      {:else if gameState.subStep === 'option_selection'}
+        <PlayerOptionSelect 
+          {gameState}
+          {subStepInfo}
+          on:selectOption={(e) => selectOption(e.detail.index)}
+          on:likeLie={(e) => likeLie(e.detail.index)}
+        />
+      {:else if gameState.subStep === 'truth_reveal'}
+        <PlayerTruthReveal 
+          {gameState}
+          {myPlayerData}
+        />
+      {:else if gameState.subStep === 'scoreboard'}
+        <PlayerScoreboard {gameState} {myPlayerData} />
       {/if}
-    </div>
-  {:else}
-    <div class="waiting-screen">
-      <h2>🎮 Game in Progress</h2>
-      <p>Please wait...</p>
-      <div class="waiting-dots">
-        <span></span>
-        <span></span>
-        <span></span>
+    {:else if gameState.phase === 'game_over'}
+      <PlayerScoreboard {gameState} {myPlayerData} isGameOver={true} />
+    {:else}
+      <!-- Fallback waiting state -->
+      <div class="waiting-state">
+        <div class="waiting-content">
+          <div class="spinner"></div>
+          <h2>Waiting for game...</h2>
+          <p>Please wait while the game loads.</p>
+        </div>
       </div>
+    {/if}
+  </div>
+  
+  <!-- Debug info (development only, minimal) -->
+  {#if import.meta.env.DEV && gameState.phase === 'playing'}
+    <div class="debug-info">
+      <details>
+        <summary>🔧</summary>
+        <pre>{JSON.stringify({phase: gameState.phase, subStep: gameState.subStep, canAct: subStepInfo.canAct}, null, 2)}</pre>
+      </details>
     </div>
   {/if}
 </main>
 
 <style>
-  main {
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  .player-container {
     min-height: 100vh;
-  }
-  
-  main.with-status {
-    padding-top: 70px;
-  }
-  
-  .lobby-waiting,
-  .question-reading,
-  .waiting-screen,
-  .scoreboard-screen {
-    min-height: 100vh;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    padding: 2rem;
+    background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
     display: flex;
     flex-direction: column;
+  }
+  
+  .player-header {
+    background: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(10px);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    padding: var(--space-4);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  
+  .player-info {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+  }
+  
+  .player-avatar {
+    width: 48px;
+    height: 48px;
+    border-radius: var(--radius-full);
+    display: flex;
     align-items: center;
     justify-content: center;
-    text-align: center;
-    color: white;
+    font-size: var(--font-size-xl);
+    border: 2px solid rgba(255, 255, 255, 0.3);
   }
   
-  .lobby-waiting h2,
-  .question-reading h2,
-  .waiting-screen h2,
-  .scoreboard-screen h2 {
-    font-size: 2rem;
-    font-weight: 800;
-    margin: 0 0 1rem 0;
-    text-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+  .player-details {
+    color: var(--white);
   }
   
-  .lobby-waiting p,
-  .waiting-screen p,
-  .scoreboard-screen p {
-    font-size: 1.1rem;
-    margin: 0.5rem 0;
+  .player-name {
+    font-weight: 700;
+    font-size: var(--font-size-lg);
+    line-height: 1.2;
+  }
+  
+  .player-score {
+    font-size: var(--font-size-sm);
     opacity: 0.9;
   }
   
-  .question-display {
-    background: rgba(255, 255, 255, 0.95);
-    backdrop-filter: blur(10px);
-    border-radius: 20px;
-    padding: 2rem;
-    margin: 1.5rem 0;
-    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
-    max-width: 500px;
-  }
-  
-  .question-text {
-    color: #2d3748;
-    font-size: 1.25rem;
-    font-weight: 600;
-    margin: 0;
-    line-height: 1.4;
-  }
-  
-  .instruction {
-    font-size: 1rem;
-    margin-top: 1rem;
-    opacity: 0.8;
-  }
-  
-  .waiting-dots {
+  .connection-status {
     display: flex;
-    justify-content: center;
-    gap: 0.5rem;
-    margin-top: 1.5rem;
+    align-items: center;
+    gap: var(--space-2);
   }
   
-  .waiting-dots span {
+  .status-dot {
     width: 12px;
     height: 12px;
-    background: rgba(255, 255, 255, 0.7);
-    border-radius: 50%;
-    animation: bounce 1.4s infinite ease-in-out both;
+    border-radius: var(--radius-full);
+    background: var(--error);
+    transition: all var(--transition);
   }
   
-  .waiting-dots span:nth-child(1) { animation-delay: -0.32s; }
-  .waiting-dots span:nth-child(2) { animation-delay: -0.16s; }
-  .waiting-dots span:nth-child(3) { animation-delay: 0s; }
+  .connection-status.connected .status-dot {
+    background: var(--success);
+    animation: pulse 2s infinite;
+  }
   
-  @keyframes bounce {
-    0%, 80%, 100% {
-      transform: scale(0);
-      opacity: 0.5;
+  .error-banner {
+    background: rgba(239, 68, 68, 0.9);
+    color: var(--white);
+    padding: var(--space-3) var(--space-4);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  }
+  
+  .error-content {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+  }
+  
+  .error-icon {
+    font-size: var(--font-size-lg);
+  }
+  
+  .error-text {
+    flex: 1;
+    font-weight: 500;
+  }
+  
+  .error-close {
+    background: none;
+    border: none;
+    color: var(--white);
+    font-size: var(--font-size-xl);
+    font-weight: bold;
+    cursor: pointer;
+    padding: var(--space-1);
+    border-radius: var(--radius);
+    transition: all var(--transition-fast);
+  }
+  
+  .error-close:hover {
+    background: rgba(255, 255, 255, 0.1);
+  }
+  
+  .player-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    padding: var(--space-4);
+  }
+  
+  .waiting-state {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  
+  .waiting-content {
+    text-align: center;
+    color: var(--white);
+  }
+  
+  .waiting-content h2 {
+    margin: var(--space-4) 0 var(--space-2);
+    font-size: var(--font-size-2xl);
+  }
+  
+  .waiting-content p {
+    opacity: 0.8;
+    font-size: var(--font-size-lg);
+  }
+  
+  .spinner {
+    width: 40px;
+    height: 40px;
+    border: 4px solid rgba(255, 255, 255, 0.3);
+    border-top: 4px solid var(--white);
+    border-radius: var(--radius-full);
+    animation: spin 1s linear infinite;
+    margin: 0 auto;
+  }
+  
+  @keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+  }
+  
+  .debug-info {
+    position: fixed;
+    bottom: var(--space-3);
+    left: var(--space-3);
+    background: rgba(0, 0, 0, 0.8);
+    color: var(--white);
+    padding: var(--space-2);
+    border-radius: var(--radius);
+    font-size: var(--font-size-xs);
+    max-width: 250px;
+    max-height: 150px;
+    overflow: auto;
+    z-index: 1000;
+  }
+  
+  .debug-info summary {
+    cursor: pointer;
+    font-weight: 600;
+    margin-bottom: var(--space-2);
+  }
+  
+  
+  @media (max-width: 768px) {
+    .player-header {
+      padding: var(--space-3);
     }
-    40% {
-      transform: scale(1);
-      opacity: 1;
+    
+    .player-avatar {
+      width: 40px;
+      height: 40px;
+      font-size: var(--font-size-lg);
+    }
+    
+    .player-content {
+      padding: var(--space-3);
+    }
+    
+    .debug-info {
+      bottom: var(--space-2);
+      left: var(--space-2);
+      max-width: calc(100vw - var(--space-4));
     }
   }
   
-  @media (max-width: 480px) {
-    main.with-status {
-      padding-top: 60px;
-    }
-    
-    .lobby-waiting,
-    .question-reading,
-    .waiting-screen,
-    .scoreboard-screen {
-      padding: 1.5rem;
-    }
-    
-    .lobby-waiting h2,
-    .question-reading h2,
-    .waiting-screen h2,
-    .scoreboard-screen h2 {
-      font-size: 1.75rem;
-    }
-    
-    .question-display {
-      padding: 1.5rem;
-    }
-    
-    .question-text {
-      font-size: 1.1rem;
+  /* Enhanced touch targets for mobile */
+  @media (pointer: coarse) {
+    .error-close {
+      min-width: 44px;
+      min-height: 44px;
     }
   }
 </style>

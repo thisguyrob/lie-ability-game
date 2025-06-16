@@ -1,250 +1,450 @@
 <script>
-  import { createEventDispatcher } from 'svelte'
+  import { createEventDispatcher } from 'svelte';
   
-  export let socket
-  export let options = []
-  export let timer = 0
-  export let canLike = true
+  export let gameState;
+  export let subStepInfo;
   
-  const dispatch = createEventDispatcher()
+  const dispatch = createEventDispatcher();
   
-  let selectedOption = null
-  let hasVoted = false
-  let likedOptions = new Set()
+  let selectedOption = null;
+  let likedOptions = new Set();
   
-  const handleSelect = (optionId) => {
-    if (hasVoted) return
-    
-    selectedOption = optionId
-    hasVoted = true
-    
-    socket.emit('select_option', { optionId })
-    dispatch('selected', { optionId })
+  // Category emoji mappings
+  const categoryEmojis = {
+    'History': '📚', 'Animals': '🐾', 'Food': '🍎', 'Science': '🔬',
+    'Sports': '⚽', 'Entertainment': '🎬', 'Geography': '🌍', 'Music': '🎵',
+    'Art': '🎨', 'Technology': '💻', 'Nature': '🌿', 'Space': '🚀',
+    'Movies': '🎬', 'TV': '📺', 'Games': '🎮', 'Literature': '📖',
+    'Mythology': '🏛️', 'Fashion': '👗', 'Language': '💬', 'Inventions': '💡',
+    'Comics': '💥', 'Tech': '⚙️', 'Misc': '🎲', 'Bonus': '⭐'
+  };
+  
+  function getCategoryEmoji(category) {
+    return categoryEmojis[category] || '❓';
   }
   
-  const handleLike = (optionId, event) => {
-    event.stopPropagation()
-    
-    if (!canLike || likedOptions.has(optionId)) return
-    
-    likedOptions.add(optionId)
-    likedOptions = new Set(likedOptions) // Trigger reactivity
-    
-    socket.emit('like_lie', { optionId })
-  }
-  
-  const shuffleArray = (array) => {
-    const shuffled = [...array]
-    for (let i = shuffled.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]]
+  function selectOption(index) {
+    if (!subStepInfo.hasSelected && subStepInfo.canAct) {
+      selectedOption = index;
+      dispatch('selectOption', { index });
     }
-    return shuffled
   }
   
-  // Shuffle options once on component mount
-  let displayOptions = shuffleArray(options)
+  function toggleLike(index) {
+    if (subStepInfo.hasSelected && index !== selectedOption) {
+      if (likedOptions.has(index)) {
+        likedOptions.delete(index);
+      } else {
+        likedOptions.add(index);
+      }
+      likedOptions = new Set(likedOptions); // Trigger reactivity
+      dispatch('likeLie', { index });
+    }
+  }
+  
+  // Format timer display
+  function formatTime(seconds) {
+    return seconds?.toString().padStart(2, '0') || '--';
+  }
+  
+  // Computed values
+  $: currentQuestion = gameState.currentQuestion;
+  $: options = gameState.options || [];
+  $: timer = gameState.timer;
+  $: canSelect = !subStepInfo.hasSelected && subStepInfo.canAct;
+  $: canLike = subStepInfo.hasSelected;
+  
+  // Get option letter (A, B, C, etc.)
+  function getOptionLetter(index) {
+    return String.fromCharCode(65 + index);
+  }
 </script>
 
-<div class="select-container">
-  <div class="select-card">
-    <div class="header">
-      <h2 class="title">Pick the Truth! 🤔</h2>
-      {#if timer > 0}
-        <div class="timer" class:urgent={timer <= 10}>
-          ⏱ {timer}s
+<div class="option-select-container">
+  {#if subStepInfo.hasSelected}
+    <!-- Already selected - show selected option and allow liking -->
+    <div class="selected-state fade-in">
+      <div class="selection-header">
+        <h1>✅ Choice Made!</h1>
+        <p>You selected option <strong>{getOptionLetter(selectedOption)}</strong>. Now you can like other creative lies!</p>
+        
+        {#if timer}
+          <div class="timer-display">
+            <div class="timer-circle">
+              <div class="timer-number">{formatTime(timer.remaining)}</div>
+            </div>
+            <div class="timer-label">seconds remaining</div>
+          </div>
+        {/if}
+      </div>
+      
+      <!-- Show question for context -->
+      {#if currentQuestion}
+        <div class="question-context glass">
+          <div class="context-header">
+            <span class="category-emoji">{getCategoryEmoji(currentQuestion.category)}</span>
+            <span class="category-name">{currentQuestion.category}</span>
+          </div>
+          <div class="context-question">
+            {currentQuestion.question}
+          </div>
         </div>
       {/if}
+      
+      <!-- Options with like functionality -->
+      <div class="options-list">
+        <h3>👍 Like creative lies from other players:</h3>
+        <div class="options-grid">
+          {#each options as option, index}
+            <div 
+              class="option-item"
+              class:selected={index === selectedOption}
+              class:liked={likedOptions.has(index)}
+              class:can-like={canLike && index !== selectedOption}
+            >
+              <div class="option-header">
+                <div class="option-letter" class:selected={index === selectedOption}>
+                  {getOptionLetter(index)}
+                </div>
+                
+                {#if index === selectedOption}
+                  <div class="selection-badge">Your choice</div>
+                {:else if canLike}
+                  <button
+                    class="like-button"
+                    class:liked={likedOptions.has(index)}
+                    on:click={() => toggleLike(index)}
+                  >
+                    {likedOptions.has(index) ? '❤️' : '🤍'}
+                  </button>
+                {/if}
+              </div>
+              
+              <div class="option-text">
+                {option.text}
+              </div>
+            </div>
+          {/each}
+        </div>
+      </div>
+      
+      <div class="waiting-message">
+        <div class="spinner">⏳</div>
+        <span>Waiting for other players to finish voting...</span>
+      </div>
     </div>
     
-    {#if !hasVoted}
-      <p class="instruction">Which one is the real answer?</p>
-      
-      <div class="options-list">
-        {#each displayOptions as option, index}
-          <button
-            class="option"
-            class:selected={selectedOption === option.id}
-            on:click={() => handleSelect(option.id)}
-            style="animation-delay: {index * 0.1}s"
-          >
-            <span class="option-number">{index + 1}</span>
-            <span class="option-text">{option.text}</span>
-            {#if canLike && option.isLie}
-              <button
-                class="like-button"
-                class:liked={likedOptions.has(option.id)}
-                on:click={(e) => handleLike(option.id, e)}
-                title="Like this lie"
-              >
-                {likedOptions.has(option.id) ? '❤️' : '🤍'}
-              </button>
-            {/if}
-          </button>
-        {/each}
+  {:else}
+    <!-- Selection interface -->
+    <div class="selection-interface slide-up">
+      <!-- Header -->
+      <div class="selection-header">
+        <h1>🗳️ Vote for the Truth</h1>
+        <p>Which answer do you think is the real one?</p>
+        
+        {#if timer}
+          <div class="timer-display" class:urgent={timer.remaining <= 10}>
+            <div class="timer-circle">
+              <div class="timer-number">{formatTime(timer.remaining)}</div>
+            </div>
+            <div class="timer-label">seconds to vote</div>
+          </div>
+        {/if}
       </div>
       
-      <p class="hint">💡 Tap to select your answer</p>
-    {:else}
-      <div class="voted-message">
-        <div class="voted-icon">🗳️</div>
-        <h3>Vote Submitted!</h3>
-        <p>You selected:</p>
-        <div class="selected-answer">
-          {displayOptions.find(o => o.id === selectedOption)?.text || 'Unknown'}
+      <!-- Question context -->
+      {#if currentQuestion}
+        <div class="question-context glass">
+          <div class="context-header">
+            <span class="category-emoji">{getCategoryEmoji(currentQuestion.category)}</span>
+            <span class="category-name">{currentQuestion.category}</span>
+          </div>
+          <div class="context-question">
+            {currentQuestion.question}
+          </div>
         </div>
-        <p class="waiting-text">Waiting for other players to vote...</p>
-        <div class="waiting-dots">
-          <span></span>
-          <span></span>
-          <span></span>
+      {/if}
+      
+      <!-- Options for selection -->
+      <div class="options-selection">
+        <h2>Choose your answer:</h2>
+        <div class="options-grid">
+          {#each options as option, index}
+            <button
+              class="option-button scale-in"
+              style="animation-delay: {index * 100}ms"
+              disabled={!canSelect}
+              on:click={() => selectOption(index)}
+            >
+              <div class="option-letter">
+                {getOptionLetter(index)}
+              </div>
+              <div class="option-text">
+                {option.text}
+              </div>
+              <div class="option-hint">
+                Tap to select
+              </div>
+            </button>
+          {/each}
         </div>
       </div>
-    {/if}
+      
+      <!-- Help text -->
+      <div class="selection-help">
+        {#if !canSelect}
+          <p class="help-text warning">⏳ Please wait...</p>
+        {:else}
+          <p class="help-text">Think carefully - which one sounds like the real answer?</p>
+        {/if}
+      </div>
+    </div>
+  {/if}
+  
+  <!-- Game context -->
+  <div class="game-context">
+    <div class="context-items">
+      <div class="context-item">
+        <span class="context-emoji">🎯</span>
+        <span>Round {gameState.round || 1} • Question {gameState.question || 1}</span>
+      </div>
+      <div class="context-item">
+        <span class="context-emoji">🏆</span>
+        <span>
+          {gameState.round === 1 ? '1,000' : gameState.round === 2 ? '2,000' : '3,000'} points for finding truth
+        </span>
+      </div>
+    </div>
   </div>
 </div>
 
 <style>
-  .select-container {
-    min-height: 100vh;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    padding: 1rem;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  }
-  
-  .select-card {
-    background: rgba(255, 255, 255, 0.95);
-    backdrop-filter: blur(10px);
-    border-radius: 20px;
-    padding: 2rem;
-    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
-    width: 100%;
-    max-width: 600px;
-  }
-  
-  .header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 1.5rem;
-  }
-  
-  .title {
-    font-size: 1.75rem;
-    font-weight: 800;
-    color: #2d3748;
-    margin: 0;
-  }
-  
-  .timer {
-    font-size: 1.25rem;
-    font-weight: 600;
-    color: #4a5568;
-    background: #f7fafc;
-    padding: 0.5rem 1rem;
-    border-radius: 10px;
-    transition: all 0.3s;
-  }
-  
-  .timer.urgent {
-    background: #feb2b2;
-    color: #c53030;
-    animation: pulse 1s infinite;
-  }
-  
-  @keyframes pulse {
-    0%, 100% { transform: scale(1); }
-    50% { transform: scale(1.05); }
-  }
-  
-  .instruction {
-    color: #4a5568;
-    font-size: 1.1rem;
-    text-align: center;
-    margin: 0 0 1.5rem 0;
-  }
-  
-  .options-list {
+  .option-select-container {
+    height: 100%;
     display: flex;
     flex-direction: column;
-    gap: 1rem;
+    padding: var(--space-4);
+    gap: var(--space-6);
   }
   
-  .option {
-    background: white;
-    border: 3px solid #e2e8f0;
-    border-radius: 15px;
-    padding: 1.25rem;
-    text-align: left;
-    cursor: pointer;
-    transition: all 0.3s ease;
+  .selection-header {
+    text-align: center;
+  }
+  
+  .selection-header h1 {
+    color: var(--white);
+    font-size: var(--font-size-4xl);
+    margin-bottom: var(--space-3);
+    font-weight: 900;
+    text-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+  }
+  
+  .selection-header p {
+    color: rgba(255, 255, 255, 0.9);
+    font-size: var(--font-size-xl);
+    margin-bottom: var(--space-4);
+  }
+  
+  .selection-header strong {
+    color: var(--white);
+    font-weight: 700;
+  }
+  
+  .timer-display {
     display: flex;
+    flex-direction: column;
     align-items: center;
-    gap: 1rem;
-    position: relative;
-    animation: slideIn 0.5s ease-out forwards;
-    opacity: 0;
-    transform: translateX(-20px);
+    gap: var(--space-2);
+    margin-top: var(--space-4);
   }
   
-  @keyframes slideIn {
-    to {
-      opacity: 1;
-      transform: translateX(0);
-    }
-  }
-  
-  .option:hover {
-    border-color: #667eea;
-    background: #f7fafc;
-    transform: translateY(-2px);
-    box-shadow: 0 5px 20px rgba(102, 126, 234, 0.2);
-  }
-  
-  .option.selected {
-    border-color: #48bb78;
-    background: linear-gradient(135deg, #f0fff4 0%, #e6fffa 100%);
-    box-shadow: 0 5px 20px rgba(72, 187, 120, 0.3);
-  }
-  
-  .option-number {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: white;
-    width: 40px;
-    height: 40px;
-    border-radius: 50%;
+  .timer-circle {
+    width: 70px;
+    height: 70px;
+    border-radius: var(--radius-full);
+    background: rgba(255, 255, 255, 0.2);
+    border: 3px solid rgba(255, 255, 255, 0.4);
     display: flex;
     align-items: center;
     justify-content: center;
+    backdrop-filter: blur(10px);
+    transition: all var(--transition);
+  }
+  
+  .timer-display.urgent .timer-circle {
+    background: rgba(239, 68, 68, 0.3);
+    border-color: var(--error);
+    animation: pulse 0.5s infinite;
+  }
+  
+  .timer-number {
+    font-size: var(--font-size-xl);
+    font-weight: 900;
+    color: var(--white);
+  }
+  
+  .timer-label {
+    color: var(--white);
+    font-size: var(--font-size-sm);
+    font-weight: 600;
+    opacity: 0.8;
+  }
+  
+  .question-context {
+    padding: var(--space-4);
+    border-radius: var(--radius-xl);
+    text-align: center;
+  }
+  
+  .context-header {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-2);
+    margin-bottom: var(--space-3);
+  }
+  
+  .category-emoji {
+    font-size: var(--font-size-xl);
+  }
+  
+  .category-name {
+    color: var(--white);
     font-weight: 700;
-    font-size: 1.1rem;
-    flex-shrink: 0;
+    font-size: var(--font-size-lg);
   }
   
-  .option.selected .option-number {
-    background: linear-gradient(135deg, #48bb78 0%, #38a169 100%);
-  }
-  
-  .option-text {
-    flex: 1;
-    color: #2d3748;
-    font-size: 1rem;
+  .context-question {
+    color: var(--white);
+    font-size: var(--font-size-lg);
+    font-weight: 600;
     line-height: 1.4;
   }
   
-  .like-button {
-    position: absolute;
-    top: 0.75rem;
-    right: 0.75rem;
-    background: transparent;
-    border: none;
-    font-size: 1.5rem;
+  .options-selection,
+  .options-list {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-4);
+  }
+  
+  .options-selection h2,
+  .options-list h3 {
+    color: var(--white);
+    font-size: var(--font-size-2xl);
+    font-weight: 700;
+    text-align: center;
+  }
+  
+  .options-grid {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+  }
+  
+  .option-button {
+    background: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(10px);
+    border: 2px solid rgba(255, 255, 255, 0.2);
+    border-radius: var(--radius-xl);
+    padding: var(--space-4);
+    display: flex;
+    align-items: center;
+    gap: var(--space-4);
     cursor: pointer;
-    transition: all 0.3s ease;
-    padding: 0.25rem;
+    transition: all var(--transition);
+    min-height: 80px;
+    position: relative;
+    overflow: hidden;
+  }
+  
+  .option-button:hover:not(:disabled) {
+    background: rgba(255, 255, 255, 0.2);
+    border-color: rgba(255, 255, 255, 0.4);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
+  }
+  
+  .option-button:active {
+    transform: translateY(0);
+  }
+  
+  .option-button:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+  
+  .option-item {
+    background: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(10px);
+    border: 2px solid rgba(255, 255, 255, 0.2);
+    border-radius: var(--radius-xl);
+    padding: var(--space-4);
+    transition: all var(--transition);
+  }
+  
+  .option-item.selected {
+    background: rgba(16, 185, 129, 0.2);
+    border-color: var(--success);
+    box-shadow: 0 0 20px rgba(16, 185, 129, 0.3);
+  }
+  
+  .option-item.liked {
+    background: rgba(244, 63, 94, 0.2);
+    border-color: #f43f5e;
+  }
+  
+  .option-item.can-like:hover {
+    background: rgba(255, 255, 255, 0.15);
+    transform: translateY(-1px);
+  }
+  
+  .option-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: var(--space-2);
+  }
+  
+  .option-letter {
+    width: 40px;
+    height: 40px;
+    background: rgba(255, 255, 255, 0.9);
+    color: var(--gray-800);
+    border-radius: var(--radius-full);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 900;
+    font-size: var(--font-size-lg);
+    flex-shrink: 0;
+    transition: all var(--transition);
+  }
+  
+  .option-letter.selected {
+    background: var(--success);
+    color: var(--white);
+    box-shadow: 0 0 10px rgba(16, 185, 129, 0.5);
+  }
+  
+  .selection-badge {
+    background: var(--success);
+    color: var(--white);
+    padding: var(--space-1) var(--space-2);
+    border-radius: var(--radius);
+    font-size: var(--font-size-xs);
+    font-weight: 700;
+  }
+  
+  .like-button {
+    background: none;
+    border: none;
+    font-size: var(--font-size-xl);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    padding: var(--space-1);
+    border-radius: var(--radius);
   }
   
   .like-button:hover {
@@ -252,113 +452,182 @@
   }
   
   .like-button.liked {
-    animation: heartBeat 0.5s ease-out;
+    animation: heart-beat 0.3s ease-out;
   }
   
-  @keyframes heartBeat {
+  .option-text {
+    color: var(--white);
+    font-size: var(--font-size-lg);
+    font-weight: 500;
+    line-height: 1.4;
+    flex: 1;
+  }
+  
+  .option-hint {
+    color: rgba(255, 255, 255, 0.7);
+    font-size: var(--font-size-sm);
+    font-weight: 500;
+    opacity: 0;
+    transition: all var(--transition);
+  }
+  
+  .option-button:hover:not(:disabled) .option-hint {
+    opacity: 1;
+  }
+  
+  .selection-help {
+    text-align: center;
+  }
+  
+  .help-text {
+    font-size: var(--font-size-lg);
+    font-weight: 500;
+    color: rgba(255, 255, 255, 0.9);
+  }
+  
+  .help-text.warning {
+    color: var(--warning);
+  }
+  
+  .waiting-message {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-2);
+    color: rgba(255, 255, 255, 0.8);
+    font-size: var(--font-size-base);
+    font-weight: 500;
+    background: rgba(255, 255, 255, 0.1);
+    padding: var(--space-3);
+    border-radius: var(--radius-lg);
+    backdrop-filter: blur(10px);
+  }
+  
+  .spinner {
+    animation: spin 2s linear infinite;
+  }
+  
+  .game-context {
+    margin-top: auto;
+  }
+  
+  .context-items {
+    display: flex;
+    justify-content: center;
+    gap: var(--space-4);
+    flex-wrap: wrap;
+  }
+  
+  .context-item {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    color: rgba(255, 255, 255, 0.8);
+    font-size: var(--font-size-sm);
+    font-weight: 500;
+    background: rgba(255, 255, 255, 0.1);
+    padding: var(--space-2) var(--space-3);
+    border-radius: var(--radius-lg);
+    backdrop-filter: blur(10px);
+  }
+  
+  .context-emoji {
+    font-size: var(--font-size-base);
+  }
+  
+  @keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+  }
+  
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+  }
+  
+  @keyframes heart-beat {
     0% { transform: scale(1); }
     50% { transform: scale(1.3); }
     100% { transform: scale(1); }
   }
   
-  .hint {
-    text-align: center;
-    color: #718096;
-    font-size: 0.875rem;
-    margin-top: 1.5rem;
-  }
-  
-  .voted-message {
-    text-align: center;
-    padding: 2rem 0;
-  }
-  
-  .voted-icon {
-    font-size: 3rem;
-    margin-bottom: 1rem;
-  }
-  
-  .voted-message h3 {
-    font-size: 1.5rem;
-    color: #38a169;
-    margin: 0 0 1rem 0;
-  }
-  
-  .voted-message p {
-    color: #718096;
-    margin: 0.5rem 0;
-  }
-  
-  .selected-answer {
-    background: #f7fafc;
-    padding: 1rem;
-    border-radius: 10px;
-    color: #4a5568;
-    margin: 1rem 0;
-    border-left: 4px solid #48bb78;
-    text-align: left;
-  }
-  
-  .waiting-text {
-    margin-top: 1.5rem;
-  }
-  
-  .waiting-dots {
-    display: flex;
-    justify-content: center;
-    gap: 0.5rem;
-    margin-top: 1rem;
-  }
-  
-  .waiting-dots span {
-    width: 10px;
-    height: 10px;
-    background: #667eea;
-    border-radius: 50%;
-    animation: bounce 1.4s infinite ease-in-out both;
-  }
-  
-  .waiting-dots span:nth-child(1) { animation-delay: -0.32s; }
-  .waiting-dots span:nth-child(2) { animation-delay: -0.16s; }
-  .waiting-dots span:nth-child(3) { animation-delay: 0s; }
-  
-  @keyframes bounce {
-    0%, 80%, 100% {
-      transform: scale(0);
-      opacity: 0.5;
+  @media (max-width: 768px) {
+    .option-select-container {
+      padding: var(--space-3);
+      gap: var(--space-4);
     }
-    40% {
-      transform: scale(1);
-      opacity: 1;
+    
+    .selection-header h1 {
+      font-size: var(--font-size-2xl);
+    }
+    
+    .selection-header p {
+      font-size: var(--font-size-lg);
+    }
+    
+    .context-question {
+      font-size: var(--font-size-base);
+    }
+    
+    .option-button,
+    .option-item {
+      padding: var(--space-3);
+      min-height: 70px;
+    }
+    
+    .option-text {
+      font-size: var(--font-size-base);
+    }
+    
+    .timer-circle {
+      width: 60px;
+      height: 60px;
+    }
+    
+    .timer-number {
+      font-size: var(--font-size-lg);
+    }
+    
+    .context-items {
+      flex-direction: column;
+      align-items: center;
     }
   }
   
   @media (max-width: 480px) {
-    .select-card {
-      padding: 1.5rem;
+    .option-header {
+      flex-direction: column;
+      gap: var(--space-2);
+      align-items: flex-start;
     }
     
-    .title {
-      font-size: 1.5rem;
-    }
-    
-    .timer {
-      font-size: 1.1rem;
-      padding: 0.4rem 0.8rem;
-    }
-    
-    .option {
-      padding: 1rem;
-    }
-    
-    .option-number {
-      width: 35px;
-      height: 35px;
-      font-size: 1rem;
+    .option-letter {
+      width: 32px;
+      height: 32px;
+      font-size: var(--font-size-base);
     }
     
     .option-text {
-      font-size: 0.95rem;
+      font-size: var(--font-size-sm);
     }
+  }
+  
+  /* Ripple effect for option buttons */
+  .option-button::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 0;
+    height: 0;
+    border-radius: var(--radius-full);
+    background: rgba(255, 255, 255, 0.3);
+    transform: translate(-50%, -50%);
+    transition: width 0.3s, height 0.3s;
+  }
+  
+  .option-button:active::before {
+    width: 100%;
+    height: 100%;
   }
 </style>
