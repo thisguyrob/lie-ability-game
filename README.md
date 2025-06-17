@@ -59,8 +59,8 @@ Lie-Ability is a social deduction party game perfect for family gatherings, part
 ## 🚀 Getting Started
 
 ### Prerequisites
-- Node.js (v14 or higher)
-- npm
+- Node.js (v16 or higher)
+- npm (v8 or higher)
 
 ### Quick Start
 
