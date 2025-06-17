@@ -572,6 +572,25 @@ fix(ui): resolve scoreboard display issue
 docs(api): update socket event documentation
 ```
 
+### Logging Conventions
+
+Use a consistent logging format to improve debugging and traceability. Each log
+message includes an emoji and a category tag:
+
+```javascript
+console.log(`🎯 [PLAYER ACTION] ${playerName} selected category ${categoryId}`);
+console.log(`🎮 [GAME STATE] Game started: Round ${round}, Question ${question}`);
+console.log(`⏰ [TIMER] Category selection timer expired - auto-selecting`);
+console.log(`🏆 [SCORING] ${playerName} fooled ${count} players (+${points} points)`);
+```
+
+**Log Categories:**
+- `[PLAYER ACTION]` - User interactions (join, submit lie, vote, etc.)
+- `[GAME STATE]` - State transitions and game flow
+- `[TIMER]` - Timer events and automatic progressions
+- `[SCORING]` - Point calculations and awards
+- `[CONNECTION]` - Socket connect/disconnect events
+
 ### Pull Request Process
 
 1. **Feature Branch**: Create from `main`
