@@ -8,7 +8,6 @@
   import QuestionView from './components/QuestionView.svelte';
   import TruthReveal from './components/TruthReveal.svelte';
   import Scoreboard from './components/Scoreboard.svelte';
-  import GameEnd from './components/GameEnd.svelte';
   
   let socket;
   let gameState = {
@@ -23,8 +22,7 @@
   let qrCodeUrl = '';
   let serverUrl = '';
   let truthRevealData = null;
-  let scoreboardData = null;
-  let gameEndData = null;
+  let scoreboardData = { players: [] };
   
   // Debug reactive statement
   $: console.log('Host gameState changed:', gameState);
@@ -77,20 +75,39 @@
       gameState = { ...gameState, state: 'option_selection' };
       currentQuestion = { ...currentQuestion, options: data.options };
     });
+
+    socket.on('host_sub_step_info', (info) => {
+      if (info.state === 'option_selection' && info.options) {
+        currentQuestion = { ...currentQuestion, options: info.options };
+      }
+    });
     
     socket.on('truth_reveal_start', (data) => {
+      truthRevealData = data || {
+        category: 'Unknown',
+        question: 'Loading...',  
+        truth: { answer: 'Loading...' },
+        lies: [],
+        truthVoters: [],
+        truthPoints: 1000
+      };
       gameState = { ...gameState, state: 'truth_reveal' };
-      truthRevealData = data;
     });
     
     socket.on('scoreboard_update', (data) => {
+      scoreboardData = data || { players: [] };
       gameState = { ...gameState, state: 'scoreboard' };
-      scoreboardData = data;
     });
     
     socket.on('game_ended', (data) => {
-      gameState = { ...gameState, state: 'game_ended' };
-      gameEndData = data;
+      // Keep showing scoreboard but with game end data
+      scoreboardData = {
+        ...scoreboardData,
+        players: data.finalScores,
+        isGameEnd: true,
+        winner: data.winner
+      };
+      gameState = { ...gameState, state: 'scoreboard' };
     });
     
     socket.on('timer_update', (data) => {
@@ -127,15 +144,6 @@
 </script>
 
 <main class="host-container">
-  <div class="game-header">
-    <h1 class="game-title">
-      <span class="title-icon">🎯</span>
-      Lie-Ability
-    </h1>
-    <div class="round-info" class:visible={gameState.state !== 'lobby'}>
-      Round {gameState.currentRound}/{gameState.totalRounds} • Question {gameState.currentQuestion}
-    </div>
-  </div>
   
   {#if timer > 0}
     <div class="timer-display" class:urgent={timer <= 5}>
@@ -158,26 +166,9 @@
       <TruthReveal data={truthRevealData} />
     {:else if gameState.state === 'scoreboard'}
       <Scoreboard data={scoreboardData} />
-    {:else if gameState.state === 'game_ended'}
-      <GameEnd data={gameEndData} />
     {/if}
   </div>
   
-  <div class="players-bar">
-    <div class="players-count">
-      <span class="players-icon">👥</span>
-      {gameState.players.length} Player{gameState.players.length !== 1 ? 's' : ''}
-    </div>
-    <div class="players-list">
-      {#each gameState.players as player}
-        <div class="player-chip" style="background-color: {player.avatar.color}22; border-color: {player.avatar.color}">
-          <span class="player-emoji">{player.avatar.emoji}</span>
-          <span class="player-name">{player.name}</span>
-          <span class="player-points">{player.points}pts</span>
-        </div>
-      {/each}
-    </div>
-  </div>
 </main>
 
 <style>
@@ -191,48 +182,6 @@
     overflow: hidden;
   }
   
-  .game-header {
-    padding: 2rem;
-    text-align: center;
-    position: relative;
-    z-index: 10;
-  }
-  
-  .game-title {
-    font-size: 4rem;
-    font-weight: 700;
-    color: white;
-    margin: 0;
-    text-shadow: 0 4px 20px rgba(0,0,0,0.3);
-    letter-spacing: -0.02em;
-  }
-  
-  .title-icon {
-    display: inline-block;
-    margin-right: 1rem;
-    animation: bounce 2s infinite;
-  }
-  
-  @keyframes bounce {
-    0%, 20%, 50%, 80%, 100% { transform: translateY(0); }
-    40% { transform: translateY(-10px); }
-    60% { transform: translateY(-5px); }
-  }
-  
-  .round-info {
-    font-size: 1.5rem;
-    font-weight: 500;
-    color: rgba(255, 255, 255, 0.9);
-    margin-top: 0.5rem;
-    opacity: 0;
-    transform: translateY(-10px);
-    transition: all 0.3s ease;
-  }
-  
-  .round-info.visible {
-    opacity: 1;
-    transform: translateY(0);
-  }
   
   .timer-display {
     position: absolute;
@@ -282,107 +231,16 @@
     min-height: 0;
   }
   
-  .players-bar {
-    background: rgba(255, 255, 255, 0.15);
-    backdrop-filter: blur(20px);
-    border-top: 1px solid rgba(255, 255, 255, 0.2);
-    padding: 1.5rem 2rem;
-    display: flex;
-    align-items: center;
-    gap: 2rem;
-    overflow-x: auto;
-    flex-shrink: 0;
-  }
-  
-  .players-count {
-    font-size: 1.2rem;
-    font-weight: 600;
-    color: white;
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    flex-shrink: 0;
-  }
-  
-  .players-icon {
-    font-size: 1.4rem;
-  }
-  
-  .players-list {
-    display: flex;
-    gap: 1rem;
-    overflow-x: auto;
-    padding-bottom: 0.5rem;
-    flex: 1;
-  }
-  
-  .player-chip {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-    padding: 0.75rem 1.25rem;
-    background: rgba(255, 255, 255, 0.1);
-    border: 2px solid;
-    border-radius: 50px;
-    color: white;
-    font-weight: 500;
-    white-space: nowrap;
-    transition: all 0.3s ease;
-    backdrop-filter: blur(10px);
-  }
-  
-  .player-chip:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 15px rgba(0,0,0,0.2);
-  }
-  
-  .player-emoji {
-    font-size: 1.2rem;
-  }
-  
-  .player-name {
-    font-size: 1rem;
-  }
-  
-  .player-points {
-    font-size: 0.9rem;
-    opacity: 0.8;
-  }
   
   @media (max-width: 768px) {
-    .game-title {
-      font-size: 2.5rem;
-    }
-    
-    .round-info {
-      font-size: 1.2rem;
-    }
-    
     .timer-circle {
       width: 60px;
       height: 60px;
     }
-    
+
     .timer-text {
       font-size: 1.4rem;
     }
-    
-    .game-header {
-      padding: 1rem;
-    }
-    
-    .players-bar {
-      padding: 1rem;
-      gap: 1rem;
-    }
-    
-    .players-count {
-      font-size: 1rem;
-    }
-    
-    .player-chip {
-      padding: 0.5rem 1rem;
-      gap: 0.5rem;
-    }
+
   }
 </style>

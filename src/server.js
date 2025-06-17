@@ -62,30 +62,39 @@ io.on('connection', (socket) => {
 
   // Handle player joining
   socket.on(SOCKET_EVENTS.JOIN_GAME, (data) => {
-    const { name: playerName, playerId, avatar } = data;
+    const { name, playerName, playerId, avatar } = data
+    const joinName = name || playerName
+
+    if (!joinName) {
+      socket.emit('player_joined_response', {
+        success: false,
+        error: 'Name is required'
+      })
+      return
+    }
     
     try {
       if (playerId && game.players.has(playerId)) {
         // Reconnecting player
-        console.log(`🔄 [PLAYER ACTION] ${playerName} is reconnecting (ID: ${playerId})`);
+        console.log(`🔄 [PLAYER ACTION] ${joinName} is reconnecting (ID: ${playerId})`);
         const success = game.reconnectPlayer(playerId, socket.id);
         if (success) {
-          console.log(`✅ [PLAYER ACTION] ${playerName} reconnected successfully`);
+          console.log(`✅ [PLAYER ACTION] ${joinName} reconnected successfully`);
           socket.emit(SOCKET_EVENTS.PLAYER_RECONNECTED, {
             success: true,
             playerId,
             gameState: game.getGameState()
           });
         } else {
-          console.log(`❌ [PLAYER ACTION] ${playerName} failed to reconnect`);
+          console.log(`❌ [PLAYER ACTION] ${joinName} failed to reconnect`);
           socket.emit(SOCKET_EVENTS.ERROR, { message: 'Failed to reconnect' });
         }
       } else {
         // New player
-        console.log(`👋 [PLAYER ACTION] New player joining: ${playerName}`);
-        const result = game.addPlayer(playerName, socket.id, avatar);
+        console.log(`👋 [PLAYER ACTION] New player joining: ${joinName}`);
+        const result = game.addPlayer(joinName, socket.id, avatar);
         if (result.success) {
-          console.log(`✅ [PLAYER ACTION] ${playerName} joined successfully (ID: ${result.player.id})`);
+          console.log(`✅ [PLAYER ACTION] ${joinName} joined successfully (ID: ${result.player.id})`);
           
           // Send success response to the joining player
           socket.emit('player_joined_response', {
@@ -99,7 +108,7 @@ io.on('connection', (socket) => {
           
           // The addPlayer method already broadcasts to all players including the new one
         } else {
-          console.log(`❌ [PLAYER ACTION] ${playerName} failed to join: ${result.error}`);
+          console.log(`❌ [PLAYER ACTION] ${joinName} failed to join: ${result.error}`);
           socket.emit('player_joined_response', { 
             success: false, 
             error: result.error 
@@ -112,6 +121,52 @@ io.on('connection', (socket) => {
         success: false, 
         error: 'Failed to join game' 
       });
+    }
+  });
+
+  // Handle player rejoining (after disconnect/reconnect)
+  socket.on('rejoin_game', (data) => {
+    const { playerId, playerName } = data;
+    
+    if (!playerId || !playerName) {
+      socket.emit(SOCKET_EVENTS.ERROR, { message: 'PlayerId and playerName are required for rejoin' });
+      return;
+    }
+    
+    try {
+      if (game.players.has(playerId)) {
+        console.log(`🔄 [PLAYER ACTION] ${playerName} is rejoining (ID: ${playerId})`);
+        const success = game.reconnectPlayer(playerId, socket.id);
+        if (success) {
+          console.log(`✅ [PLAYER ACTION] ${playerName} rejoined successfully`);
+          
+          // Send updated game state
+          socket.emit('game_state_update', game.getGameState());
+          
+          // Send current sub-step info
+          socket.emit('sub_step_info', game.getSubStepInfo(playerId));
+          
+          // Send any current phase-specific data
+          const currentState = game.getGameState().state;
+          if (currentState === 'truth_reveal' && game.truthRevealData) {
+            socket.emit('truth_reveal_start', game.truthRevealData);
+          } else if (currentState === 'scoreboard' && game.currentScoreboardData) {
+            socket.emit('scoreboard_update', game.currentScoreboardData);
+          } else if (currentState === 'game_ended' && game.gameEndData) {
+            socket.emit('game_ended', game.gameEndData);
+          }
+          
+        } else {
+          console.log(`❌ [PLAYER ACTION] ${playerName} failed to rejoin`);
+          socket.emit(SOCKET_EVENTS.ERROR, { message: 'Failed to rejoin game' });
+        }
+      } else {
+        console.log(`❌ [PLAYER ACTION] ${playerName} tried to rejoin but player not found`);
+        socket.emit(SOCKET_EVENTS.ERROR, { message: 'Player not found. Please join as a new player.' });
+      }
+    } catch (error) {
+      console.error('Error in rejoin_game:', error);
+      socket.emit(SOCKET_EVENTS.ERROR, { message: 'Failed to rejoin game' });
     }
   });
 
@@ -181,7 +236,7 @@ io.on('connection', (socket) => {
       const result = game.submitLie(playerId, data.lie);
       if (!result.success) {
         console.log(`❌ [PLAYER ACTION] Lie submission failed for ${playerName}: ${result.error}`);
-        socket.emit(SOCKET_EVENTS.ERROR, { message: result.error });
+        socket.emit('lie_submitted', { success: false, error: result.error });
       } else {
         console.log(`✅ [PLAYER ACTION] Lie accepted from ${playerName}`);
         socket.emit('lie_submitted', { success: true });
@@ -311,9 +366,11 @@ io.on('connection', (socket) => {
         return
       }
 
-      const result = game.updatePlayerName(playerId, data.name)
+      const result = game.updatePlayerName(playerId, data.newName)
       if (!result.success) {
         socket.emit(SOCKET_EVENTS.ERROR, { message: result.error })
+      } else {
+        socket.emit('name_updated', { success: true, newName: data.newName })
       }
     } catch (error) {
       console.error('Error in UPDATE_NAME:', error)
@@ -465,11 +522,11 @@ app.get('/tests/debug-interface.html', (req, res) => {
 
 // Routes for lightweight demo front-end
 app.get('/host', (req, res) => {
-  res.sendFile(path.join(__dirname, '../public/host.html'));
+  res.sendFile(path.join(__dirname, '../public/src/host.html'))
 });
 
 app.get('/player', (req, res) => {
-  res.sendFile(path.join(__dirname, '../public/player.html'));
+  res.sendFile(path.join(__dirname, '../public/src/player.html'))
 });
 
 // Serve static files for frontend (when we build it)

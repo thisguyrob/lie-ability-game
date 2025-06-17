@@ -1,18 +1,21 @@
 <script>
+  import '../../player-mobile.css';
+  
   export let connectionStatus;
   export let onJoin;
+  export let onClearData;
   
   let playerName = '';
   let isJoining = false;
+  let showNameError = false;
   
   function handleJoin() {
     if (!playerName.trim()) {
-      alert('Please enter your name!');
+      showNameError = true;
       return;
     }
     
     if (connectionStatus !== 'connected') {
-      alert('Not connected to server. Please wait...');
       return;
     }
     
@@ -24,6 +27,10 @@
     if (event.key === 'Enter') {
       handleJoin();
     }
+  }
+  
+  function handleNameInput() {
+    showNameError = false;
   }
   
   // Generate a random fun name as placeholder
@@ -38,360 +45,233 @@
   let placeholder = generateRandomName();
 </script>
 
-<div class="join-container">
-  <div class="join-card">
-    <div class="game-logo">
-      <div class="logo-icon">🎯</div>
-      <h1 class="logo-text">Lie-Ability</h1>
-    </div>
+<div class="container-mobile safe-top safe-bottom animate-fadeIn">
+  <div class="card-mobile">
+    <h1 class="title-mobile text-center">Ready to Play?</h1>
+    <p class="subtitle-mobile text-center">
+      Test your deception skills in this game of lies and laughs
+    </p>
     
-    <div class="join-content">
-      <h2 class="join-title">Join the Game!</h2>
-      <p class="join-subtitle">
-        Ready to test your deception skills? Enter your name and let's see how well you can lie! 😏
-      </p>
-      
-      <div class="name-input-section">
-        <label for="playerName" class="input-label">Your Name</label>
+    <form on:submit|preventDefault={handleJoin}>
+      <div class="form-group">
         <input
           id="playerName"
           type="text"
           bind:value={playerName}
+          on:input={handleNameInput}
           placeholder={placeholder}
           maxlength="20"
           disabled={connectionStatus !== 'connected' || isJoining}
           on:keypress={handleKeyPress}
-          class="name-input"
-          class:connecting={connectionStatus !== 'connected'}
+          class="input-mobile"
+          class:error={showNameError}
           autofocus
+          autocomplete="off"
+          autocorrect="off"
+          autocapitalize="words"
         />
         
+        {#if showNameError}
+          <div class="error-message animate-slideUp">
+            Please enter your name
+          </div>
+        {/if}
+        
         {#if connectionStatus !== 'connected'}
-          <div class="connection-warning">
-            <span class="warning-icon">⚠️</span>
+          <div class="connection-status">
+            <div class="connection-dot"></div>
             Connecting to server...
           </div>
         {/if}
       </div>
       
       <button
-        class="join-button"
-        class:disabled={connectionStatus !== 'connected' || isJoining || !playerName.trim()}
-        disabled={connectionStatus !== 'connected' || isJoining || !playerName.trim()}
-        on:click={handleJoin}
+        type="submit"
+        class="btn-touch btn-success btn-full-width"
+        class:btn-disabled={connectionStatus !== 'connected' || isJoining || !playerName.trim()}
+        disabled={connectionStatus !== 'connected' || isJoining}
       >
         {#if isJoining}
-          <div class="button-spinner"></div>
+          <div class="spinner-mobile"></div>
           Joining...
         {:else if connectionStatus !== 'connected'}
-          <span class="button-icon">📡</span>
+          <span class="icon">📡</span>
           Connecting...
         {:else}
-          <span class="button-icon">🚀</span>
+          <span class="icon">🎮</span>
           Join Game
         {/if}
       </button>
-      
-      <div class="game-preview">
-        <h3 class="preview-title">How to Play</h3>
-        <div class="preview-steps">
-          <div class="preview-step">
-            <span class="step-icon">❓</span>
-            <span class="step-text">Read the question</span>
-          </div>
-          <div class="preview-step">
-            <span class="step-icon">🤥</span>
-            <span class="step-text">Create a convincing lie</span>
-          </div>
-          <div class="preview-step">
-            <span class="step-icon">🗳️</span>
-            <span class="step-text">Vote for the real answer</span>
-          </div>
-          <div class="preview-step">
-            <span class="step-icon">🏆</span>
-            <span class="step-text">Score points for fooling others!</span>
-          </div>
-        </div>
-      </div>
+    </form>
+    
+    <div class="divider"></div>
+    
+    <div class="how-to-play">
+      <h2 class="section-title">How to Play</h2>
+      <ul class="list-mobile">
+        <li class="list-item-mobile">
+          <span class="icon">❓</span>
+          <span class="text">Answer trivia questions</span>
+        </li>
+        <li class="list-item-mobile">
+          <span class="icon">🤥</span>
+          <span class="text">Create convincing lies</span>
+        </li>
+        <li class="list-item-mobile">
+          <span class="icon">🗳️</span>
+          <span class="text">Vote for the truth</span>
+        </li>
+        <li class="list-item-mobile">
+          <span class="icon">🏆</span>
+          <span class="text">Score points by fooling others</span>
+        </li>
+      </ul>
     </div>
+    
+    {#if onClearData}
+      <div class="footer-actions">
+        <button class="link-button" on:click={onClearData}>
+          Reset saved data
+        </button>
+      </div>
+    {/if}
   </div>
 </div>
 
 <style>
-  .join-container {
-    width: 100%;
-    max-width: 500px;
-    padding: 1rem;
-    animation: fadeInUp 0.8s ease;
+  .form-group {
+    margin-bottom: var(--space-lg);
   }
   
-  .join-card {
-    background: rgba(255, 255, 255, 0.95);
-    backdrop-filter: blur(20px);
-    border-radius: 24px;
-    padding: 2.5rem;
-    box-shadow: 0 12px 40px rgba(0,0,0,0.15);
-    border: 2px solid rgba(255, 255, 255, 0.2);
-    text-align: center;
+  .input-mobile.error {
+    border-color: var(--error-color);
+    animation: shake 0.3s ease;
   }
   
-  .game-logo {
-    margin-bottom: 2rem;
+  @keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    25% { transform: translateX(-5px); }
+    75% { transform: translateX(5px); }
   }
   
-  .logo-icon {
-    font-size: 3rem;
-    margin-bottom: 0.5rem;
-    animation: bounce 2s infinite;
-  }
-  
-  .logo-text {
-    font-size: 2.5rem;
-    font-weight: 700;
-    color: #333;
-    margin: 0;
-    background: linear-gradient(135deg, #667eea, #764ba2);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-  }
-  
-  .join-title {
-    font-size: 2rem;
-    font-weight: 700;
-    color: #333;
-    margin: 0 0 1rem 0;
-  }
-  
-  .join-subtitle {
-    font-size: 1.1rem;
-    color: #666;
-    margin: 0 0 2rem 0;
-    line-height: 1.5;
-  }
-  
-  .name-input-section {
-    margin-bottom: 2rem;
-    text-align: left;
-  }
-  
-  .input-label {
-    display: block;
-    font-size: 1rem;
-    font-weight: 600;
-    color: #333;
-    margin-bottom: 0.75rem;
-  }
-  
-  .name-input {
-    width: 100%;
-    padding: 1rem 1.25rem;
-    border: 2px solid #e2e8f0;
-    border-radius: 12px;
-    font-size: 1.1rem;
+  .error-message {
+    color: var(--error-color);
+    font-size: var(--font-sm);
+    margin-top: var(--space-xs);
     font-weight: 500;
-    transition: all 0.3s ease;
-    background: white;
-    box-sizing: border-box;
   }
   
-  .name-input:focus {
-    outline: none;
-    border-color: #667eea;
-    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+  .connection-status {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+    margin-top: var(--space-sm);
+    color: var(--warning-color);
+    font-size: var(--font-sm);
+    font-weight: 500;
   }
   
-  .name-input:disabled {
-    background: #f8fafc;
-    color: #94a3b8;
+  .connection-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--warning-color);
+    animation: pulse var(--transition-slow) infinite;
+  }
+  
+  .btn-disabled {
+    opacity: 0.6;
     cursor: not-allowed;
-  }
-  
-  .name-input.connecting {
-    border-color: #fbbf24;
-    background: #fffbeb;
-  }
-  
-  .connection-warning {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    margin-top: 0.75rem;
-    padding: 0.75rem;
-    background: #fffbeb;
-    border: 1px solid #fbbf24;
-    border-radius: 8px;
-    color: #92400e;
-    font-size: 0.9rem;
-    font-weight: 500;
-  }
-  
-  .warning-icon {
-    font-size: 1rem;
-  }
-  
-  .join-button {
-    width: 100%;
-    padding: 1.25rem;
-    background: linear-gradient(135deg, #4ade80, #22c55e);
-    color: white;
-    border: none;
-    border-radius: 12px;
-    font-size: 1.2rem;
-    font-weight: 700;
-    cursor: pointer;
-    transition: all 0.3s ease;
-    box-shadow: 0 4px 15px rgba(34, 197, 94, 0.3);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 0.75rem;
-    margin-bottom: 2rem;
-  }
-  
-  .join-button:hover:not(.disabled) {
-    transform: translateY(-2px);
-    box-shadow: 0 8px 25px rgba(34, 197, 94, 0.4);
-  }
-  
-  .join-button:active:not(.disabled) {
-    transform: translateY(0);
-  }
-  
-  .join-button.disabled {
     background: #94a3b8;
-    cursor: not-allowed;
     box-shadow: none;
+  }
+  
+  .btn-disabled:active {
     transform: none;
   }
   
-  .button-icon {
-    font-size: 1.3rem;
+  .icon {
+    font-size: 1.2em;
   }
   
-  .button-spinner {
-    width: 20px;
-    height: 20px;
-    border: 2px solid rgba(255, 255, 255, 0.3);
-    border-top: 2px solid white;
-    border-radius: 50%;
-    animation: spin 1s linear infinite;
+  .divider {
+    height: 1px;
+    background: #e2e8f0;
+    margin: var(--space-xl) 0;
   }
   
-  @keyframes spin {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
-  }
-  
-  .game-preview {
-    text-align: left;
-  }
-  
-  .preview-title {
-    font-size: 1.3rem;
-    font-weight: 700;
+  .section-title {
+    font-size: var(--font-lg);
+    font-weight: 600;
     color: #333;
-    margin: 0 0 1rem 0;
+    margin: 0 0 var(--space-md) 0;
+  }
+  
+  .how-to-play .list-item-mobile {
+    cursor: default;
+    gap: var(--space-md);
+  }
+  
+  .how-to-play .list-item-mobile:active {
+    transform: none;
+  }
+  
+  .how-to-play .icon {
+    font-size: 1.3em;
+    flex-shrink: 0;
+    width: 30px;
     text-align: center;
   }
   
-  .preview-steps {
-    display: flex;
-    flex-direction: column;
-    gap: 0.75rem;
-  }
-  
-  .preview-step {
-    display: flex;
-    align-items: center;
-    gap: 1rem;
-    padding: 0.75rem;
-    background: linear-gradient(135deg, #f8fafc, #e2e8f0);
-    border-radius: 10px;
-    transition: all 0.3s ease;
-  }
-  
-  .preview-step:hover {
-    transform: translateX(5px);
-    background: linear-gradient(135deg, #e2e8f0, #cbd5e1);
-  }
-  
-  .step-icon {
-    font-size: 1.3rem;
-    flex-shrink: 0;
-  }
-  
-  .step-text {
-    font-size: 1rem;
+  .how-to-play .text {
+    flex: 1;
+    font-size: var(--font-sm);
     font-weight: 500;
-    color: #374151;
+    color: #4b5563;
   }
   
-  @keyframes bounce {
-    0%, 20%, 50%, 80%, 100% {
-      transform: translateY(0);
-    }
-    40% {
-      transform: translateY(-10px);
-    }
-    60% {
-      transform: translateY(-5px);
+  .footer-actions {
+    margin-top: var(--space-xl);
+    text-align: center;
+  }
+  
+  .link-button {
+    background: none;
+    border: none;
+    color: #6b7280;
+    font-size: var(--font-sm);
+    text-decoration: underline;
+    cursor: pointer;
+    padding: var(--space-sm);
+    transition: color var(--transition-fast);
+  }
+  
+  .link-button:active {
+    color: var(--error-color);
+  }
+  
+  @media (min-width: 480px) {
+    .how-to-play .text {
+      font-size: var(--font-base);
     }
   }
   
-  @keyframes fadeInUp {
-    from {
-      opacity: 0;
-      transform: translateY(30px);
-    }
-    to {
-      opacity: 1;
-      transform: translateY(0);
-    }
-  }
-  
-  @media (max-width: 480px) {
-    .join-container {
-      padding: 0.5rem;
+  /* Dark mode adjustments */
+  @media (prefers-color-scheme: dark) {
+    .section-title {
+      color: var(--text-primary);
     }
     
-    .join-card {
-      padding: 2rem 1.5rem;
+    .how-to-play .text {
+      color: var(--text-secondary);
     }
     
-    .logo-text {
-      font-size: 2rem;
-    }
-    
-    .join-title {
-      font-size: 1.8rem;
-    }
-    
-    .join-subtitle {
-      font-size: 1rem;
-    }
-    
-    .name-input {
-      padding: 0.875rem 1rem;
-      font-size: 1rem;
-    }
-    
-    .join-button {
-      padding: 1rem;
-      font-size: 1.1rem;
-    }
-    
-    .preview-steps {
-      gap: 0.5rem;
-    }
-    
-    .preview-step {
-      padding: 0.5rem;
-      gap: 0.75rem;
-    }
-    
-    .step-text {
-      font-size: 0.9rem;
+    .connection-status {
+      background: rgba(245, 158, 11, 0.1);
+      border: 1px solid rgba(245, 158, 11, 0.3);
+      padding: var(--space-sm) var(--space-md);
+      border-radius: var(--radius-sm);
+      margin-top: var(--space-sm);
     }
   }
 </style>

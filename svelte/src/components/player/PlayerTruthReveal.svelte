@@ -4,7 +4,27 @@
   
   let likedLies = new Set();
   
-  $: data = truthRevealData;
+  // Ensure data is properly defined with defaults
+  $: data = truthRevealData || {
+    category: 'Unknown',
+    question: 'Loading...',  
+    truth: { answer: 'Loading...' },
+    lies: [],
+    truthVoters: [],
+    truthPoints: 1000
+  };
+  
+  // Combine truth and lies into one list
+  $: allOptions = data ? [
+    {
+      id: 'truth',
+      text: data.truth.answer,
+      votes: data.truthVoters?.length || 0,
+      isTruth: true,
+      voters: data.truthVoters || []
+    },
+    ...(data.lies || [])
+  ].sort(() => Math.random() - 0.5) : []; // Randomize order
   
   function handleLikeLie(lieId) {
     if (likedLies.has(lieId)) return;
@@ -39,80 +59,65 @@
       <div class="question-text">{data.question}</div>
     </div>
     
-    <div class="truth-section">
-      <div class="truth-label">The Truth</div>
-      <div class="truth-answer">{data.truth.answer}</div>
-      <div class="truth-celebration">🎯</div>
-    </div>
-    
-    {#if data.lies && data.lies.length > 0}
-      <div class="lies-section">
-        <h3 class="lies-title">The Lies That Fooled Players</h3>
-        <div class="lies-list">
-          {#each data.lies as lie, index}
-            <div class="lie-item" style="animation-delay: {index * 0.1}s">
-              <div class="lie-header">
-                <div class="lie-votes">
-                  <span class="votes-icon">🗳️</span>
-                  <span class="votes-count">{lie.votes}</span>
-                </div>
-                <button
-                  class="like-button"
-                  class:liked={likedLies.has(lie.id)}
-                  disabled={likedLies.has(lie.id)}
-                  on:click={() => handleLikeLie(lie.id)}
-                >
-                  <span class="like-icon">{likedLies.has(lie.id) ? '❤️' : '🤍'}</span>
-                  <span class="like-text">{likedLies.has(lie.id) ? 'Liked!' : 'Like'}</span>
-                </button>
-              </div>
-              
-              <div class="lie-text">"{lie.text}"</div>
-              
-              <div class="lie-attribution">
-                <div class="authors">
-                  <span class="authors-label">By:</span>
-                  {#each lie.authors as author, authorIndex}
-                    <span class="author" style="color: {author.avatar.color}">
-                      {author.avatar.emoji} {author.name}
-                    </span>
-                    {#if authorIndex < lie.authors.length - 1}, {/if}
-                  {/each}
-                </div>
-                
-                {#if lie.voters && lie.voters.length > 0}
-                  <div class="voters">
-                    <span class="voters-label">Fooled:</span>
-                    {#each lie.voters as voter, voterIndex}
-                      <span class="voter" style="color: {voter.avatar.color}">
-                        {voter.avatar.emoji} {voter.name}
-                      </span>
-                      {#if voterIndex < lie.voters.length - 1}, {/if}
-                    {/each}
-                  </div>
+    <div class="options-section">
+      <h3 class="options-title">All the Options</h3>
+      <div class="options-list">
+        {#each allOptions as option, index}
+          <div class="option-item" class:is-truth={option.isTruth} style="animation-delay: {index * 0.1}s">
+            <div class="option-header">
+              <div class="option-votes">
+                <span class="votes-icon">🗳️</span>
+                <span class="votes-count">{option.votes}</span>
+                {#if option.likesReceived && option.likesReceived > 0}
+                  <span class="likes-indicator">👍🏻</span>
                 {/if}
               </div>
+              {#if !option.isTruth}
+                <button
+                  class="like-button"
+                  class:liked={likedLies.has(option.id)}
+                  disabled={likedLies.has(option.id)}
+                  on:click={() => handleLikeLie(option.id)}
+                >
+                  <span class="like-icon">{likedLies.has(option.id) ? '❤️' : '🤍'}</span>
+                  <span class="like-text">{likedLies.has(option.id) ? 'Liked!' : 'Like'}</span>
+                </button>
+              {:else}
+                <span class="truth-badge">🎯 Truth</span>
+              {/if}
             </div>
-          {/each}
-        </div>
-      </div>
-    {/if}
-    
-    {#if data.truthVoters && data.truthVoters.length > 0}
-      <div class="truth-voters-section">
-        <h3 class="truth-voters-title">Truth Detectives 🕵️</h3>
-        <div class="truth-voters">
-          {#each data.truthVoters as voter, index}
-            <div class="truth-voter" style="animation-delay: {index * 0.1}s">
-              <div class="voter-avatar" style="background-color: {voter.avatar.color}">
-                <span class="voter-emoji">{voter.avatar.emoji}</span>
-              </div>
-              <div class="voter-name">{voter.name}</div>
+            
+            <div class="option-text">"{option.text}"</div>
+            
+            <div class="option-attribution">
+              {#if !option.isTruth}
+                <div class="authors">
+                  <span class="authors-label">By:</span>
+                  {#each (option.authors || []) as author, authorIndex}
+                    <span class="author" style="color: {author.avatar?.color || '#666'}">
+                      {author.avatar?.emoji || '😀'} {author.name}
+                    </span>
+                    {#if authorIndex < (option.authors || []).length - 1}, {/if}
+                  {/each}
+                </div>
+              {/if}
+              
+              {#if option.voters && option.voters.length > 0}
+                <div class="voters">
+                  <span class="voters-label">{option.isTruth ? 'Found by:' : 'Fooled:'}</span>
+                  {#each option.voters as voter, voterIndex}
+                    <span class="voter" style="color: {voter.avatar?.color || '#666'}">
+                      {voter.avatar?.emoji || '😀'} {voter.name}
+                    </span>
+                    {#if voterIndex < option.voters.length - 1}, {/if}
+                  {/each}
+                </div>
+              {/if}
             </div>
-          {/each}
-        </div>
+          </div>
+        {/each}
       </div>
-    {/if}
+    </div>
   </div>
 </div>
 
@@ -162,64 +167,11 @@
     line-height: 1.3;
   }
   
-  .truth-section {
-    background: linear-gradient(135deg, #4ade80, #22c55e);
-    color: white;
-    border-radius: 16px;
-    padding: 2rem;
-    text-align: center;
-    margin-bottom: 2rem;
-    position: relative;
-    overflow: hidden;
-    animation: bounceIn 0.8s ease;
-  }
-  
-  .truth-section::before {
-    content: '';
-    position: absolute;
-    top: -50%;
-    left: -50%;
-    width: 200%;
-    height: 200%;
-    background: linear-gradient(45deg, transparent, rgba(255,255,255,0.1), transparent);
-    animation: shine 2s infinite;
-  }
-  
-  @keyframes shine {
-    0% { transform: translateX(-100%) translateY(-100%) rotate(45deg); }
-    100% { transform: translateX(100%) translateY(100%) rotate(45deg); }
-  }
-  
-  .truth-label {
-    font-size: 1rem;
-    font-weight: 600;
-    opacity: 0.9;
-    margin-bottom: 0.75rem;
-  }
-  
-  .truth-answer {
-    font-size: 1.8rem;
-    font-weight: 700;
-    margin-bottom: 0.75rem;
-    position: relative;
-    z-index: 2;
-  }
-  
-  .truth-celebration {
-    font-size: 1.5rem;
-    animation: bounce 1s infinite alternate;
-  }
-  
-  @keyframes bounce {
-    0% { transform: translateY(0); }
-    100% { transform: translateY(-5px); }
-  }
-  
-  .lies-section {
+  .options-section {
     margin-bottom: 2rem;
   }
   
-  .lies-title {
+  .options-title {
     font-size: 1.3rem;
     font-weight: 700;
     color: #333;
@@ -227,13 +179,13 @@
     text-align: center;
   }
   
-  .lies-list {
+  .options-list {
     display: flex;
     flex-direction: column;
     gap: 1rem;
   }
   
-  .lie-item {
+  .option-item {
     background: linear-gradient(135deg, #f8fafc, #e2e8f0);
     border: 1px solid #e2e8f0;
     border-radius: 12px;
@@ -242,19 +194,32 @@
     transition: all 0.3s ease;
   }
   
-  .lie-item:hover {
+  .option-item:hover {
     transform: translateY(-2px);
     box-shadow: 0 4px 15px rgba(0,0,0,0.1);
   }
   
-  .lie-header {
+  .option-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
     margin-bottom: 1rem;
   }
   
-  .lie-votes {
+  .truth-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    background: rgba(34, 197, 94, 0.1);
+    color: #22c55e;
+    padding: 0.5rem 1rem;
+    border-radius: 20px;
+    font-weight: 600;
+    font-size: 0.9rem;
+    border: 1px solid rgba(34, 197, 94, 0.2);
+  }
+  
+  .option-votes {
     display: flex;
     align-items: center;
     gap: 0.5rem;
@@ -265,6 +230,25 @@
   
   .votes-icon {
     font-size: 1rem;
+  }
+  
+  .likes-indicator {
+    font-style: normal;
+    font-weight: 600;
+    color: #f59e0b;
+    margin-left: 0.5rem;
+    animation: likeAppear 0.5s ease;
+  }
+  
+  @keyframes likeAppear {
+    0% {
+      opacity: 0;
+      transform: scale(0.8);
+    }
+    100% {
+      opacity: 1;
+      transform: scale(1);
+    }
   }
   
   .like-button {
@@ -302,7 +286,7 @@
     font-size: 1rem;
   }
   
-  .lie-text {
+  .option-text {
     font-size: 1.1rem;
     font-weight: 600;
     color: #333;
@@ -311,7 +295,7 @@
     line-height: 1.4;
   }
   
-  .lie-attribution {
+  .option-attribution {
     display: flex;
     flex-direction: column;
     gap: 0.5rem;
@@ -340,60 +324,6 @@
     border: 1px solid currentColor;
   }
   
-  .truth-voters-section {
-    text-align: center;
-  }
-  
-  .truth-voters-title {
-    font-size: 1.3rem;
-    font-weight: 700;
-    color: #333;
-    margin: 0 0 1.5rem 0;
-  }
-  
-  .truth-voters {
-    display: flex;
-    flex-wrap: wrap;
-    justify-content: center;
-    gap: 1rem;
-  }
-  
-  .truth-voter {
-    background: linear-gradient(135deg, #22c55e20, #4ade8020);
-    border: 1px solid rgba(34, 197, 94, 0.2);
-    border-radius: 12px;
-    padding: 1rem;
-    text-align: center;
-    animation: slideInUp 0.5s ease both;
-    transition: all 0.3s ease;
-    min-width: 80px;
-  }
-  
-  .truth-voter:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 15px rgba(34, 197, 94, 0.2);
-  }
-  
-  .voter-avatar {
-    width: 40px;
-    height: 40px;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    margin: 0 auto 0.75rem auto;
-    border: 2px solid rgba(255, 255, 255, 0.3);
-  }
-  
-  .voter-emoji {
-    font-size: 1.2rem;
-  }
-  
-  .voter-name {
-    font-size: 0.9rem;
-    font-weight: 600;
-    color: #333;
-  }
   
   @keyframes fadeIn {
     from {
@@ -406,20 +336,6 @@
     }
   }
   
-  @keyframes bounceIn {
-    0% {
-      opacity: 0;
-      transform: scale(0.3);
-    }
-    50% {
-      opacity: 1;
-      transform: scale(1.1);
-    }
-    100% {
-      opacity: 1;
-      transform: scale(1);
-    }
-  }
   
   @keyframes slideInUp {
     from {
@@ -445,36 +361,23 @@
       font-size: 1.1rem;
     }
     
-    .truth-answer {
-      font-size: 1.5rem;
-    }
-    
-    .lie-item {
+    .option-item {
       padding: 1rem;
     }
     
-    .lie-header {
+    .option-header {
       flex-direction: column;
       gap: 0.75rem;
       align-items: flex-start;
     }
     
-    .lie-attribution {
+    .option-attribution {
       flex-direction: column;
       gap: 0.75rem;
     }
     
     .authors, .voters {
       justify-content: flex-start;
-    }
-    
-    .truth-voters {
-      gap: 0.75rem;
-    }
-    
-    .truth-voter {
-      min-width: 70px;
-      padding: 0.75rem;
     }
   }
 </style>

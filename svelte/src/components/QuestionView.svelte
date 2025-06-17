@@ -16,38 +16,9 @@
     return categoryEmojis[category] || '❓';
   }
   
-  function getStateTitle(state) {
-    switch (state) {
-      case 'question_reading':
-        return 'Read the Question';
-      case 'lie_submission':
-        return 'Players Are Creating Lies';
-      case 'option_selection':
-        return 'Time to Vote!';
-      default:
-        return 'Question';
-    }
-  }
-  
-  function getStateSubtitle(state) {
-    switch (state) {
-      case 'question_reading':
-        return 'Everyone study this question carefully';
-      case 'lie_submission':
-        return 'Players are crafting their most convincing lies...';
-      case 'option_selection':
-        return 'Which option is the real answer?';
-      default:
-        return '';
-    }
-  }
 </script>
 
 <div class="question-container">
-  <div class="state-header">
-    <h2 class="state-title">{getStateTitle(state)}</h2>
-    <p class="state-subtitle">{getStateSubtitle(state)}</p>
-  </div>
   
   <div class="question-card">
     <div class="category-badge">
@@ -79,7 +50,6 @@
         <div class="options-grid">
           {#each currentQuestion.options as option, index}
             <div class="option-card" style="animation-delay: {index * 0.1}s">
-              <div class="option-letter">{String.fromCharCode(65 + index)}</div>
               <div class="option-text">{option.text}</div>
             </div>
           {/each}
@@ -100,23 +70,6 @@
     animation: fadeIn 0.6s ease;
   }
   
-  .state-header {
-    text-align: center;
-  }
-  
-  .state-title {
-    font-size: 3rem;
-    font-weight: 700;
-    color: white;
-    margin: 0 0 0.5rem 0;
-    text-shadow: 0 4px 20px rgba(0,0,0,0.3);
-  }
-  
-  .state-subtitle {
-    font-size: 1.3rem;
-    color: rgba(255, 255, 255, 0.8);
-    margin: 0;
-  }
   
   .question-card {
     background: rgba(255, 255, 255, 0.95);
@@ -255,36 +208,19 @@
     padding: 1.5rem;
     display: flex;
     align-items: center;
-    gap: 1rem;
+    justify-content: center;
+    text-align: center;
     transition: all 0.3s ease;
     animation: slideInUp 0.5s ease both;
   }
   
-  .option-card:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 8px 25px rgba(0,0,0,0.1);
-    border-color: #667eea;
-  }
   
-  .option-letter {
-    width: 40px;
-    height: 40px;
-    background: linear-gradient(135deg, #667eea, #764ba2);
-    color: white;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-weight: 700;
-    font-size: 1.2rem;
-    flex-shrink: 0;
-  }
   
   .option-text {
     font-size: 1.1rem;
     font-weight: 500;
     color: #333;
-    text-align: left;
+    text-align: center;
   }
   
   @keyframes fadeIn {
@@ -314,14 +250,6 @@
       gap: 1.5rem;
     }
     
-    .state-title {
-      font-size: 2.5rem;
-    }
-    
-    .state-subtitle {
-      font-size: 1.1rem;
-    }
-    
     .question-card {
       padding: 2rem 1.5rem;
     }
@@ -329,7 +257,7 @@
     .question-text {
       font-size: 2rem;
     }
-    
+
     .category-badge {
       padding: 0.6rem 1.2rem;
       font-size: 1rem;
@@ -353,15 +281,11 @@
     .question-card {
       padding: 1.5rem 1rem;
     }
-    
+
     .question-text {
       font-size: 1.8rem;
     }
-    
-    .state-title {
-      font-size: 2rem;
-    }
-    
+
     .category-badge {
       font-size: 0.9rem;
       padding: 0.5rem 1rem;

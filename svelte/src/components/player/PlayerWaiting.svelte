@@ -1,71 +1,154 @@
 <script>
   export let playerName;
   export let gameState;
+  export let currentPlayer;
+  export let onUpdateAvatar;
+  export let onUpdateName;
   
   $: otherPlayers = gameState.players.filter(p => p.name !== playerName);
+  
+  // Avatar customization options
+  const emojiOptions = ['👤', '😊', '😎', '🤖', '👑', '🐱', '🐶', '🦊', '🐼', '🦁', '🐸', '🐧', '🦄', '🌟', '🔥', '💎', '🎭', '🎯', '🚀', '🎸'];
+  const colorOptions = [
+    '#667eea', '#764ba2', '#f093fb', '#f5576c', '#4facfe', '#00f2fe',
+    '#43e97b', '#38f9d7', '#ffecd2', '#fcb69f', '#a8edea', '#fed6e3',
+    '#ff9a9e', '#fecfef', '#ffeaa7', '#fab1a0', '#74b9ff', '#a29bfe'
+  ];
+  
+  let showCustomization = false;
+  let editingName = false;
+  let tempName = playerName;
+  
+  function handleEmojiSelect(emoji) {
+    if (currentPlayer && onUpdateAvatar) {
+      onUpdateAvatar(emoji, currentPlayer.avatar.color);
+    }
+  }
+  
+  function handleColorSelect(color) {
+    if (currentPlayer && onUpdateAvatar) {
+      onUpdateAvatar(currentPlayer.avatar.emoji, color);
+    }
+  }
+  
+  function toggleCustomization() {
+    showCustomization = !showCustomization;
+  }
+  
+  function startEditingName() {
+    editingName = true;
+    tempName = playerName;
+  }
+  
+  function cancelEditingName() {
+    editingName = false;
+    tempName = playerName;
+  }
+  
+  function saveName() {
+    const trimmedName = tempName.trim();
+    if (trimmedName && trimmedName !== playerName && onUpdateName) {
+      onUpdateName(trimmedName);
+    }
+    editingName = false;
+  }
+  
+  function handleNameKeyPress(event) {
+    if (event.key === 'Enter') {
+      saveName();
+    } else if (event.key === 'Escape') {
+      cancelEditingName();
+    }
+  }
 </script>
 
 <div class="waiting-container">
   <div class="waiting-card">
     <div class="welcome-section">
       <div class="welcome-icon">👋</div>
-      <h2 class="welcome-title">Welcome, {playerName}!</h2>
+      
+      {#if editingName}
+        <div class="name-editing">
+          <input
+            type="text"
+            bind:value={tempName}
+            on:keydown={handleNameKeyPress}
+            maxlength="20"
+            class="name-input"
+            autofocus
+            placeholder="Enter your name"
+          />
+          <div class="name-buttons">
+            <button class="save-name-button" on:click={saveName} disabled={!tempName.trim() || tempName.trim() === playerName}>
+              ✓ Save
+            </button>
+            <button class="cancel-name-button" on:click={cancelEditingName}>
+              ✕ Cancel
+            </button>
+          </div>
+        </div>
+      {:else}
+        <div class="name-display">
+          <h2 class="welcome-title">Welcome, {playerName}!</h2>
+          <button class="edit-name-button" on:click={startEditingName}>
+            ✏️ Change Name
+          </button>
+        </div>
+      {/if}
+      
       <p class="welcome-message">
         You're in the game! Waiting for more players to join...
       </p>
     </div>
     
-    <div class="status-section">
-      <div class="status-indicator">
-        <div class="status-dot"></div>
-        <span class="status-text">In Lobby</span>
+    {#if currentPlayer}
+    <div class="avatar-customization-section">
+      <div class="current-avatar-display">
+        <div class="current-avatar" style="background-color: {currentPlayer.avatar.color}">
+          <span class="current-emoji">{currentPlayer.avatar.emoji}</span>
+        </div>
+        <button class="customize-button" on:click={toggleCustomization}>
+          {showCustomization ? 'Done' : 'Customize Avatar'}
+        </button>
       </div>
       
-      <div class="player-count">
-        <span class="count-number">{gameState.players.length}</span>
-        <span class="count-label">player{gameState.players.length !== 1 ? 's' : ''} joined</span>
-      </div>
-    </div>
-    
-    <div class="players-section">
-      <h3 class="players-title">Players in Game</h3>
-      <div class="players-list">
-        {#each gameState.players as player, index}
-          <div class="player-item" style="animation-delay: {index * 0.1}s">
-            <div class="player-avatar" style="background-color: {player.avatar.color}">
-              <span class="player-emoji">{player.avatar.emoji}</span>
-            </div>
-            <div class="player-info">
-              <span class="player-name" class:is-you={player.name === playerName}>
-                {player.name}
-                {#if player.name === playerName}
-                  <span class="you-badge">You</span>
-                {/if}
-              </span>
-              <span class="player-status">Ready</span>
+      {#if showCustomization}
+        <div class="customization-panel">
+          <div class="customization-section">
+            <h4 class="customization-title">Choose Emoji</h4>
+            <div class="emoji-grid">
+              {#each emojiOptions as emoji}
+                <button 
+                  class="emoji-option" 
+                  class:active={currentPlayer.avatar.emoji === emoji}
+                  on:click={() => handleEmojiSelect(emoji)}
+                >
+                  {emoji}
+                </button>
+              {/each}
             </div>
           </div>
-        {/each}
-      </div>
+          
+          <div class="customization-section">
+            <h4 class="customization-title">Choose Color</h4>
+            <div class="color-grid">
+              {#each colorOptions as color}
+                <button 
+                  class="color-option" 
+                  class:active={currentPlayer.avatar.color === color}
+                  style="background-color: {color}"
+                  on:click={() => handleColorSelect(color)}
+                >
+                </button>
+              {/each}
+            </div>
+          </div>
+        </div>
+      {/if}
     </div>
+    {/if}
     
-    <div class="game-info">
-      <h3 class="info-title">Game Setup</h3>
-      <div class="info-grid">
-        <div class="info-item">
-          <span class="info-icon">🎯</span>
-          <span class="info-label">3 Rounds</span>
-        </div>
-        <div class="info-item">
-          <span class="info-icon">❓</span>
-          <span class="info-label">17 Questions</span>
-        </div>
-        <div class="info-item">
-          <span class="info-icon">⏱️</span>
-          <span class="info-label">~15 Minutes</span>
-        </div>
-      </div>
-    </div>
+    <!-- Removed game-info section -->
     
     <div class="waiting-indicator">
       <div class="waiting-dots">
@@ -106,6 +189,103 @@
     margin-bottom: 2rem;
   }
   
+  .name-display {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.75rem;
+  }
+  
+  .edit-name-button {
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    color: white;
+    border: none;
+    padding: 0.5rem 1rem;
+    border-radius: 8px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    opacity: 0.8;
+    margin-bottom: 1rem;
+  }
+  
+  .edit-name-button:hover {
+    opacity: 1;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+  }
+  
+  .name-editing {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1rem;
+    width: 100%;
+  }
+  
+  .name-input {
+    padding: 0.75rem 1rem;
+    border: 2px solid #e2e8f0;
+    border-radius: 12px;
+    font-size: 1.2rem;
+    font-weight: 600;
+    text-align: center;
+    background: white;
+    color: #333;
+    transition: all 0.3s ease;
+    max-width: 300px;
+    width: 100%;
+  }
+  
+  .name-input:focus {
+    outline: none;
+    border-color: #667eea;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+  }
+  
+  .name-buttons {
+    display: flex;
+    gap: 0.75rem;
+  }
+  
+  .save-name-button, .cancel-name-button {
+    padding: 0.5rem 1rem;
+    border: none;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+  }
+  
+  .save-name-button {
+    background: linear-gradient(135deg, #4ade80, #22c55e);
+    color: white;
+  }
+  
+  .save-name-button:hover:not(:disabled) {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(34, 197, 94, 0.3);
+  }
+  
+  .save-name-button:disabled {
+    background: #94a3b8;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+  }
+  
+  .cancel-name-button {
+    background: linear-gradient(135deg, #ef4444, #dc2626);
+    color: white;
+  }
+  
+  .cancel-name-button:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+  }
+  
   .welcome-icon {
     font-size: 3rem;
     margin-bottom: 1rem;
@@ -122,7 +302,7 @@
     font-size: 2rem;
     font-weight: 700;
     color: #333;
-    margin: 0 0 1rem 0;
+    margin: 0;
   }
   
   .welcome-message {
@@ -131,181 +311,150 @@
     margin: 0;
   }
   
-  .status-section {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 1.5rem;
-    background: linear-gradient(135deg, #f8fafc, #e2e8f0);
-    border-radius: 16px;
+  .avatar-customization-section {
     margin-bottom: 2rem;
-  }
-  
-  .status-indicator {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-  }
-  
-  .status-dot {
-    width: 12px;
-    height: 12px;
-    background: #4ade80;
-    border-radius: 50%;
-    animation: pulse 2s infinite;
-  }
-  
-  @keyframes pulse {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.5; }
-  }
-  
-  .status-text {
-    font-weight: 600;
-    color: #374151;
-  }
-  
-  .player-count {
-    text-align: right;
-  }
-  
-  .count-number {
-    font-size: 1.8rem;
-    font-weight: 700;
-    color: #667eea;
-    display: block;
-  }
-  
-  .count-label {
-    font-size: 0.9rem;
-    color: #666;
-  }
-  
-  .players-section {
-    margin-bottom: 2rem;
-    text-align: left;
-  }
-  
-  .players-title {
-    font-size: 1.3rem;
-    font-weight: 700;
-    color: #333;
-    margin: 0 0 1rem 0;
     text-align: center;
   }
   
-  .players-list {
+  .current-avatar-display {
     display: flex;
     flex-direction: column;
-    gap: 0.75rem;
-    max-height: 200px;
-    overflow-y: auto;
-  }
-  
-  .player-item {
-    display: flex;
     align-items: center;
     gap: 1rem;
-    padding: 0.75rem;
-    background: rgba(255, 255, 255, 0.7);
-    border-radius: 12px;
-    transition: all 0.3s ease;
-    animation: slideInUp 0.4s ease both;
+    margin-bottom: 1rem;
   }
   
-  .player-item:hover {
-    transform: translateX(5px);
-    background: rgba(255, 255, 255, 0.9);
-  }
-  
-  .player-avatar {
-    width: 40px;
-    height: 40px;
+  .current-avatar {
+    width: 60px;
+    height: 60px;
     border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
-    border: 2px solid rgba(255, 255, 255, 0.3);
-    flex-shrink: 0;
+    border: 3px solid rgba(255, 255, 255, 0.3);
+    transition: all 0.3s ease;
   }
   
-  .player-emoji {
-    font-size: 1.2rem;
+  .current-emoji {
+    font-size: 1.8rem;
   }
   
-  .player-info {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    gap: 0.25rem;
+  .customize-button {
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    color: white;
+    border: none;
+    padding: 0.75rem 1.5rem;
+    border-radius: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-size: 0.9rem;
   }
   
-  .player-name {
+  .customize-button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+  }
+  
+  .customization-panel {
+    background: rgba(255, 255, 255, 0.8);
+    border-radius: 16px;
+    padding: 1.5rem;
+    margin-top: 1rem;
+    animation: slideDown 0.3s ease;
+  }
+  
+  @keyframes slideDown {
+    from {
+      opacity: 0;
+      transform: translateY(-10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+  
+  .customization-section {
+    margin-bottom: 1.5rem;
+  }
+  
+  .customization-section:last-child {
+    margin-bottom: 0;
+  }
+  
+  .customization-title {
     font-size: 1rem;
     font-weight: 600;
     color: #333;
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-  }
-  
-  .player-name.is-you {
-    color: #667eea;
-  }
-  
-  .you-badge {
-    background: #667eea;
-    color: white;
-    padding: 0.125rem 0.5rem;
-    border-radius: 8px;
-    font-size: 0.75rem;
-    font-weight: 700;
-  }
-  
-  .player-status {
-    font-size: 0.8rem;
-    color: #4ade80;
-    font-weight: 500;
-  }
-  
-  .game-info {
-    margin-bottom: 2rem;
-  }
-  
-  .info-title {
-    font-size: 1.3rem;
-    font-weight: 700;
-    color: #333;
     margin: 0 0 1rem 0;
-  }
-  
-  .info-grid {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 1rem;
-  }
-  
-  .info-item {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 0.5rem;
-    padding: 1rem;
-    background: linear-gradient(135deg, #667eea20, #764ba220);
-    border-radius: 12px;
-    border: 1px solid rgba(102, 126, 234, 0.2);
-  }
-  
-  .info-icon {
-    font-size: 1.5rem;
-  }
-  
-  .info-label {
-    font-size: 0.9rem;
-    font-weight: 600;
-    color: #374151;
     text-align: center;
   }
+  
+  .emoji-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(40px, 1fr));
+    gap: 0.5rem;
+    max-width: 300px;
+    margin: 0 auto;
+  }
+  
+  .emoji-option {
+    width: 40px;
+    height: 40px;
+    border: 2px solid transparent;
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.8);
+    cursor: pointer;
+    font-size: 1.2rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+  }
+  
+  .emoji-option:hover {
+    background: rgba(102, 126, 234, 0.1);
+    border-color: #667eea;
+    transform: scale(1.1);
+  }
+  
+  .emoji-option.active {
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    border-color: #667eea;
+    transform: scale(1.1);
+  }
+  
+  .color-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(30px, 1fr));
+    gap: 0.5rem;
+    max-width: 250px;
+    margin: 0 auto;
+  }
+  
+  .color-option {
+    width: 30px;
+    height: 30px;
+    border: 3px solid transparent;
+    border-radius: 50%;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    position: relative;
+  }
+  
+  .color-option:hover {
+    transform: scale(1.2);
+    border-color: rgba(255, 255, 255, 0.8);
+  }
+  
+  .color-option.active {
+    transform: scale(1.2);
+    border-color: rgba(255, 255, 255, 1);
+    box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.5);
+  }
+
+  
   
   .waiting-indicator {
     display: flex;
@@ -383,25 +532,48 @@
       font-size: 1.8rem;
     }
     
-    .status-section {
+    
+    .emoji-grid {
+      grid-template-columns: repeat(auto-fit, minmax(35px, 1fr));
+      max-width: 280px;
+    }
+    
+    .emoji-option {
+      width: 35px;
+      height: 35px;
+      font-size: 1rem;
+    }
+    
+    .color-grid {
+      grid-template-columns: repeat(auto-fit, minmax(25px, 1fr));
+      max-width: 220px;
+    }
+    
+    .color-option {
+      width: 25px;
+      height: 25px;
+    }
+    
+    .customization-panel {
+      padding: 1rem;
+    }
+    
+    .name-input {
+      font-size: 1.1rem;
+      max-width: 280px;
+    }
+    
+    .name-buttons {
       flex-direction: column;
-      gap: 1rem;
-      text-align: center;
+      gap: 0.5rem;
+      width: 100%;
+      max-width: 200px;
     }
     
-    .info-grid {
-      grid-template-columns: 1fr;
-      gap: 0.75rem;
+    .save-name-button, .cancel-name-button {
+      width: 100%;
     }
     
-    .info-item {
-      flex-direction: row;
-      justify-content: center;
-      padding: 0.75rem;
-    }
-    
-    .info-label {
-      font-size: 0.8rem;
-    }
+    /* Removed game-info responsive styles */
   }
 </style>
