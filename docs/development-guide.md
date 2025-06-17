@@ -24,6 +24,9 @@ npm install
 cd svelte
 npm install
 cd ..
+
+# Or simply run the helper script
+./dev-reqs.sh
 ```
 
 **2. Environment Configuration**:
