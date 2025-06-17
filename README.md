@@ -2,6 +2,11 @@
 
 A multiplayer party game inspired by Fibbage, where players create lies to fool others while trying to identify the real answer among fabricated ones.
 
+## 📚 Documentation
+
+For in-depth guides covering architecture, game flow, and development setup,
+see the [docs](./docs/) directory.
+
 ## 🎮 Game Overview
 
 Lie-Ability is a social deduction party game perfect for family gatherings, parties, or online game nights. Players are presented with trivia questions with missing answers, and they must:
@@ -100,172 +105,23 @@ The server automatically detects your local IP address for QR codes and player a
 
 ## 📁 Project Structure
 
-```
-lie-ability-game/
-├── src/                      # Backend Node.js code
-│   ├── models/
-│   │   ├── Game.js          # Main game logic and state machine
-│   │   └── Player.js        # Player data and avatar management
-│   ├── services/
-│   │   ├── TimerService.js  # Timer management with cleanup
-│   │   └── QuestionService.js # Question pack loading
-│   ├── utils/
-│   │   └── constants.js     # Game constants and configuration
-│   └── server.js            # Express server and Socket.IO setup
-├── svelte/                   # Svelte frontend source
-│   ├── src/
-│   │   ├── Host.svelte      # Main host screen component
-│   │   ├── Player.svelte    # Main player screen component
-│   │   └── components/      # Reusable UI components
-│   │       ├── Lobby.svelte, QuestionView.svelte, etc.
-│   │       └── player/      # Player-specific components
-│   │           ├── PlayerJoin.svelte
-│   │           ├── PlayerCategorySelect.svelte
-│   │           ├── PlayerLieSubmit.svelte
-│   │           └── PlayerOptionSelect.svelte, etc.
-│   └── package.json         # Frontend dependencies
-├── public/                   # Built frontend assets (served by Express)
-│   ├── host.html            # Host interface entry point
-│   ├── player.html          # Player interface entry point
-│   └── assets/              # Built JS/CSS bundles
-├── question_packs/
-│   └── default.json         # Default question set (28 questions)
-├── tests/
-│   └── debug-interface.html # Backend testing interface
-├── start.sh                 # Quick start script
-└── package.json             # Backend dependencies
-```
+The backend lives in `src/` and the Svelte frontend in `svelte/`. A full folder breakdown is available in [docs/backend-architecture.md](./docs/backend-architecture.md).
 
 ## 🎯 Question Packs
 
-Question packs are JSON files in the `question_packs/` directory. The default pack includes 28 questions across categories like History, Animals, Food, Sports, Geography, Music, and Science.
-
-### Question Pack Structure
-```json
-{
-  "early_rounds": [
-    {
-      "category": "History",
-      "question": "What item did President Harrison refuse to wear at his inauguration?",
-      "answer": "Coat",
-      "lies": ["Top hat", "Gloves", "Scarf", "Socks", "Overcoat", "Cape"],
-      "audio_file": null
-    }
-  ],
-  "final_round": [
-    {
-      "category": "Bonus",
-      "question": "What is the dot over a lowercase 'i' called?",
-      "answer": "Tittle",
-      "lies": ["Jot", "Speck", "Nib", "Flick"],
-      "audio_file": null
-    }
-  ]
-}
-```
-
-### Creating Custom Question Packs
-
-1. Create a new JSON file in `question_packs/`
-2. Include `early_rounds` array with multiple questions
-3. Add `final_round` array (optional, for final round questions)
-4. Each question needs: `category`, `question`, `answer`, and `lies` array
-5. Restart the server to load new packs
-
-### Supported Categories (with emoji icons)
-- History 📚, Animals 🐾, Food 🍎, Science 🔬
-- Sports ⚽, Entertainment 🎬, Geography 🌍, Music 🎵
-- Art 🎨, Technology 💻, Nature 🌿, Space 🚀
-- And many more (30+ categories supported)
+Question files live in `question_packs/`. See [docs/question-pack-format.md](./docs/question-pack-format.md) for the full JSON schema and tips on creating your own packs.
 
 ## 🎮 Game Rules & Scoring
 
-### Scoring System
-- **Round 1**: 500 points per player fooled, 1,000 for finding truth
-- **Round 2**: Points doubled (1,000 / 2,000)
-- **Round 3**: Points tripled (1,500 / 3,000)
-
-### Game Structure
-- **3 rounds total** (configurable in constants.js)
-- **8 questions per round** (configurable)
-- **2-16 players** supported
-- **30-second timers** for lie submission and voting
-- **15-second timer** for category selection
-- **10-second timer** for question reading
-
-### Special Features
-- **Like System**: Players can like each other's lies during reveal (future scoring)
-- **Auto-completion**: Random lies submitted for inactive players
-- **Duplicate Handling**: Identical lies are combined and credited to all submitters
-- **Smart Options**: Extra lies added to hide patterns and duplicate submissions
+Scoring details and round timing are documented in [docs/game-overview.md](./docs/game-overview.md) and [docs/voting-scoring.md](./docs/voting-scoring.md).
 
 ## 🔧 API Endpoints
 
-### REST API
-- `GET /api/health` - Server health check and game status
-- `GET /api/server-info` - Detected server URL for QR codes
-- `GET /api/game-info` - Current game state and player count
-- `GET /api/question-packs` - Available question packs with current selection
-
-### Game Routes
-- `GET /host` - Host interface (main game screen)
-- `GET /player` - Player interface (personal device screen)
-- `GET /` - Landing page with game links
-- `GET /tests/debug-interface.html` - Backend testing interface
-
-### WebSocket Events
-
-#### Client to Server
-- `join_game` - Player joins with name and avatar
-- `start_game` - Begin gameplay (host action)
-- `select_category` - Choose question category
-- `submit_lie` - Submit fake answer
-- `select_option` - Vote for real answer
-- `like_lie` - Like another player's lie
-- `request_game_state` - Get current state
-
-#### Server to Client
-- `player_joined_response` - Join success/failure
-- `game_state_update` - Game state changes
-- `sub_step_info` - Player-specific state info
-- `timer_update` - Countdown timer updates
-- `truth_reveal_start` - Begin scoring reveal
-- `player_data_update` - Individual player updates
+The server exposes a small REST API and a set of WebSocket events. See [docs/backend-architecture.md](./docs/backend-architecture.md) for the endpoint list and usage patterns.
 
 ## 🧪 Testing & Development
 
-### Backend Debug Interface
-
-Visit `http://localhost:3000/tests/debug-interface.html` for comprehensive testing:
-
-- **Real-time Connection Monitoring** - WebSocket status and events
-- **Multi-player Simulation** - Open multiple tabs to test game flow
-- **Game Action Testing** - Test all player actions and state transitions
-- **Live Event Logging** - See all WebSocket communications
-- **State Inspection** - View current game state and player data
-
-### Frontend Development
-
-```bash
-cd svelte
-npm run dev    # Start Vite dev server with hot reload
-npm run build  # Build production assets to ../public/
-```
-
-The Svelte frontend uses:
-- **Vite** for fast development and building
-- **Socket.IO Client** for real-time communication
-- **QR Code generation** for easy player joining
-- **Responsive CSS** for mobile-first design
-
-### Testing Game Flow
-
-1. Open the debug interface in multiple browser tabs
-2. Join with different player names in each tab
-3. Start the game and follow through all phases:
-   - Lobby → Category Selection → Question Reading
-   - Lie Submission → Option Selection → Truth Reveal → Scoreboard
-4. Test edge cases: disconnections, timeouts, duplicate lies
+Development tips and the browser-based debug interface are described in [docs/development-guide.md](./docs/development-guide.md).
 
 ## 🐳 Docker Support
 
