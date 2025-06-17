@@ -1,4 +1,6 @@
 <script>
+  import '../../player-mobile.css';
+  
   export let currentQuestion;
   export let subStepInfo;
   export let onSubmit;
@@ -6,6 +8,7 @@
   
   let lieText = '';
   let isSubmitting = false;
+  let showStrategies = false;
   
   $: hasSubmitted = subStepInfo?.hasSubmittedLie;
   $: canSubmit = lieText.trim().length > 0 && !hasSubmitted && !isSubmitting;
@@ -24,7 +27,8 @@
   }
   
   function handleKeyPress(event) {
-    if (event.key === 'Enter' && canSubmit) {
+    if (event.key === 'Enter' && event.shiftKey === false && canSubmit) {
+      event.preventDefault();
       handleSubmit();
     }
   }
@@ -44,103 +48,108 @@
   }
 </script>
 
-<div class="lie-container">
-  <div class="lie-card">
+<div class="container-mobile safe-top safe-bottom animate-fadeIn">
+  <div class="card-mobile">
     {#if !hasSubmitted}
-      <div class="lie-header">
-        <div class="lie-icon">🤥</div>
-        <h2 class="lie-title">Create Your Lie</h2>
-        <p class="lie-subtitle">Make it believable enough to fool other players!</p>
-      </div>
-      
-      <div class="question-reminder">
-        <div class="reminder-badge">
-          <span class="reminder-emoji">{getEmoji(currentQuestion.category)}</span>
-          <span class="reminder-category">{currentQuestion.category}</span>
+      <div class="question-card">
+        <div class="category-badge">
+          <span class="category-icon">{getEmoji(currentQuestion.category)}</span>
+          <span class="category-name">{currentQuestion.category}</span>
         </div>
-        <div class="reminder-question">{currentQuestion.question}</div>
+        <h2 class="question-text">{currentQuestion.question}</h2>
       </div>
       
-      <div class="lie-input-section">
-        <label for="lieInput" class="input-label">Your Fake Answer</label>
-        <textarea
-          id="lieInput"
-          bind:value={lieText}
-          placeholder="Enter a convincing lie..."
-          maxlength="100"
-          rows="3"
-          disabled={hasSubmitted || isSubmitting}
-          on:keypress={handleKeyPress}
-          class="lie-input"
-          class:submitting={isSubmitting}
-          autofocus
-        ></textarea>
+      <form on:submit|preventDefault={handleSubmit}>
+        <div class="form-group">
+          <textarea
+            id="lieInput"
+            bind:value={lieText}
+            placeholder="Create a convincing fake answer..."
+            maxlength="100"
+            rows="4"
+            disabled={hasSubmitted || isSubmitting}
+            on:keypress={handleKeyPress}
+            class="textarea-mobile"
+            class:submitting={isSubmitting}
+            autofocus
+            autocomplete="off"
+            autocorrect="on"
+            spellcheck="true"
+          ></textarea>
+          
+          <div class="input-footer">
+            <div class="character-count" class:warning={lieText.length > 80}>
+              {lieText.length}/100
+            </div>
+          </div>
+        </div>
         
-        <div class="input-footer">
-          <div class="character-count" class:near-limit={lieText.length > 80}>
-            {lieText.length}/100
-          </div>
-          <div class="input-hints">
-            <div class="hint">💡 Make it sound plausible</div>
-            <div class="hint">🎭 Think like the real answer</div>
-          </div>
+        <div class="button-group">
+          <button
+            type="submit"
+            class="btn-touch btn-success"
+            class:btn-disabled={!canSubmit}
+            disabled={!canSubmit}
+          >
+            {#if isSubmitting}
+              <div class="spinner-mobile"></div>
+              Submitting...
+            {:else}
+              <span class="icon">✏️</span>
+              Submit Lie
+            {/if}
+          </button>
+          
+          <button
+            type="button"
+            class="btn-touch btn-warning"
+            disabled={hasSubmitted || isSubmitting}
+            on:click={handleAutoLie}
+          >
+            <span class="icon">🎲</span>
+            Auto
+          </button>
         </div>
-      </div>
+      </form>
       
-      <div class="action-buttons">
-        <button
-          class="submit-button"
-          class:disabled={!canSubmit}
-          disabled={!canSubmit}
-          on:click={handleSubmit}
-        >
-          {#if isSubmitting}
-            <div class="button-spinner"></div>
-            Submitting...
-          {:else}
-            <span class="button-icon">🚀</span>
-            Submit Lie
-          {/if}
-        </button>
-        
-        <button
-          class="auto-button"
-          disabled={hasSubmitted || isSubmitting}
-          on:click={handleAutoLie}
-        >
-          <span class="button-icon">🎲</span>
-          Lie for Me
-        </button>
-      </div>
+      <button 
+        class="strategy-toggle"
+        on:click={() => showStrategies = !showStrategies}
+      >
+        <span class="icon">💡</span>
+        {showStrategies ? 'Hide' : 'Show'} Tips
+        <span class="arrow" class:open={showStrategies}>▼</span>
+      </button>
       
-      <div class="strategy-tips">
-        <h4 class="tips-title">Strategy Tips</h4>
-        <div class="tips-list">
-          <div class="tip">
-            <span class="tip-icon">🎯</span>
-            <span class="tip-text">Base it on something real but wrong</span>
-          </div>
-          <div class="tip">
-            <span class="tip-icon">🧠</span>
-            <span class="tip-text">Think about common knowledge</span>
-          </div>
-          <div class="tip">
-            <span class="tip-icon">⚡</span>
-            <span class="tip-text">Make it feel "right" but isn't</span>
-          </div>
+      {#if showStrategies}
+        <div class="strategy-tips animate-slideUp">
+          <ul class="list-mobile">
+            <li class="list-item-mobile tip-item">
+              <span class="icon">🎯</span>
+              <span class="text">Mix truth with fiction</span>
+            </li>
+            <li class="list-item-mobile tip-item">
+              <span class="icon">🧠</span>
+              <span class="text">Use believable details</span>
+            </li>
+            <li class="list-item-mobile tip-item">
+              <span class="icon">⚡</span>
+              <span class="text">Keep it simple</span>
+            </li>
+          </ul>
         </div>
-      </div>
+      {/if}
     {:else}
-      <div class="submitted-state">
-        <div class="submitted-icon">✅</div>
-        <h2 class="submitted-title">Lie Submitted!</h2>
-        <p class="submitted-subtitle">
-          Your deception is in the mix. Now we wait to see who falls for it...
+      <div class="submitted-state text-center">
+        <div class="success-icon animate-slideUp">✅</div>
+        <h2 class="title-mobile">Lie Submitted!</h2>
+        <p class="subtitle-mobile">
+          Let's see who falls for it...
         </p>
         
         <div class="submitted-preview">
-          <div class="preview-label">Your lie:</div>
-          <div class="preview-text">"{lieText || 'Auto-generated lie'}"</div>
+          <div class="preview-label">Your answer:</div>
+          <div class="preview-text">"{lieText || 'Auto-generated'}"</div>
         </div>
         
         <div class="waiting-indicator">
@@ -149,7 +158,7 @@
             <span></span>
             <span></span>
           </div>
-          <p class="waiting-text">Waiting for other players...</p>
+          <p class="waiting-text">Waiting for others...</p>
         </div>
       </div>
     {/if}
@@ -157,356 +166,178 @@
 </div>
 
 <style>
-  .lie-container {
-    width: 100%;
-    max-width: 500px;
-    padding: 1rem;
-    animation: fadeIn 0.6s ease;
-  }
-  
-  .lie-card {
-    background: rgba(255, 255, 255, 0.95);
-    backdrop-filter: blur(20px);
-    border-radius: 24px;
-    padding: 2rem;
-    box-shadow: 0 12px 40px rgba(0,0,0,0.15);
-    border: 2px solid rgba(255, 255, 255, 0.2);
-    text-align: center;
-  }
-  
-  .lie-header {
-    margin-bottom: 2rem;
-  }
-  
-  .lie-icon {
-    font-size: 3rem;
-    margin-bottom: 1rem;
-    animation: wink 3s infinite;
-  }
-  
-  @keyframes wink {
-    0%, 90%, 100% { transform: scaleX(1); }
-    95% { transform: scaleX(0.1); }
-  }
-  
-  .lie-title {
-    font-size: 1.8rem;
-    font-weight: 700;
-    color: #333;
-    margin: 0 0 1rem 0;
-  }
-  
-  .lie-subtitle {
-    font-size: 1rem;
-    color: #666;
-    margin: 0;
-  }
-  
-  .question-reminder {
-    background: linear-gradient(135deg, #667eea20, #764ba220);
+  .question-card {
+    background: linear-gradient(135deg, rgba(102, 126, 234, 0.08), rgba(118, 75, 162, 0.08));
     border: 1px solid rgba(102, 126, 234, 0.2);
-    border-radius: 16px;
-    padding: 1.5rem;
-    margin-bottom: 2rem;
+    border-radius: var(--radius-lg);
+    padding: var(--space-lg);
+    margin-bottom: var(--space-xl);
     text-align: center;
   }
   
-  .reminder-badge {
+  .category-badge {
     display: inline-flex;
     align-items: center;
-    gap: 0.5rem;
-    background: linear-gradient(135deg, #667eea, #764ba2);
+    gap: var(--space-sm);
+    background: linear-gradient(135deg, var(--primary-gradient-start), var(--primary-gradient-end));
     color: white;
-    padding: 0.5rem 1rem;
-    border-radius: 20px;
+    padding: var(--space-sm) var(--space-md);
+    border-radius: var(--radius-full);
     font-weight: 600;
-    font-size: 0.9rem;
-    margin-bottom: 1rem;
+    font-size: var(--font-sm);
+    margin-bottom: var(--space-md);
   }
   
-  .reminder-emoji {
-    font-size: 1.1rem;
+  .category-icon {
+    font-size: 1.2em;
   }
   
-  .reminder-question {
-    font-size: 1.1rem;
-    font-weight: 600;
-    color: #333;
-    line-height: 1.3;
-  }
-  
-  .lie-input-section {
-    margin-bottom: 2rem;
-    text-align: left;
-  }
-  
-  .input-label {
-    display: block;
-    font-size: 1rem;
+  .question-text {
+    font-size: var(--font-lg);
     font-weight: 600;
     color: #333;
-    margin-bottom: 0.75rem;
-    text-align: center;
+    margin: 0;
+    line-height: 1.4;
   }
   
-  .lie-input {
-    width: 100%;
-    padding: 1rem;
-    border: 2px solid #e2e8f0;
-    border-radius: 12px;
-    font-size: 1.1rem;
-    font-family: inherit;
-    resize: vertical;
-    min-height: 80px;
-    transition: all 0.3s ease;
-    background: white;
-    box-sizing: border-box;
+  .form-group {
+    margin-bottom: var(--space-lg);
   }
   
-  .lie-input:focus {
-    outline: none;
-    border-color: #667eea;
-    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
-  }
-  
-  .lie-input:disabled {
-    background: #f8fafc;
-    color: #94a3b8;
-    cursor: not-allowed;
-  }
-  
-  .lie-input.submitting {
-    border-color: #4ade80;
+  .textarea-mobile.submitting {
+    border-color: var(--success-color);
     background: #f0fdf4;
   }
   
   .input-footer {
     display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-    margin-top: 0.75rem;
+    justify-content: flex-end;
+    margin-top: var(--space-xs);
   }
   
   .character-count {
-    font-size: 0.8rem;
+    font-size: var(--font-xs);
     color: #666;
     font-weight: 500;
   }
   
-  .character-count.near-limit {
-    color: #ef4444;
+  .character-count.warning {
+    color: var(--error-color);
     font-weight: 700;
   }
   
-  .input-hints {
-    display: flex;
-    flex-direction: column;
-    gap: 0.25rem;
-    text-align: right;
+  .button-group {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: var(--space-sm);
+    margin-bottom: var(--space-lg);
   }
   
-  .hint {
-    font-size: 0.8rem;
+  .icon {
+    font-size: 1.2em;
+  }
+  
+  .strategy-toggle {
+    width: 100%;
+    padding: var(--space-md);
+    background: transparent;
+    border: 1px solid #e2e8f0;
+    border-radius: var(--radius-md);
+    font-size: var(--font-sm);
+    font-weight: 500;
     color: #666;
-    opacity: 0.8;
-  }
-  
-  .action-buttons {
-    display: flex;
-    gap: 1rem;
-    margin-bottom: 2rem;
-  }
-  
-  .submit-button, .auto-button {
-    flex: 1;
-    padding: 1rem;
-    border: none;
-    border-radius: 12px;
-    font-size: 1rem;
-    font-weight: 700;
     cursor: pointer;
-    transition: all 0.3s ease;
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 0.5rem;
+    gap: var(--space-sm);
+    transition: all var(--transition-fast);
   }
   
-  .submit-button {
-    background: linear-gradient(135deg, #4ade80, #22c55e);
-    color: white;
-    box-shadow: 0 4px 15px rgba(34, 197, 94, 0.3);
+  .strategy-toggle:active {
+    background: #f8fafc;
   }
   
-  .submit-button:hover:not(.disabled) {
-    transform: translateY(-2px);
-    box-shadow: 0 8px 25px rgba(34, 197, 94, 0.4);
+  .arrow {
+    font-size: 0.8em;
+    transition: transform var(--transition-fast);
+    margin-left: auto;
   }
   
-  .submit-button.disabled {
-    background: #94a3b8;
-    cursor: not-allowed;
-    box-shadow: none;
-    transform: none;
-  }
-  
-  .auto-button {
-    background: linear-gradient(135deg, #f59e0b, #d97706);
-    color: white;
-    box-shadow: 0 4px 15px rgba(245, 158, 11, 0.3);
-  }
-  
-  .auto-button:hover:not(:disabled) {
-    transform: translateY(-2px);
-    box-shadow: 0 8px 25px rgba(245, 158, 11, 0.4);
-  }
-  
-  .auto-button:disabled {
-    background: #94a3b8;
-    cursor: not-allowed;
-    box-shadow: none;
-    transform: none;
-  }
-  
-  .button-icon {
-    font-size: 1.1rem;
-  }
-  
-  .button-spinner {
-    width: 16px;
-    height: 16px;
-    border: 2px solid rgba(255, 255, 255, 0.3);
-    border-top: 2px solid white;
-    border-radius: 50%;
-    animation: spin 1s linear infinite;
-  }
-  
-  @keyframes spin {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
+  .arrow.open {
+    transform: rotate(180deg);
   }
   
   .strategy-tips {
-    text-align: left;
+    margin-top: var(--space-md);
   }
   
-  .tips-title {
-    font-size: 1.1rem;
-    font-weight: 700;
-    color: #333;
-    margin: 0 0 1rem 0;
-    text-align: center;
+  .tip-item {
+    cursor: default;
+    background: rgba(102, 126, 234, 0.05);
+    border: 1px solid rgba(102, 126, 234, 0.1);
   }
   
-  .tips-list {
-    display: flex;
-    flex-direction: column;
-    gap: 0.75rem;
+  .tip-item:active {
+    transform: none;
   }
   
-  .tip {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-    padding: 0.75rem;
-    background: linear-gradient(135deg, #f8fafc, #e2e8f0);
-    border-radius: 10px;
-    transition: all 0.3s ease;
-  }
-  
-  .tip:hover {
-    transform: translateX(5px);
-    background: linear-gradient(135deg, #e2e8f0, #cbd5e1);
-  }
-  
-  .tip-icon {
-    font-size: 1.1rem;
+  .tip-item .icon {
+    font-size: 1.1em;
     flex-shrink: 0;
   }
   
-  .tip-text {
-    font-size: 0.9rem;
-    color: #374151;
+  .tip-item .text {
+    font-size: var(--font-sm);
+    color: #4b5563;
     font-weight: 500;
   }
   
-  .submitted-state {
-    text-align: center;
-  }
-  
-  .submitted-icon {
+  .success-icon {
     font-size: 4rem;
-    margin-bottom: 1rem;
-    animation: checkmark 0.8s ease;
-  }
-  
-  @keyframes checkmark {
-    0% {
-      transform: scale(0);
-      opacity: 0;
-    }
-    50% {
-      transform: scale(1.2);
-      opacity: 1;
-    }
-    100% {
-      transform: scale(1);
-      opacity: 1;
-    }
-  }
-  
-  .submitted-title {
-    font-size: 2rem;
-    font-weight: 700;
-    color: #22c55e;
-    margin: 0 0 1rem 0;
-  }
-  
-  .submitted-subtitle {
-    font-size: 1.1rem;
-    color: #666;
-    margin: 0 0 2rem 0;
+    margin-bottom: var(--space-md);
   }
   
   .submitted-preview {
-    background: linear-gradient(135deg, #22c55e20, #4ade8020);
+    background: linear-gradient(135deg, rgba(34, 197, 94, 0.08), rgba(74, 222, 128, 0.08));
     border: 1px solid rgba(34, 197, 94, 0.2);
-    border-radius: 16px;
-    padding: 1.5rem;
-    margin-bottom: 2rem;
+    border-radius: var(--radius-lg);
+    padding: var(--space-lg);
+    margin-bottom: var(--space-xl);
   }
   
   .preview-label {
-    font-size: 0.9rem;
+    font-size: var(--font-sm);
     font-weight: 600;
     color: #666;
-    margin-bottom: 0.75rem;
+    margin-bottom: var(--space-sm);
   }
   
   .preview-text {
-    font-size: 1.2rem;
+    font-size: var(--font-lg);
     font-weight: 600;
     color: #333;
     font-style: italic;
+    word-break: break-word;
   }
   
   .waiting-indicator {
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 1rem;
+    gap: var(--space-md);
   }
   
   .waiting-dots {
     display: flex;
-    gap: 0.5rem;
+    gap: var(--space-sm);
   }
   
   .waiting-dots span {
     width: 12px;
     height: 12px;
     border-radius: 50%;
-    background: #667eea;
+    background: var(--primary-gradient-start);
     animation: dot-bounce 1.4s infinite ease-in-out both;
   }
   
@@ -525,68 +356,66 @@
   }
   
   .waiting-text {
-    font-size: 1rem;
+    font-size: var(--font-base);
     color: #666;
     margin: 0;
   }
   
-  @keyframes fadeIn {
-    from {
-      opacity: 0;
-      transform: scale(0.95);
+  @media (min-width: 480px) {
+    .button-group {
+      grid-template-columns: 3fr 1fr;
     }
-    to {
-      opacity: 1;
-      transform: scale(1);
+    
+    .strategy-tips {
+      margin-top: var(--space-lg);
     }
   }
   
-  @media (max-width: 480px) {
-    .lie-container {
-      padding: 0.5rem;
+  /* Dark mode adjustments */
+  @media (prefers-color-scheme: dark) {
+    .question-card {
+      background: linear-gradient(135deg, rgba(124, 143, 245, 0.08), rgba(150, 116, 194, 0.08));
+      border-color: rgba(124, 143, 245, 0.2);
     }
     
-    .lie-card {
-      padding: 1.5rem;
+    .question-text {
+      color: var(--text-primary);
     }
     
-    .lie-title, .submitted-title {
-      font-size: 1.6rem;
+    .strategy-toggle {
+      background: var(--bg-input);
+      border-color: var(--border-color);
+      color: var(--text-secondary);
     }
     
-    .question-reminder {
-      padding: 1.25rem;
+    .strategy-toggle:active {
+      background: var(--bg-hover);
     }
     
-    .reminder-question {
-      font-size: 1rem;
+    .tip-item {
+      background: rgba(124, 143, 245, 0.05);
+      border-color: rgba(124, 143, 245, 0.1);
     }
     
-    .action-buttons {
-      flex-direction: column;
-      gap: 0.75rem;
+    .tip-item .text {
+      color: var(--text-secondary);
     }
     
-    .input-footer {
-      flex-direction: column;
-      gap: 0.75rem;
+    .submitted-preview {
+      background: linear-gradient(135deg, rgba(52, 208, 88, 0.08), rgba(86, 224, 112, 0.08));
+      border-color: rgba(52, 208, 88, 0.2);
     }
     
-    .input-hints {
-      text-align: left;
+    .preview-label {
+      color: var(--text-secondary);
     }
     
-    .tips-list {
-      gap: 0.5rem;
+    .preview-text {
+      color: var(--text-primary);
     }
     
-    .tip {
-      padding: 0.5rem;
-      gap: 0.5rem;
-    }
-    
-    .tip-text {
-      font-size: 0.8rem;
+    .waiting-text {
+      color: var(--text-secondary);
     }
   }
 </style>

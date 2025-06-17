@@ -25,9 +25,51 @@
 
 <div class="scoreboard-container">
   <div class="scoreboard-header">
-    <h2 class="scoreboard-title">Round {data.round} Complete!</h2>
+    <h2 class="scoreboard-title">
+      {#if data.isGameEnd}
+        🎊 Game Complete! 🎊
+      {:else}
+        Question {data.question || 1} Complete!
+      {/if}
+    </h2>
     <p class="round-progress">
-      Question {data.question} • {data.totalRounds - data.round} round{data.totalRounds - data.round !== 1 ? 's' : ''} remaining
+      {(() => {
+        const round = data.round || 1;
+        const question = data.question || 1;
+        const totalRounds = data.totalRounds || 3;
+        const questionsPerRound = data.questionsPerRound || 8;
+        
+        // Calculate questions remaining in current round
+        const questionsRemainingInRound = questionsPerRound - question;
+        
+        // Calculate rounds remaining until The Big Lie (final round)
+        const roundsUntilFinal = totalRounds - round;
+        
+        let progressText = '';
+        
+        if (questionsRemainingInRound > 0) {
+          progressText += `${questionsRemainingInRound} question${questionsRemainingInRound !== 1 ? 's' : ''} left in round`;
+        }
+        
+        if (roundsUntilFinal > 0) {
+          if (progressText) progressText += ' • ';
+          if (roundsUntilFinal === 1) {
+            progressText += 'Next up: The Big Lie!';
+          } else {
+            progressText += `${roundsUntilFinal} round${roundsUntilFinal !== 1 ? 's' : ''} until The Big Lie`;
+          }
+        } else if (round === totalRounds) {
+          // We're in The Big Lie round
+          if (progressText) progressText += ' • ';
+          progressText += 'The Big Lie!';
+        }
+        
+        if (data.isGameEnd) {
+          return '🏆 Final Results 🏆';
+        }
+        
+        return progressText || 'Final question complete!';
+      })()}
     </p>
   </div>
   
@@ -47,13 +89,18 @@
           </div>
           
           <div class="player-info">
-            <div class="player-avatar" style="background-color: {player.avatar.color}">
-              <span class="player-emoji">{player.avatar.emoji}</span>
+            <div class="player-avatar" style="background-color: {player.avatar?.color || '#667eea'}">
+              <span class="player-emoji">{player.avatar?.emoji || '😀'}</span>
             </div>
             <div class="player-details">
               <div class="player-name">{player.name}</div>
               {#if player.lastLie}
-                <div class="last-lie">"{player.lastLie}"</div>
+                <div class="last-lie">
+                  "{player.lastLie}" 
+                  {#if player.likesReceived && player.likesReceived > 0}
+                    <span class="likes-indicator">👍🏻</span>
+                  {/if}
+                </div>
               {/if}
             </div>
           </div>
@@ -70,20 +117,33 @@
     </div>
   </div>
   
-  <div class="continue-indicator">
-    <div class="continue-dots">
-      <span></span>
-      <span></span>
-      <span></span>
+  {#if !data.isGameEnd}
+    <div class="continue-indicator">
+      <div class="continue-dots">
+        <span></span>
+        <span></span>
+        <span></span>
+      </div>
+      <p>
+        {#if data.round < data.totalRounds}
+          Get ready for Round {data.round + 1}...
+        {:else}
+          Preparing final results...
+        {/if}
+      </p>
     </div>
-    <p>
-      {#if data.round < data.totalRounds}
-        Get ready for Round {data.round + 1}...
-      {:else}
-        Preparing final results...
-      {/if}
-    </p>
-  </div>
+  {:else}
+    <div class="game-complete-footer">
+      <div class="winner-spotlight">
+        <div class="winner-crown">👑</div>
+        <h3 class="winner-name">{sortedPlayers[0]?.name} is the Champion!</h3>
+        <p class="winner-message">Congratulations on your masterful deception!</p>
+      </div>
+      <div class="play-again-section">
+        <p class="thanks-message">Thanks for playing Lie-Ability! 🎉</p>
+      </div>
+    </div>
+  {/if}
 </div>
 
 <style>
@@ -254,6 +314,32 @@
     text-overflow: ellipsis;
   }
   
+  .likes-indicator {
+    font-style: normal;
+    font-weight: 600;
+    color: #f59e0b;
+    margin-left: 0.5rem;
+    animation: likeAppear 0.5s ease;
+  }
+  
+  @keyframes likeAppear {
+    0% {
+      opacity: 0;
+      transform: scale(0.8);
+    }
+    100% {
+      opacity: 1;
+      transform: scale(1);
+    }
+  }
+  
+  .rank-first .likes-indicator,
+  .rank-second .likes-indicator,
+  .rank-third .likes-indicator {
+    color: inherit;
+    opacity: 0.9;
+  }
+  
   .player-stats {
     text-align: right;
     flex-shrink: 0;
@@ -329,6 +415,61 @@
     margin: 0;
   }
   
+  .game-complete-footer {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2rem;
+    padding: 2rem;
+    animation: fadeIn 1s ease;
+  }
+  
+  .winner-spotlight {
+    text-align: center;
+    animation: winnerAppear 1s ease;
+  }
+  
+  @keyframes winnerAppear {
+    from {
+      opacity: 0;
+      transform: translateY(20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+  
+  .winner-crown {
+    font-size: 4rem;
+    margin-bottom: 1rem;
+    animation: bounce 2s infinite;
+  }
+  
+  .winner-name {
+    font-size: 2.5rem;
+    font-weight: 700;
+    color: white;
+    margin: 0 0 0.5rem 0;
+    text-shadow: 0 4px 20px rgba(0,0,0,0.3);
+  }
+  
+  .winner-message {
+    font-size: 1.3rem;
+    color: rgba(255, 255, 255, 0.9);
+    margin: 0;
+  }
+  
+  .play-again-section {
+    text-align: center;
+  }
+  
+  .thanks-message {
+    font-size: 1.4rem;
+    color: rgba(255, 255, 255, 0.8);
+    margin: 0;
+  }
+  
   @keyframes fadeIn {
     from {
       opacity: 0;
@@ -388,6 +529,10 @@
     
     .last-lie {
       font-size: 0.9rem;
+    }
+    
+    .likes-indicator {
+      font-size: 0.85rem;
     }
     
     .points-total {

@@ -409,3 +409,75 @@ h6 {
     transition-duration: 0.01ms !important;
   }
 }
+
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+  :root {
+    /* Adjusted colors for dark mode */
+    --primary: #7c8ff5;
+    --primary-dark: #6b7de6;
+    --secondary: #9674c2;
+    --accent: #f4a1fc;
+    
+    /* Dark mode neutrals */
+    --white: #1c1c1e;
+    --gray-50: #2c2c2e;
+    --gray-100: #3a3a3c;
+    --gray-200: #48484a;
+    --gray-300: #636366;
+    --gray-400: #8e8e93;
+    --gray-500: #aeaeb2;
+    --gray-600: #c7c7cc;
+    --gray-700: #d1d1d6;
+    --gray-800: #e5e5ea;
+    --gray-900: #f2f2f7;
+    
+    /* Shadows for dark mode */
+    --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.2);
+    --shadow: 0 1px 3px 0 rgb(0 0 0 / 0.3), 0 1px 2px -1px rgb(0 0 0 / 0.3);
+    --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.3), 0 2px 4px -2px rgb(0 0 0 / 0.3);
+    --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.4), 0 4px 6px -4px rgb(0 0 0 / 0.4);
+    --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.5), 0 8px 10px -6px rgb(0 0 0 / 0.5);
+    --shadow-2xl: 0 25px 50px -12px rgb(0 0 0 / 0.6);
+  }
+  
+  body {
+    background: #000;
+    color: var(--gray-900);
+  }
+  
+  .card {
+    background: var(--gray-50);
+    border: 1px solid var(--gray-200);
+  }
+  
+  .glass {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+  }
+  
+  .btn-secondary {
+    background: var(--gray-100);
+    color: var(--gray-900);
+    border-color: var(--gray-300);
+  }
+  
+  .btn-secondary:hover:not(:disabled) {
+    background: var(--gray-200);
+  }
+  
+  .input {
+    background: var(--gray-100);
+    border-color: var(--gray-300);
+    color: var(--gray-900);
+  }
+  
+  .input:focus {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(124, 143, 245, 0.2);
+  }
+  
+  .input::placeholder {
+    color: var(--gray-500);
+  }
+}

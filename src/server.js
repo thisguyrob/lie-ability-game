@@ -124,6 +124,52 @@ io.on('connection', (socket) => {
     }
   });
 
+  // Handle player rejoining (after disconnect/reconnect)
+  socket.on('rejoin_game', (data) => {
+    const { playerId, playerName } = data;
+    
+    if (!playerId || !playerName) {
+      socket.emit(SOCKET_EVENTS.ERROR, { message: 'PlayerId and playerName are required for rejoin' });
+      return;
+    }
+    
+    try {
+      if (game.players.has(playerId)) {
+        console.log(`🔄 [PLAYER ACTION] ${playerName} is rejoining (ID: ${playerId})`);
+        const success = game.reconnectPlayer(playerId, socket.id);
+        if (success) {
+          console.log(`✅ [PLAYER ACTION] ${playerName} rejoined successfully`);
+          
+          // Send updated game state
+          socket.emit('game_state_update', game.getGameState());
+          
+          // Send current sub-step info
+          socket.emit('sub_step_info', game.getSubStepInfo(playerId));
+          
+          // Send any current phase-specific data
+          const currentState = game.getGameState().state;
+          if (currentState === 'truth_reveal' && game.truthRevealData) {
+            socket.emit('truth_reveal_start', game.truthRevealData);
+          } else if (currentState === 'scoreboard' && game.currentScoreboardData) {
+            socket.emit('scoreboard_update', game.currentScoreboardData);
+          } else if (currentState === 'game_ended' && game.gameEndData) {
+            socket.emit('game_ended', game.gameEndData);
+          }
+          
+        } else {
+          console.log(`❌ [PLAYER ACTION] ${playerName} failed to rejoin`);
+          socket.emit(SOCKET_EVENTS.ERROR, { message: 'Failed to rejoin game' });
+        }
+      } else {
+        console.log(`❌ [PLAYER ACTION] ${playerName} tried to rejoin but player not found`);
+        socket.emit(SOCKET_EVENTS.ERROR, { message: 'Player not found. Please join as a new player.' });
+      }
+    } catch (error) {
+      console.error('Error in rejoin_game:', error);
+      socket.emit(SOCKET_EVENTS.ERROR, { message: 'Failed to rejoin game' });
+    }
+  });
+
   // Handle game start
   socket.on(SOCKET_EVENTS.START_GAME, () => {
     try {
@@ -191,7 +237,6 @@ io.on('connection', (socket) => {
       if (!result.success) {
         console.log(`❌ [PLAYER ACTION] Lie submission failed for ${playerName}: ${result.error}`);
         socket.emit('lie_submitted', { success: false, error: result.error });
-        socket.emit(SOCKET_EVENTS.ERROR, { message: result.error });
       } else {
         console.log(`✅ [PLAYER ACTION] Lie accepted from ${playerName}`);
         socket.emit('lie_submitted', { success: true });
@@ -321,9 +366,11 @@ io.on('connection', (socket) => {
         return
       }
 
-      const result = game.updatePlayerName(playerId, data.name)
+      const result = game.updatePlayerName(playerId, data.newName)
       if (!result.success) {
         socket.emit(SOCKET_EVENTS.ERROR, { message: result.error })
+      } else {
+        socket.emit('name_updated', { success: true, newName: data.newName })
       }
     } catch (error) {
       console.error('Error in UPDATE_NAME:', error)

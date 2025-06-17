@@ -1,6 +1,16 @@
 <script>
   export let data;
   
+  // Ensure data is properly defined with defaults
+  $: safeData = data || {
+    category: 'Unknown',
+    question: 'Loading...',  
+    truth: { answer: 'Loading...' },
+    lies: [],
+    truthVoters: [],
+    truthPoints: 1000
+  };
+  
   // Category emoji mapping
   const categoryEmojis = {
     'History': '📚', 'Animals': '🐾', 'Food': '🍎', 'Sports': '⚽',
@@ -19,26 +29,26 @@
 <div class="reveal-container">
   <div class="question-section">
     <div class="category-badge">
-      <span class="category-emoji">{getEmoji(data.category)}</span>
-      <span class="category-name">{data.category}</span>
+      <span class="category-emoji">{getEmoji(safeData.category)}</span>
+      <span class="category-name">{safeData.category}</span>
     </div>
     
-    <h2 class="question-text">{data.question}</h2>
+    <h2 class="question-text">{safeData.question}</h2>
   </div>
   
   <div class="answer-reveal">
     <div class="answer-card">
       <div class="answer-label">The Truth</div>
-      <div class="answer-text">{data.truth.answer}</div>
+      <div class="answer-text">{safeData.truth.answer}</div>
       <div class="answer-celebration">🎯</div>
     </div>
   </div>
   
-  {#if data.lies && data.lies.length > 0}
+  {#if safeData.lies && safeData.lies.length > 0}
     <div class="lies-section">
       <h3 class="lies-title">The Lies That Fooled You</h3>
       <div class="lies-grid">
-        {#each data.lies as lie, index}
+        {#each safeData.lies as lie, index}
           <div class="lie-card" style="animation-delay: {index * 0.15}s">
             <div class="lie-header">
               <div class="lie-votes">
@@ -53,11 +63,11 @@
             <div class="lie-attribution">
               <div class="authors">
                 <span class="authors-label">By:</span>
-                {#each lie.authors as author, authorIndex}
-                  <span class="author" style="color: {author.avatar.color}">
-                    {author.avatar.emoji} {author.name}
+                {#each (lie.authors || []) as author, authorIndex}
+                  <span class="author" style="color: {author.avatar?.color || '#666'}">
+                    {author.avatar?.emoji || '😀'} {author.name}
                   </span>
-                  {#if authorIndex < lie.authors.length - 1}, {/if}
+                  {#if authorIndex < (lie.authors || []).length - 1}, {/if}
                 {/each}
               </div>
               
@@ -65,8 +75,8 @@
                 <div class="voters">
                   <span class="voters-label">Fooled:</span>
                   {#each lie.voters as voter, voterIndex}
-                    <span class="voter" style="color: {voter.avatar.color}">
-                      {voter.avatar.emoji} {voter.name}
+                    <span class="voter" style="color: {voter.avatar?.color || '#666'}">
+                      {voter.avatar?.emoji || '😀'} {voter.name}
                     </span>
                     {#if voterIndex < lie.voters.length - 1}, {/if}
                   {/each}
@@ -79,17 +89,17 @@
     </div>
   {/if}
   
-  {#if data.truthVoters && data.truthVoters.length > 0}
+  {#if safeData.truthVoters && safeData.truthVoters.length > 0}
     <div class="truth-voters-section">
       <h3 class="truth-voters-title">Truth Detectives 🕵️</h3>
       <div class="truth-voters">
-        {#each data.truthVoters as voter, index}
+        {#each safeData.truthVoters as voter, index}
           <div class="truth-voter" style="animation-delay: {index * 0.1}s">
-            <div class="voter-avatar" style="background-color: {voter.avatar.color}">
-              <span class="voter-emoji">{voter.avatar.emoji}</span>
+            <div class="voter-avatar" style="background-color: {voter.avatar?.color || '#667eea'}">
+              <span class="voter-emoji">{voter.avatar?.emoji || '🕵️'}</span>
             </div>
             <div class="voter-name">{voter.name}</div>
-            <div class="voter-bonus">+{data.truthPoints || 1000} pts</div>
+            <div class="voter-bonus">+{safeData.truthPoints || 1000} pts</div>
           </div>
         {/each}
       </div>

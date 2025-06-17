@@ -44,13 +44,12 @@
     
     <div class="players-grid">
       {#each gameState.players as player, index}
-        <div class="player-card" style="animation-delay: {index * 0.1}s">
+        <div class="player-card" style="animation-delay: {index * 0.1}s; background-color: {player.avatar.color};">
           <div class="player-avatar" style="background-color: {player.avatar.color}">
             <span class="player-emoji">{player.avatar.emoji}</span>
           </div>
           <div class="player-details">
             <span class="player-name">{player.name}</span>
-            <span class="player-status">Ready</span>
           </div>
         </div>
       {/each}
@@ -232,17 +231,18 @@
     align-items: center;
     gap: 1rem;
     padding: 1rem;
-    background: rgba(255, 255, 255, 0.1);
     backdrop-filter: blur(10px);
     border-radius: 12px;
     border: 1px solid rgba(255, 255, 255, 0.2);
     animation: slideInUp 0.3s ease both;
     transition: all 0.3s ease;
+    opacity: 0.9;
   }
   
   .player-card:hover {
     transform: translateY(-2px);
-    box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+    box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+    opacity: 1;
   }
   
   .player-avatar {
@@ -271,11 +271,6 @@
     color: white;
   }
   
-  .player-status {
-    font-size: 0.9rem;
-    color: #4ade80;
-    font-weight: 500;
-  }
   
   .empty-state {
     text-align: center;

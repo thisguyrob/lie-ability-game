@@ -8,7 +8,6 @@
   import QuestionView from './components/QuestionView.svelte';
   import TruthReveal from './components/TruthReveal.svelte';
   import Scoreboard from './components/Scoreboard.svelte';
-  import GameEnd from './components/GameEnd.svelte';
   
   let socket;
   let gameState = {
@@ -24,7 +23,6 @@
   let serverUrl = '';
   let truthRevealData = null;
   let scoreboardData = { players: [] };
-  let gameEndData = null;
   
   // Debug reactive statement
   $: console.log('Host gameState changed:', gameState);
@@ -85,7 +83,14 @@
     });
     
     socket.on('truth_reveal_start', (data) => {
-      truthRevealData = data || null;
+      truthRevealData = data || {
+        category: 'Unknown',
+        question: 'Loading...',  
+        truth: { answer: 'Loading...' },
+        lies: [],
+        truthVoters: [],
+        truthPoints: 1000
+      };
       gameState = { ...gameState, state: 'truth_reveal' };
     });
     
@@ -95,8 +100,14 @@
     });
     
     socket.on('game_ended', (data) => {
-      gameState = { ...gameState, state: 'game_ended' };
-      gameEndData = data;
+      // Keep showing scoreboard but with game end data
+      scoreboardData = {
+        ...scoreboardData,
+        players: data.finalScores,
+        isGameEnd: true,
+        winner: data.winner
+      };
+      gameState = { ...gameState, state: 'scoreboard' };
     });
     
     socket.on('timer_update', (data) => {
@@ -155,8 +166,6 @@
       <TruthReveal data={truthRevealData} />
     {:else if gameState.state === 'scoreboard'}
       <Scoreboard data={scoreboardData} />
-    {:else if gameState.state === 'game_ended'}
-      <GameEnd data={gameEndData} />
     {/if}
   </div>
   

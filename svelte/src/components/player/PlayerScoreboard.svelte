@@ -34,9 +34,17 @@
   <div class="scoreboard-card">
     <div class="round-header">
       <div class="round-icon">🏆</div>
-      <h2 class="round-title">Round {data.round} Complete!</h2>
+      <h2 class="round-title">
+        {#if data.isGameEnd}
+          🎊 Game Complete! 🎊
+        {:else}
+          Round {data.round} Complete!
+        {/if}
+      </h2>
       <p class="round-progress">
-        {#if data.round < data.totalRounds}
+        {#if data.isGameEnd}
+          🏆 Final Results 🏆
+        {:else if data.round < data.totalRounds}
           Next: Round {data.round + 1}
         {:else}
           Final results coming up!
@@ -44,28 +52,7 @@
       </p>
     </div>
     
-    <div class="my-performance">
-      <div class="performance-card" class:highlight={myRank <= 3}>
-        <div class="performance-rank">
-          <span class="rank-display">{myPosition}</span>
-        </div>
-        <div class="performance-info">
-          <div class="my-avatar" style="background-color: {currentPlayer?.avatar?.color}">
-            <span class="my-emoji">{currentPlayer?.avatar?.emoji}</span>
-          </div>
-          <div class="performance-details">
-            <div class="my-name">You</div>
-            <div class="my-points">{currentPlayer?.points || 0} points</div>
-            {#if currentPlayer?.pointsThisRound}
-              <div class="points-gained">+{currentPlayer.pointsThisRound} this round</div>
-            {/if}
-          </div>
-        </div>
-      </div>
-    </div>
-    
     <div class="leaderboard-section">
-      <h3 class="leaderboard-title">Full Leaderboard</h3>
       <div class="players-list">
         {#each sortedPlayers as player, index}
           <div 
@@ -78,8 +65,8 @@
             </div>
             
             <div class="player-info">
-              <div class="player-avatar" style="background-color: {player.avatar.color}">
-                <span class="player-emoji">{player.avatar.emoji}</span>
+              <div class="player-avatar" style="background-color: {player.avatar?.color || '#667eea'}">
+                <span class="player-emoji">{player.avatar?.emoji || '😀'}</span>
               </div>
               <div class="player-details">
                 <div class="player-name">
@@ -115,32 +102,56 @@
           <span class="stat-label">Questions</span>
         </div>
         <div class="stat-item">
-          <span class="stat-icon">🤥</span>
-          <span class="stat-value">{data.totalLies || 0}</span>
-          <span class="stat-label">Lies Created</span>
+          <span class="stat-icon">🎭</span>
+          <span class="stat-value">{currentPlayer?.foolsThisRound || 0}</span>
+          <span class="stat-label">Players Fooled</span>
         </div>
         <div class="stat-item">
           <span class="stat-icon">🎯</span>
-          <span class="stat-value">{data.truthsFound || 0}</span>
+          <span class="stat-value">{currentPlayer?.truthsFound || 0}</span>
           <span class="stat-label">Truths Found</span>
         </div>
       </div>
     </div>
     
-    <div class="continue-indicator">
-      <div class="continue-dots">
-        <span></span>
-        <span></span>
-        <span></span>
+    {#if !data.isGameEnd}
+      <div class="continue-indicator">
+        <div class="continue-dots">
+          <span></span>
+          <span></span>
+          <span></span>
+        </div>
+        <p class="continue-text">
+          {#if data.round < data.totalRounds}
+            Get ready for Round {data.round + 1}...
+          {:else}
+            Calculating final results...
+          {/if}
+        </p>
       </div>
-      <p class="continue-text">
-        {#if data.round < data.totalRounds}
-          Get ready for Round {data.round + 1}...
+    {:else}
+      <div class="game-complete-section">
+        {#if myRank === 1}
+          <div class="winner-celebration">
+            <div class="celebration-crown">👑</div>
+            <h3 class="celebration-title">You're the Champion!</h3>
+            <p class="celebration-message">Congratulations on your masterful deception!</p>
+          </div>
         {:else}
-          Calculating final results...
+          <div class="final-placement">
+            <h3 class="placement-title">Final Placement: {myPosition}</h3>
+            <p class="placement-message">
+              {#if myRank <= 3}
+                Great job! You made it to the podium!
+              {:else}
+                Thanks for playing! Better luck next time!
+              {/if}
+            </p>
+          </div>
         {/if}
-      </p>
-    </div>
+        <p class="thanks-message">Thanks for playing Lie-Ability! 🎉</p>
+      </div>
+    {/if}
   </div>
 </div>
 
@@ -185,106 +196,9 @@
     margin: 0;
   }
   
-  .my-performance {
-    margin-bottom: 2rem;
-  }
-  
-  .performance-card {
-    background: linear-gradient(135deg, #f8fafc, #e2e8f0);
-    border: 2px solid #e2e8f0;
-    border-radius: 16px;
-    padding: 1.5rem;
-    display: flex;
-    align-items: center;
-    gap: 1rem;
-    transition: all 0.3s ease;
-  }
-  
-  .performance-card.highlight {
-    background: linear-gradient(135deg, #fbbf24, #f59e0b);
-    border-color: #f59e0b;
-    color: white;
-    animation: glow 2s ease-in-out infinite alternate;
-  }
-  
-  @keyframes glow {
-    0% {
-      box-shadow: 0 4px 20px rgba(251, 191, 36, 0.3);
-    }
-    100% {
-      box-shadow: 0 8px 30px rgba(251, 191, 36, 0.6);
-    }
-  }
-  
-  .performance-rank {
-    flex-shrink: 0;
-  }
-  
-  .rank-display {
-    font-size: 1.5rem;
-    font-weight: 700;
-  }
-  
-  .performance-info {
-    display: flex;
-    align-items: center;
-    gap: 1rem;
-    flex: 1;
-  }
-  
-  .my-avatar {
-    width: 50px;
-    height: 50px;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border: 3px solid rgba(255, 255, 255, 0.3);
-    flex-shrink: 0;
-  }
-  
-  .my-emoji {
-    font-size: 1.5rem;
-  }
-  
-  .performance-details {
-    text-align: left;
-    flex: 1;
-  }
-  
-  .my-name {
-    font-size: 1.2rem;
-    font-weight: 700;
-    margin-bottom: 0.25rem;
-  }
-  
-  .my-points {
-    font-size: 1.4rem;
-    font-weight: 700;
-    color: #667eea;
-  }
-  
-  .performance-card.highlight .my-points {
-    color: white;
-  }
-  
-  .points-gained {
-    font-size: 0.9rem;
-    opacity: 0.8;
-    font-weight: 600;
-  }
-  
   .leaderboard-section {
     margin-bottom: 2rem;
     text-align: left;
-  }
-  
-  .leaderboard-title {
-    font-size: 1.3rem;
-    font-weight: 700;
-    color: #333;
-    margin: 0 0 1.5rem 0;
-    text-align: center;
   }
   
   .players-list {
@@ -504,6 +418,74 @@
     margin: 0;
   }
   
+  .game-complete-section {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1.5rem;
+    padding: 2rem 0;
+    animation: fadeIn 1s ease;
+  }
+  
+  .winner-celebration {
+    text-align: center;
+    animation: winnerAppear 1s ease;
+  }
+  
+  .celebration-crown {
+    font-size: 4rem;
+    margin-bottom: 1rem;
+    animation: bounce 2s infinite;
+  }
+  
+  .celebration-title {
+    font-size: 1.8rem;
+    font-weight: 700;
+    color: #fbbf24;
+    margin: 0 0 0.5rem 0;
+  }
+  
+  .celebration-message {
+    font-size: 1.1rem;
+    color: #666;
+    margin: 0;
+  }
+  
+  .final-placement {
+    text-align: center;
+  }
+  
+  .placement-title {
+    font-size: 1.6rem;
+    font-weight: 700;
+    color: #333;
+    margin: 0 0 0.5rem 0;
+  }
+  
+  .placement-message {
+    font-size: 1rem;
+    color: #666;
+    margin: 0;
+  }
+  
+  .thanks-message {
+    font-size: 1.1rem;
+    color: #666;
+    margin: 0;
+    font-style: italic;
+  }
+  
+  @keyframes winnerAppear {
+    from {
+      opacity: 0;
+      transform: translateY(20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+  
   @keyframes fadeIn {
     from {
       opacity: 0;
@@ -549,21 +531,6 @@
     
     .round-title {
       font-size: 1.6rem;
-    }
-    
-    .performance-card {
-      flex-direction: column;
-      text-align: center;
-      gap: 1rem;
-    }
-    
-    .performance-info {
-      flex-direction: column;
-      gap: 0.75rem;
-    }
-    
-    .performance-details {
-      text-align: center;
     }
     
     .player-row {

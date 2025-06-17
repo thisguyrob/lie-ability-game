@@ -21,6 +21,7 @@ class Game {
     this.categoryOptions = [];
     this.selectedCategory = null;
     this.categorySelector = null; // Player ID who should select category
+    this.previousCategorySelector = null; // Track who selected last to avoid repeats
     
     // Question state
     this.playerLies = new Map(); // playerId -> lie text
@@ -33,6 +34,11 @@ class Game {
     this.askedQuestions = new Set();
     // Track which lies have been used for each question
     this.usedLiesByQuestion = new Map();
+    
+    // Store data for reconnection purposes
+    this.truthRevealData = null;
+    this.currentScoreboardData = null;
+    this.gameEndData = null;
     
     // Don't call init() here - it should be called explicitly
   }
@@ -212,6 +218,7 @@ class Game {
     this.currentQuestion = 1;
     this.askedQuestions.clear();
     this.usedLiesByQuestion.clear();
+    this.previousCategorySelector = null; // Reset category selector tracking
 
     // Reset all players for new game
     for (const player of this.players.values()) {
@@ -240,6 +247,10 @@ class Game {
     this.playerLikes.clear();
     this.shuffledOptions = [];
     
+    // Clear stored data from previous phases
+    this.truthRevealData = null;
+    this.currentScoreboardData = null;
+    
     // Reset player question state
     for (const player of this.players.values()) {
       player.resetForNewQuestion();
@@ -265,10 +276,33 @@ class Game {
       return;
     }
 
-    this.categorySelector = connectedPlayers[Math.floor(Math.random() * connectedPlayers.length)].id;
+    // Select a random player to choose category, avoiding the previous selector if possible
+    let eligiblePlayers = connectedPlayers;
+    
+    // If we have more than one player and someone selected last time, exclude them
+    if (connectedPlayers.length > 1 && this.previousCategorySelector) {
+      eligiblePlayers = connectedPlayers.filter(p => p.id !== this.previousCategorySelector);
+      
+      // If somehow all players were excluded (shouldn't happen), fall back to all connected players
+      if (eligiblePlayers.length === 0) {
+        eligiblePlayers = connectedPlayers;
+      }
+    }
+    
+    // Randomly select from eligible players
+    const selectedPlayer = eligiblePlayers[Math.floor(Math.random() * eligiblePlayers.length)];
+    this.categorySelector = selectedPlayer.id;
+    
+    // Store this selection for next round
+    this.previousCategorySelector = this.categorySelector;
+    
     const selector = this.players.get(this.categorySelector);
 
-    console.log(`🎯 [GAME STATE] ${selector.name} selected to choose category (${TIMERS.CATEGORY_SELECTION / 1000}s timer)`);
+    const previousSelectorName = this.previousCategorySelector !== this.categorySelector && this.previousCategorySelector 
+      ? this.players.get(this.previousCategorySelector)?.name 
+      : null;
+    
+    console.log(`🎯 [GAME STATE] ${selector.name} selected to choose category${previousSelectorName ? ` (previous: ${previousSelectorName})` : ''} (${TIMERS.CATEGORY_SELECTION / 1000}s timer)`);
 
     const selectorPayload = {
       categories: this.categoryOptions.map(opt => ({ id: opt.id, category: opt.category })),
@@ -649,6 +683,9 @@ class Game {
       console.log(`🤥 [GAME STATE] Lie: "${lie.lie}" by ${lie.submittedBy} (${lie.voteCount} votes)`);
     });
     
+    // Store data for reconnection
+    this.truthRevealData = revealData;
+    
     this.broadcastToAll(SOCKET_EVENTS.TRUTH_REVEAL_START, revealData);
 
     this.broadcastGameStateAndSubStep();
@@ -706,7 +743,12 @@ class Game {
       }
     }
 
-    // Count likes received
+    // Note: Like counting moved to calculateLikes() method called before scoreboard
+  }
+
+  calculateLikes() {
+    // Count likes received - this should be called right before showing scoreboard
+    // to ensure all likes submitted during truth reveal are included
     for (const player of this.players.values()) {
       let likesReceived = 0;
       for (const otherPlayer of this.players.values()) {
@@ -755,8 +797,7 @@ class Game {
         }],
         voters,
         votes: votes,
-        points: votes * GAME_CONFIG.POINTS[`ROUND_${this.currentRound}`].FOOL_PLAYER,
-        likesReceived: author.roundStats.likesReceived || 0
+        points: votes * GAME_CONFIG.POINTS[`ROUND_${this.currentRound}`].FOOL_PLAYER
       });
     }
 
@@ -798,6 +839,9 @@ class Game {
   showScoreboard() {
     this.state = GAME_STATES.SCOREBOARD;
 
+    // Calculate final like counts to include all likes submitted during truth reveal
+    this.calculateLikes();
+
     // Sort players by points (descending)
     const sortedPlayers = Array.from(this.players.values())
       .sort((a, b) => b.points - a.points)
@@ -811,12 +855,24 @@ class Game {
       console.log(`   ${player.rank}. ${player.name}: ${player.points} points`);
     });
 
-    this.broadcastToAll(SOCKET_EVENTS.SCOREBOARD_UPDATE, {
+    // Calculate round statistics
+    const truthsFound = Array.from(this.players.values())
+      .reduce((total, player) => total + player.roundStats.correctGuesses, 0);
+
+    const scoreboardData = {
       players: sortedPlayers,
       round: this.currentRound,
       question: this.currentQuestion,
-      isGameEnd: this.isGameEnd()
-    });
+      totalRounds: GAME_CONFIG.TOTAL_ROUNDS,
+      questionsPerRound: GAME_CONFIG.QUESTIONS_PER_ROUND,
+      isGameEnd: this.isGameEnd(),
+      truthsFound: truthsFound
+    };
+    
+    // Store data for reconnection
+    this.currentScoreboardData = scoreboardData;
+    
+    this.broadcastToAll(SOCKET_EVENTS.SCOREBOARD_UPDATE, scoreboardData);
 
     this.broadcastGameStateAndSubStep();
 
@@ -874,15 +930,17 @@ class Game {
     });
     console.log(`🎊 [GAME STATE] Winner: ${finalScores[0].name}!`);
 
-    this.broadcastToAll(SOCKET_EVENTS.GAME_ENDED, {
+    const gameEndData = {
       finalScores,
       winner: finalScores[0]
-    });
-
-    // Reset to lobby after a delay
-    setTimeout(() => {
-      this.returnToLobby();
-    }, 10000);
+    };
+    
+    // Store data for reconnection
+    this.gameEndData = gameEndData;
+    
+    this.broadcastToAll(SOCKET_EVENTS.GAME_ENDED, gameEndData);
+    
+    // Don't auto-return to lobby - keep showing final scoreboard
   }
 
   resetToLobby() {
@@ -939,6 +997,22 @@ class Game {
   }
 
   // Utility Methods
+  getQuestionDataForState() {
+    // Return current question data for all states that need it
+    const questionStates = [
+      GAME_STATES.QUESTION_READING,
+      GAME_STATES.LIE_SUBMISSION,
+      GAME_STATES.OPTION_SELECTION,
+      GAME_STATES.TRUTH_REVEAL
+    ];
+    
+    if (questionStates.includes(this.state) && this.currentQuestionData) {
+      return this.currentQuestionData;
+    }
+    
+    return null;
+  }
+
   getGameState() {
     // Map backend states to frontend phases
     let phase, subStep;
@@ -996,7 +1070,7 @@ class Game {
       totalRounds: GAME_CONFIG.TOTAL_ROUNDS,
       questionsPerRound: GAME_CONFIG.QUESTIONS_PER_ROUND,
       categorySelector: this.categorySelector,
-      currentQuestionData: this.state === GAME_STATES.QUESTION_READING ? this.currentQuestionData : null,
+      currentQuestionData: this.getQuestionDataForState(),
       availableQuestionPacks: this.questionService.getAvailablePacks(),
       currentQuestionPack: this.questionService.currentPack
     };
@@ -1031,6 +1105,7 @@ class Game {
       case GAME_STATES.LIE_SUBMISSION:
         return {
           ...baseInfo,
+          question: this.currentQuestionData,
           timeRemaining: Math.ceil(this.timerService.getRemainingTime('lie_submission') / 1000)
         };
       case GAME_STATES.OPTION_SELECTION:
@@ -1042,6 +1117,15 @@ class Game {
           ...baseInfo,
           options: options.map(o => ({ id: o.id, text: o.text, submittedBy: o.submittedBy })),
           timeRemaining: Math.ceil(this.timerService.getRemainingTime('option_selection') / 1000)
+        };
+      case GAME_STATES.TRUTH_REVEAL:
+        let revealOptions = this.shuffledOptions?.map(opt => ({ id: opt.id, text: opt.text, submittedBy: opt.submittedBy }));
+        if (playerId) {
+          revealOptions = revealOptions.filter(opt => !opt.submittedBy || !opt.submittedBy.includes(playerId));
+        }
+        return {
+          ...baseInfo,
+          options: revealOptions.map(o => ({ id: o.id, text: o.text, submittedBy: o.submittedBy }))
         };
       default:
         return baseInfo;

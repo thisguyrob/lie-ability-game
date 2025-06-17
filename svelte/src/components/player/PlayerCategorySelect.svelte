@@ -144,48 +144,24 @@
     gap: 0.75rem;
   }
   
-  .category-option:hover {
-    transform: translateY(-5px);
-    border-color: #667eea;
-    background: linear-gradient(135deg, #667eea, #764ba2);
-    color: white;
-    box-shadow: 0 8px 25px rgba(102, 126, 234, 0.3);
-  }
-  
   .category-option:active {
     transform: translateY(-2px);
   }
   
   .category-emoji {
     font-size: 2.5rem;
-    transition: all 0.3s ease;
-  }
-  
-  .category-option:hover .category-emoji {
-    transform: scale(1.1);
   }
   
   .category-name {
     font-size: 1.1rem;
     font-weight: 700;
     color: #333;
-    transition: color 0.3s ease;
-  }
-  
-  .category-option:hover .category-name {
-    color: white;
   }
   
   .select-hint {
     font-size: 0.8rem;
     color: #666;
     opacity: 0.8;
-    transition: all 0.3s ease;
-  }
-  
-  .category-option:hover .select-hint {
-    color: rgba(255, 255, 255, 0.9);
-    opacity: 1;
   }
   
   .categories-preview {

@@ -27,7 +27,7 @@ lie-ability-game/
 ├── tests/              # Testing and debugging tools
 │   └── debug-interface.html  # Browser-based backend testing interface
 ├── public/             # Frontend placeholder (future development)
-└── docs/               # Documentation (future)
+└── docs/               # Comprehensive game engine documentation
 ```
 
 **Key Architecture Principles:**
@@ -241,3 +241,105 @@ Always consider both screen types when implementing features:
 - **Monitor player state** through game state updates
 
 This project prioritizes **game flow correctness**, **timer reliability**, and **real-time synchronization**. When in doubt, ensure the game can always progress and timers never hang.
+
+## Documentation Requirements for Agents
+
+### Mandatory Documentation Updates
+
+**When making significant changes or learning about the system, agents MUST update the comprehensive documentation in the `/docs/` folder:**
+
+#### Required Documentation Practices
+
+1. **Document New Features**: Add detailed explanations to relevant documentation files
+   - Update `game-flow.md` for new game states or timing changes
+   - Update `backend-architecture.md` for new models, services, or API changes  
+   - Update `frontend-components.md` for new UI components or patterns
+   - Update `voting-scoring.md` for changes to scoring or like systems
+
+2. **Record System Understanding**: When discovering how existing systems work
+   - Add detailed explanations with code examples
+   - Document data flow patterns and architectural decisions
+   - Include timing diagrams and state transitions
+   - Explain the reasoning behind design choices
+
+3. **Update Development Patterns**: For new coding patterns or best practices
+   - Add to `development-guide.md` with examples
+   - Include debugging techniques and common issues
+   - Document testing strategies and setup procedures
+
+4. **Create New Documentation Files**: For entirely new subsystems
+   - Follow the established markdown structure and style
+   - Include comprehensive code examples and usage patterns
+   - Add cross-references to related documentation
+   - Update the main `docs/README.md` index
+
+#### Documentation Standards
+
+**Structure Requirements**:
+```markdown
+# Title
+
+## Overview
+- Brief explanation of the system/feature
+
+## Key Components  
+- Detailed breakdown with code examples
+
+## Usage Patterns
+- How to use/implement with examples
+
+## Common Issues & Solutions
+- Troubleshooting and debugging information
+```
+
+**Code Example Requirements**:
+- Include actual code snippets from the codebase
+- Show complete examples, not just fragments
+- Explain the context and purpose of each example
+- Include both server-side and client-side code where relevant
+
+**Integration Requirements**:
+- Link to related documentation sections
+- Update cross-references when adding new content
+- Ensure consistency with existing documentation style
+- Update the main documentation index
+
+#### When Documentation is Required
+
+**Always document when**:
+- Adding new game mechanics or features
+- Modifying existing game flow or state machine
+- Discovering complex system interactions during debugging
+- Implementing new Socket.IO events or patterns
+- Making changes to the scoring or voting systems
+- Adding new frontend components or UI patterns
+- Learning about undocumented system behaviors
+
+**Example Documentation Updates**:
+```markdown
+## Recent Changes (Agent-Added)
+
+### Like System Timing Fix
+- **Issue**: Likes submitted during truth reveal weren't being counted
+- **Solution**: Moved `calculateLikes()` to execute right before scoreboard
+- **Impact**: All likes now count until scoreboard display
+- **Files Modified**: `src/models/Game.js` lines 712-727, 807
+
+### Player Interface During Truth Reveal  
+- **Discovery**: Players should stay on like interface, not see truth reveal
+- **Implementation**: Modified Player.svelte conditional rendering
+- **Reasoning**: Host-only truth reveal maintains game tension
+```
+
+#### Quality Standards
+
+**Documentation must be**:
+- **Comprehensive**: Cover all aspects of the system/feature
+- **Accurate**: Reflect the actual current implementation
+- **Practical**: Include working code examples and patterns
+- **Maintainable**: Update existing docs rather than duplicate information
+- **Cross-referenced**: Link related concepts and files
+
+**Agents who fail to document significant discoveries or changes will be considered to have provided incomplete work.**
+
+This documentation requirement ensures knowledge transfer and maintains the comprehensive understanding of the game engine for future development.

@@ -1,18 +1,49 @@
 <script>
+  import '../../player-mobile.css';
+  
   export let currentQuestion;
   export let subStepInfo;
   export let onSelect;
+  export let onLike;
   
   let selectedOptionId = null;
+  let likedOptions = new Set();
+  let likedTruth = false;
+  let showLikes = false;
   
   $: hasSelected = subStepInfo?.hasSelectedOption || selectedOptionId !== null;
   $: options = currentQuestion?.options || [];
+  
+  function handleLikeOption(option) {
+    if (likedOptions.has(option.id)) return;
+    if (!option.submittedBy || option.submittedBy.length === 0) return; // Can't like the truth
+    
+    likedOptions.add(option.id);
+    likedOptions = likedOptions; // Trigger reactivity
+    
+    // Like all authors of this lie
+    option.submittedBy.forEach(authorId => {
+      onLike(authorId);
+    });
+  }
+
+  function handleLikeTruth(option) {
+    if (likedTruth) return;
+    likedTruth = true;
+    // For truth, we don't call onLike since there's no player to like
+    // This is just a UI acknowledgment that they liked the truth
+  }
   
   function handleOptionSelect(optionId) {
     if (hasSelected) return;
     
     selectedOptionId = optionId;
     onSelect(optionId);
+    
+    // Auto-show likes after selection
+    setTimeout(() => {
+      showLikes = true;
+    }, 500);
   }
   
   // Category emoji mapping
@@ -30,312 +61,287 @@
   }
 </script>
 
-<div class="voting-container">
-  <div class="voting-card">
-    {#if !hasSelected}
-      
-      <div class="question-reminder">
-        <div class="reminder-badge">
-          <span class="reminder-emoji">{getEmoji(currentQuestion.category)}</span>
-          <span class="reminder-category">{currentQuestion.category}</span>
-        </div>
-        <div class="reminder-question">{currentQuestion.question}</div>
+<div class="container-mobile safe-top safe-bottom animate-fadeIn">
+  <div class="card-mobile">
+    <div class="question-card">
+      <div class="category-badge">
+        <span class="category-icon">{getEmoji(currentQuestion.category)}</span>
+        <span class="category-name">{currentQuestion.category}</span>
       </div>
-      
-      <div class="options-section">
-        <div class="options-list">
-          {#each options as option, index}
-            <button
-              class="option-button"
-              style="animation-delay: {index * 0.1}s"
-              on:click={() => handleOptionSelect(option.id)}
-              disabled={hasSelected}
-            >
-              <div class="option-letter">{String.fromCharCode(65 + index)}</div>
-              <div class="option-text">{option.text}</div>
-              <div class="option-arrow">→</div>
-            </button>
+      <h2 class="question-text">{currentQuestion.question}</h2>
+    </div>
+    
+    {#if !hasSelected}
+      <h3 class="section-title text-center">Which is the truth?</h3>
+    {/if}
+    
+    <div class="options-container">
+      {#each options as option, index}
+        <button
+          class="option-card"
+          class:selected={hasSelected && option.id === selectedOptionId}
+          class:disabled={hasSelected && option.id !== selectedOptionId}
+          on:click={() => handleOptionSelect(option.id)}
+          disabled={hasSelected}
+          style="animation-delay: {index * 0.1}s"
+        >
+          <span class="option-text">{option.text}</span>
+          {#if hasSelected && option.id === selectedOptionId}
+            <span class="check-mark">✓</span>
+          {/if}
+        </button>
+      {/each}
+    </div>
+    
+    {#if hasSelected && showLikes}
+      <div class="likes-section animate-slideUp">
+        <h3 class="likes-title">Give kudos to creative answers</h3>
+        <div class="likes-grid">
+          {#each options as option}
+            <div class="like-item"
+                 class:is-selected={option.id === selectedOptionId}>
+              <div class="like-text">{option.text}</div>
+              <button
+                class="like-btn"
+                class:liked={option.submittedBy && option.submittedBy.length > 0 ? likedOptions.has(option.id) : likedTruth}
+                disabled={option.submittedBy && option.submittedBy.length > 0 ? likedOptions.has(option.id) : likedTruth}
+                on:click={() => option.submittedBy && option.submittedBy.length > 0 ? handleLikeOption(option) : handleLikeTruth(option)}
+              >
+                {#if (option.submittedBy && option.submittedBy.length > 0 ? likedOptions.has(option.id) : likedTruth)}
+                  ❤️
+                {:else}
+                  🤍
+                {/if}
+              </button>
+            </div>
           {/each}
         </div>
       </div>
-      
-    {:else}
-      <div class="voted-state">
-        <div class="voted-icon">✅</div>
-        <h2 class="voted-title">Vote Cast!</h2>
-        <p class="voted-subtitle">
-          Your vote is locked in. Let's see if you picked the truth!
-        </p>
-        
-        {#if selectedOptionId}
-          <div class="vote-preview">
-            <div class="preview-label">You voted for:</div>
-            <div class="preview-option">
-              {#each options as option, index}
-                {#if option.id === selectedOptionId}
-                  <div class="selected-option">
-                    <span class="selected-letter">{String.fromCharCode(65 + index)}</span>
-                    <span class="selected-text">"{option.text}"</span>
-                  </div>
-                {/if}
-              {/each}
-            </div>
-          </div>
-        {/if}
-        
-        <div class="waiting-indicator">
-          <div class="waiting-dots">
-            <span></span>
-            <span></span>
-            <span></span>
-          </div>
-          <p class="waiting-text">Waiting for other players to vote...</p>
+    {/if}
+    
+    {#if hasSelected}
+      <div class="waiting-indicator">
+        <div class="waiting-dots">
+          <span></span>
+          <span></span>
+          <span></span>
         </div>
+        <p class="waiting-text">Waiting for others...</p>
       </div>
     {/if}
   </div>
 </div>
 
 <style>
-  .voting-container {
-    width: 100%;
-    max-width: 500px;
-    padding: 1rem;
-    animation: fadeIn 0.6s ease;
-  }
-  
-  .voting-card {
-    background: rgba(255, 255, 255, 0.95);
-    backdrop-filter: blur(20px);
-    border-radius: 24px;
-    padding: 2rem;
-    box-shadow: 0 12px 40px rgba(0,0,0,0.15);
-    border: 2px solid rgba(255, 255, 255, 0.2);
-    text-align: center;
-  }
-  
-  
-  .question-reminder {
-    background: linear-gradient(135deg, #667eea20, #764ba220);
+  .question-card {
+    background: linear-gradient(135deg, rgba(102, 126, 234, 0.08), rgba(118, 75, 162, 0.08));
     border: 1px solid rgba(102, 126, 234, 0.2);
-    border-radius: 16px;
-    padding: 1.5rem;
-    margin-bottom: 2rem;
+    border-radius: var(--radius-lg);
+    padding: var(--space-lg);
+    margin-bottom: var(--space-xl);
     text-align: center;
   }
   
-  .reminder-badge {
+  .category-badge {
     display: inline-flex;
     align-items: center;
-    gap: 0.5rem;
-    background: linear-gradient(135deg, #667eea, #764ba2);
+    gap: var(--space-sm);
+    background: linear-gradient(135deg, var(--primary-gradient-start), var(--primary-gradient-end));
     color: white;
-    padding: 0.5rem 1rem;
-    border-radius: 20px;
+    padding: var(--space-sm) var(--space-md);
+    border-radius: var(--radius-full);
     font-weight: 600;
-    font-size: 0.9rem;
-    margin-bottom: 1rem;
+    font-size: var(--font-sm);
+    margin-bottom: var(--space-md);
   }
   
-  .reminder-emoji {
-    font-size: 1.1rem;
+  .category-icon {
+    font-size: 1.2em;
   }
   
-  .reminder-question {
-    font-size: 1.1rem;
+  .question-text {
+    font-size: var(--font-lg);
     font-weight: 600;
     color: #333;
-    line-height: 1.3;
+    margin: 0;
+    line-height: 1.4;
   }
   
-  .options-section {
-    margin-bottom: 2rem;
+  .section-title {
+    font-size: var(--font-base);
+    font-weight: 600;
+    color: #666;
+    margin: 0 0 var(--space-md) 0;
   }
   
-  
-  .options-list {
+  .options-container {
     display: flex;
     flex-direction: column;
-    gap: 1rem;
+    gap: var(--space-sm);
+    margin-bottom: var(--space-xl);
   }
   
-  .option-button {
-    display: flex;
-    align-items: center;
-    gap: 1rem;
-    padding: 1.25rem;
+  .option-card {
+    width: 100%;
+    min-height: var(--touch-target-large);
+    padding: var(--space-md) var(--space-lg);
     background: linear-gradient(135deg, #f8fafc, #e2e8f0);
     border: 2px solid #e2e8f0;
-    border-radius: 16px;
+    border-radius: var(--radius-lg);
+    font-size: var(--font-base);
+    font-weight: 500;
+    color: #333;
     cursor: pointer;
-    transition: all 0.3s ease;
-    animation: slideInUp 0.5s ease both;
+    transition: all var(--transition-base);
+    position: relative;
     text-align: left;
+    line-height: 1.4;
+    animation: slideUp var(--transition-base) ease both;
   }
   
-  .option-button:hover:not(:disabled) {
-    transform: translateY(-3px);
-    border-color: #667eea;
-    background: linear-gradient(135deg, #667eea, #764ba2);
+  @keyframes slideUp {
+    from {
+      opacity: 0;
+      transform: translateY(20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+  
+  .option-card:active:not(:disabled) {
+    transform: scale(0.98);
+  }
+  
+  .option-card.selected {
+    background: linear-gradient(135deg, var(--success-light), var(--success-color));
+    border-color: var(--success-color);
     color: white;
-    box-shadow: 0 8px 25px rgba(102, 126, 234, 0.3);
+    box-shadow: 0 4px 15px rgba(34, 197, 94, 0.3);
   }
   
-  .option-button:active:not(:disabled) {
-    transform: translateY(-1px);
-  }
-  
-  .option-button:disabled {
+  .option-card.disabled:not(.selected) {
+    opacity: 0.5;
     cursor: not-allowed;
-    opacity: 0.6;
-  }
-  
-  .option-letter {
-    width: 40px;
-    height: 40px;
-    background: linear-gradient(135deg, #667eea, #764ba2);
-    color: white;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-weight: 700;
-    font-size: 1.1rem;
-    flex-shrink: 0;
-    transition: all 0.3s ease;
-  }
-  
-  .option-button:hover:not(:disabled) .option-letter {
-    background: rgba(255, 255, 255, 0.2);
-    transform: scale(1.1);
   }
   
   .option-text {
-    flex: 1;
-    font-size: 1rem;
-    font-weight: 500;
-    color: #333;
-    line-height: 1.4;
-    transition: color 0.3s ease;
+    display: block;
+    padding-right: var(--space-xl);
   }
   
-  .option-button:hover:not(:disabled) .option-text {
-    color: white;
+  .check-mark {
+    position: absolute;
+    right: var(--space-lg);
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 1.5rem;
+    animation: checkPop var(--transition-base) ease;
   }
   
-  .option-arrow {
-    font-size: 1.2rem;
-    color: #667eea;
-    opacity: 0;
-    transform: translateX(-10px);
-    transition: all 0.3s ease;
-    flex-shrink: 0;
+  @keyframes checkPop {
+    0% {
+      transform: translateY(-50%) scale(0);
+    }
+    50% {
+      transform: translateY(-50%) scale(1.2);
+    }
+    100% {
+      transform: translateY(-50%) scale(1);
+    }
   }
   
-  .option-button:hover:not(:disabled) .option-arrow {
-    opacity: 1;
-    transform: translateX(0);
-    color: white;
+  .likes-section {
+    margin-top: var(--space-xl);
+    padding: var(--space-lg);
+    background: rgba(102, 126, 234, 0.05);
+    border-radius: var(--radius-lg);
+    border: 1px solid rgba(102, 126, 234, 0.1);
   }
   
-  
-  .voted-state {
+  .likes-title {
+    font-size: var(--font-base);
+    font-weight: 600;
+    color: var(--primary-gradient-start);
+    margin: 0 0 var(--space-md) 0;
     text-align: center;
   }
   
-  .voted-icon {
-    font-size: 4rem;
-    margin-bottom: 1rem;
-    animation: checkmark 0.8s ease;
+  .likes-grid {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-sm);
   }
   
-  @keyframes checkmark {
-    0% {
-      transform: scale(0);
-      opacity: 0;
-    }
-    50% {
-      transform: scale(1.2);
-      opacity: 1;
-    }
-    100% {
-      transform: scale(1);
-      opacity: 1;
-    }
-  }
-  
-  .voted-title {
-    font-size: 2rem;
-    font-weight: 700;
-    color: #667eea;
-    margin: 0 0 1rem 0;
-  }
-  
-  .voted-subtitle {
-    font-size: 1.1rem;
-    color: #666;
-    margin: 0 0 2rem 0;
-  }
-  
-  .vote-preview {
-    background: linear-gradient(135deg, #667eea20, #764ba220);
-    border: 1px solid rgba(102, 126, 234, 0.2);
-    border-radius: 16px;
-    padding: 1.5rem;
-    margin-bottom: 2rem;
-  }
-  
-  .preview-label {
-    font-size: 0.9rem;
-    font-weight: 600;
-    color: #666;
-    margin-bottom: 1rem;
-  }
-  
-  .selected-option {
+  .like-item {
     display: flex;
     align-items: center;
-    gap: 1rem;
-    justify-content: center;
+    justify-content: space-between;
+    padding: var(--space-sm) var(--space-md);
+    background: rgba(255, 255, 255, 0.7);
+    border-radius: var(--radius-md);
+    border: 1px solid rgba(102, 126, 234, 0.1);
+    gap: var(--space-md);
   }
   
-  .selected-letter {
-    width: 32px;
-    height: 32px;
-    background: linear-gradient(135deg, #667eea, #764ba2);
-    color: white;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-weight: 700;
-    font-size: 1rem;
-  }
   
-  .selected-text {
-    font-size: 1.1rem;
-    font-weight: 600;
-    color: #333;
+  .like-text {
+    flex: 1;
+    font-size: var(--font-sm);
+    color: #4b5563;
     font-style: italic;
+    line-height: 1.3;
+  }
+  
+  .like-btn {
+    width: var(--touch-target-min);
+    height: var(--touch-target-min);
+    border-radius: var(--radius-full);
+    border: 2px solid #e2e8f0;
+    background: white;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.2rem;
+    transition: all var(--transition-fast);
+    flex-shrink: 0;
+  }
+  
+  .like-btn:active:not(:disabled) {
+    transform: scale(0.9);
+  }
+  
+  .like-btn.liked {
+    background: #fecaca;
+    border-color: #ef4444;
+    animation: heartPop var(--transition-base) ease;
+  }
+  
+  @keyframes heartPop {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.2); }
   }
   
   .waiting-indicator {
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 1rem;
+    gap: var(--space-md);
+    margin-top: var(--space-xl);
   }
   
   .waiting-dots {
     display: flex;
-    gap: 0.5rem;
+    gap: var(--space-sm);
   }
   
   .waiting-dots span {
     width: 12px;
     height: 12px;
     border-radius: 50%;
-    background: #667eea;
+    background: var(--primary-gradient-start);
     animation: dot-bounce 1.4s infinite ease-in-out both;
   }
   
@@ -354,64 +360,86 @@
   }
   
   .waiting-text {
-    font-size: 1rem;
+    font-size: var(--font-base);
     color: #666;
     margin: 0;
   }
   
-  @keyframes fadeIn {
-    from {
-      opacity: 0;
-      transform: scale(0.95);
+  @media (min-width: 480px) {
+    .option-card {
+      padding: var(--space-lg) var(--space-xl);
     }
-    to {
-      opacity: 1;
-      transform: scale(1);
+    
+    .likes-grid {
+      gap: var(--space-md);
+    }
+    
+    .like-item {
+      padding: var(--space-md);
     }
   }
   
-  @keyframes slideInUp {
-    from {
-      opacity: 0;
-      transform: translateY(20px);
-    }
-    to {
-      opacity: 1;
-      transform: translateY(0);
-    }
-  }
-  
-  @media (max-width: 480px) {
-    .voting-container {
-      padding: 0.5rem;
+  /* Dark mode adjustments */
+  @media (prefers-color-scheme: dark) {
+    .question-card {
+      background: linear-gradient(135deg, rgba(124, 143, 245, 0.08), rgba(150, 116, 194, 0.08));
+      border-color: rgba(124, 143, 245, 0.2);
     }
     
-    .voting-card {
-      padding: 1.5rem;
+    .question-text {
+      color: var(--text-primary);
     }
     
-    .voted-title {
-      font-size: 1.6rem;
+    .section-title {
+      color: var(--text-secondary);
     }
     
-    .option-button {
-      padding: 1rem;
-      gap: 0.75rem;
+    .option-card {
+      background: var(--bg-input);
+      border-color: var(--border-color);
+      color: var(--text-primary);
     }
     
-    .option-letter {
-      width: 36px;
-      height: 36px;
-      font-size: 1rem;
+    .option-card:active:not(:disabled) {
+      background: var(--bg-hover);
     }
     
-    .option-text {
-      font-size: 0.9rem;
+    .option-card.selected {
+      background: linear-gradient(135deg, var(--success-color), var(--success-light));
+      border-color: var(--success-color);
+    }
+    
+    .likes-section {
+      background: rgba(124, 143, 245, 0.05);
+      border-color: rgba(124, 143, 245, 0.1);
+    }
+    
+    .likes-title {
+      color: var(--primary-gradient-start);
+    }
+    
+    .like-item {
+      background: var(--bg-input);
+      border-color: var(--border-color);
     }
     
     
-    .selected-text {
-      font-size: 1rem;
+    .like-text {
+      color: var(--text-secondary);
+    }
+    
+    .like-btn {
+      background: var(--bg-hover);
+      border-color: var(--border-color);
+    }
+    
+    .like-btn.liked {
+      background: rgba(255, 107, 107, 0.2);
+      border-color: rgba(255, 107, 107, 0.4);
+    }
+    
+    .waiting-text {
+      color: var(--text-secondary);
     }
   }
 </style>

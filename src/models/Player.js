@@ -73,6 +73,7 @@ class Player {
 
   addPoints(points) {
     this.points += points;
+    this.pointsThisRound += points;
   }
 
   resetForNewQuestion() {
@@ -82,6 +83,7 @@ class Player {
     this.hasSubmittedLie = false;
     this.hasSelectedOption = false;
     this.playersFooledLastQuestion = 0;
+    this.pointsThisRound = 0;
   }
 
   resetForNewGame() {
@@ -121,7 +123,10 @@ class Player {
       avatar: this.avatar,
       lastLie: this.roundStats.liesSubmitted[this.roundStats.liesSubmitted.length - 1] || null,
       likesReceived: this.roundStats.likesReceived,
-      playersFooled: this.playersFooledLastQuestion
+      playersFooled: this.playersFooledLastQuestion,
+      pointsThisRound: this.pointsThisRound,
+      foolsThisRound: this.roundStats.playersFooled,
+      truthsFound: this.roundStats.correctGuesses
     };
   }
 }
