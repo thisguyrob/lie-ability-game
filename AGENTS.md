@@ -40,11 +40,12 @@ lie-ability-game/
 
 ### JavaScript Style
 - Use **ES6+ features** (const/let, arrow functions, async/await)
-- **No semicolons** - follow project's existing style
+- **Use semicolons** - code in `src/` consistently terminates statements
 - **camelCase** for variables and functions
 - **PascalCase** for classes and constructors
 - Use **template literals** for string interpolation
 - Prefer **destructuring** for object/array access
+- No Prettier or ESLint configuration is provided; follow existing formatting
 
 ### Naming Conventions
 - Files: **PascalCase** for classes (Game.js), **camelCase** for utilities
