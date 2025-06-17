@@ -79,9 +79,11 @@ console.log(`🏆 [SCORING] ${playerName} fooled ${count} players (+${points} po
 ### Development Setup
 ```bash
 npm install          # Install dependencies
+./dev-reqs.sh        # Install testing dependencies
 npm run dev          # Start with nodemon (auto-restart)
 npm start           # Production start
 ```
+When adding new test dependencies, update **dev-reqs.sh** so contributors can install them easily.
 
 ### Testing Approach
 **Primary Testing:** Use the debug interface at `http://localhost:3000/tests/debug-interface.html`
