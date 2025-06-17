@@ -14,6 +14,7 @@ The Lie Ability Game is a real-time multiplayer party game where players create 
 - **[Frontend Components](./frontend-components.md)** - Svelte components and UI structure
 - **[Voting & Scoring System](./voting-scoring.md)** - Detailed scoring mechanics and like system
 - **[Development Guide](./development-guide.md)** - Setup, debugging, and troubleshooting
+- **[Logging Conventions](./development-guide.md#logging-conventions)** - Standard console output format
 
 ## Quick Start
 
