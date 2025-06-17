@@ -84,6 +84,8 @@ lie-ability-game/
 └── package.json           # Dependencies and scripts
 ```
 
+For guidelines on authoring new trivia content, see [Question Pack Format](./question-pack-format.md).
+
 ## Development Patterns
 
 ### Backend Development
