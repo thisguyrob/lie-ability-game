@@ -269,10 +269,24 @@ import PlayerJoin from '../src/components/player/PlayerJoin.svelte';
 test('should emit join event on form submit', async () => {
   const mockOnJoin = jest.fn();
   const { getByRole } = render(PlayerJoin, { onJoin: mockOnJoin });
-  
+
   await fireEvent.click(getByRole('button'));
   expect(mockOnJoin).toHaveBeenCalled();
 });
+```
+
+#### Running Unit Tests
+
+Run backend tests from the project root:
+
+```bash
+npm test
+```
+
+Run frontend tests from the `svelte` directory:
+
+```bash
+cd svelte && npm test
 ```
 
 ### Integration Testing
